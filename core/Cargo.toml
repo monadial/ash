@@ -1,0 +1,16 @@
+[package]
+name = "ash-core"
+version = "0.1.0"
+edition = "2021"
+description = "Cryptographic core for ASH secure messaging"
+license = "MIT"
+repository = "https://github.com/monadial/ash"
+
+# Zero external dependencies - maximum security, minimal attack surface
+[dependencies]
+
+[dev-dependencies]
+
+[lib]
+name = "ash_core"
+path = "src/lib.rs"

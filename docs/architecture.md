@@ -11,6 +11,8 @@ Its purpose is to:
 This document must be read together with:
 - `scope.md`
 - `threat-model.md`
+- `ceremony.md`
+- `data-lifecycle.md`
 
 ---
 
@@ -35,21 +37,25 @@ ASH is designed to achieve the following goals:
 
 ASH consists of four primary subsystems:
 
+```
 ┌────────────┐
 │   Users    │
 └─────┬──────┘
       │
 ┌─────▼──────┐
-│ iOS App    │  (SwiftUI)
+│  iOS App   │  (SwiftUI)
 └─────┬──────┘
-      │  FFI boundary
+      │  FFI boundary (via bindings)
 ┌─────▼──────┐
-│ ash-core   │  (Shared Rust Core)
+│   core     │  (Shared Rust Core)
 └─────┬──────┘
       │
 ┌─────▼──────┐
-│ Backend    │  (Rust Relay)
+│  Backend   │  (Rust Relay)
 └────────────┘
+```
+
+Note: Android support is planned for future versions.
 
 Each subsystem is intentionally constrained.
 
@@ -118,7 +124,7 @@ The iOS application is a **presentation and orchestration layer**.
 It exists to:
 - interact with the user
 - manage UI state
-- invoke `ash-core` correctly
+- invoke `core` correctly via FFI bindings
 - enforce UX constraints
 
 ---
@@ -133,7 +139,7 @@ The iOS app is responsible for:
 - Managing message display lifecycle
 - Handling app foreground/background transitions
 - Temporarily storing encrypted blobs
-- Calling shared core APIs
+- Calling shared core APIs via bindings
 
 ---
 
@@ -147,6 +153,55 @@ The iOS app must never:
 - invent alternate checksums
 - persist decrypted messages
 - perform silent background actions
+
+---
+
+## Bindings Architecture
+
+### Purpose
+
+The bindings layer exposes `core` APIs to the iOS application.
+
+It uses **UniFFI** (Mozilla's Uniform Foreign Function Interface) to generate Swift bindings.
+
+---
+
+### Design
+
+```
+┌─────────────────┐
+│  core (Rust)    │
+└────────┬────────┘
+         │ UniFFI generates
+         │
+    ┌────▼────┐
+    │  Swift  │
+    └─────────┘
+```
+
+UniFFI generates bindings from a single interface definition.
+
+Note: Kotlin bindings for Android will use the same interface when Android support is added.
+
+---
+
+### Responsibilities
+
+The bindings layer:
+- Exposes safe, minimal API surface
+- Handles memory management across FFI boundary
+- Converts types between Rust and platform languages
+- Provides error handling across languages
+
+---
+
+### Explicit non-responsibilities
+
+The bindings must never:
+- Add business logic
+- Cache or store data
+- Make security decisions
+- Differ in behavior between platforms
 
 ---
 
@@ -302,7 +357,7 @@ The website provides **documentation and education only**.
 | Component  | Trust level |
 |-----------|-------------|
 | ash-core  | Trusted |
-| iOS App  | Partially trusted |
+| iOS App | Partially trusted |
 | Backend  | Untrusted |
 | Network  | Untrusted |
 | Website  | Untrusted |

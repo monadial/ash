@@ -10,6 +10,10 @@ Its purpose is to:
 
 If something is **not listed here**, it is **out of scope**.
 
+This document must be read together with:
+- `architecture.md`
+- `threat-model.md`
+
 ---
 
 ## What ASH *is*
@@ -99,9 +103,11 @@ The ceremony must:
 - One-to-one conversations only
 - Text messages
 - One-shot location messages
+  - Lat/long with 6 decimal places (~10cm precision)
+  - No altitude, speed, or heading
 - Ephemeral message lifecycle
 - Automatic message disappearance after read / time
-- Manual “burn” action that irreversibly wipes conversation state
+- Manual "burn" action that irreversibly wipes conversation state
 
 ---
 
@@ -204,7 +210,7 @@ The backend must **never**:
 ---
 
 ### Platform & ecosystem
-- Android application
+- Android application (planned for future)
 - Web application
 - Desktop application
 - VisionOS / watchOS support

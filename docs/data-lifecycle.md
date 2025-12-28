@@ -337,4 +337,28 @@ If uncertainty exists, the conversation must be invalidated.
 ## Backups and OS behavior
 
 ### iOS
-- App data may be backed up
+- App data may be backed up by iCloud or iTunes
+- Sensitive data must be stored with `kSecAttrAccessible` flags that exclude backup
+- Keychain items must use `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`
+- No plaintext or pad material in standard app containers
+
+---
+
+### Platform requirements
+The iOS app must:
+- Exclude all sensitive data from backup
+- Use Keychain for secure storage
+- Fail safely if secure storage is unavailable
+
+Note: Android requirements will be defined when Android support is added.
+
+---
+
+## Final note
+
+Data lifecycle is a **security-critical** aspect of ASH.
+
+If a data category is not listed here, it must not exist.
+
+If a lifecycle is unclear, the conservative interpretation is:
+> **Do not store it. Do not persist it. Delete it immediately.**

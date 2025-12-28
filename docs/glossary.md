@@ -69,6 +69,11 @@ A short, human-readable sequence of words derived deterministically from pad mat
 
 Used by participants to visually verify that both devices share the same pad.
 
+ASH uses a **custom wordlist** (not BIP-39) optimized for:
+- Verbal clarity (distinct pronunciation)
+- Cross-language usability
+- Minimal confusion between similar words
+
 ---
 
 ### Conversation
@@ -134,9 +139,33 @@ Frames:
 ---
 
 ### FFI (Foreign Function Interface)
-The boundary between Rust (`ash-core`) and platform code (Swift, Kotlin).
+The boundary between Rust (`core`) and platform code (Swift, Kotlin).
+
+ASH uses **UniFFI** to generate bindings from a single interface definition.
 
 FFI exposes safe, minimal APIs and prevents reimplementation of security logic.
+
+---
+
+### FCM (Firebase Cloud Messaging)
+Google's push notification service for Android devices.
+
+Will be used by ASH for Android push notifications when Android support is added.
+
+---
+
+## G
+
+### Gesture Entropy
+Unpredictable input collected from user touch gestures during the ceremony.
+
+In ASH, gesture entropy:
+- Is mixed with OS-provided randomness
+- Captures touch coordinates, timing, and pressure
+- Requires minimum gesture duration
+- Provides visual feedback during collection
+
+Gesture entropy collection is **required** before pad generation.
 
 ---
 
@@ -158,6 +187,20 @@ In ASH, this includes:
 A mechanism to detect accidental corruption of data (e.g., CRC).
 
 Integrity checks detect errors but do not provide secrecy.
+
+---
+
+## L
+
+### Location Message
+A one-shot message containing geographic coordinates.
+
+Format:
+- Latitude: 6 decimal places (~10cm precision)
+- Longitude: 6 decimal places (~10cm precision)
+- No altitude, speed, or heading data
+
+Location messages are ephemeral like text messages and consume pad bytes.
 
 ---
 
@@ -256,6 +299,15 @@ ASH explicitly defines trust boundaries between:
 ---
 
 ## U
+
+### UniFFI
+Mozilla's Uniform Foreign Function Interface tool for Rust.
+
+UniFFI generates language bindings from a single Rust interface definition, ensuring consistent behavior across platforms.
+
+ASH uses UniFFI to generate Swift bindings. Kotlin bindings will be added when Android support is implemented.
+
+---
 
 ### Untrusted
 A component assumed to be potentially malicious or compromised.

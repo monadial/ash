@@ -89,16 +89,36 @@ If a device is offline, it receives burn when it next connects.
 - `conversation_id -> registered device tokens (APNS)`
 - operational counters (aggregate)
 
-### TTL policy (v1 recommended defaults)
-- Encrypted blobs: **30 seconds**
-- Burn flag: **5 minutes**
-- Device tokens: session-bound (or **24 hours max**) depending on implementation
+### TTL policy (v1 defaults)
+
+| Data type | Default TTL | Extended TTL |
+|-----------|-------------|--------------|
+| Encrypted blobs | 30 seconds | Up to 48 hours (for delayed reading) |
+| Burn flag | 5 minutes | - |
+| Device tokens | 24 hours | - |
 
 The backend must delete expired data automatically.
 
+**Note on extended TTL:** When a push notification wakes a device but the user doesn't open the app immediately, messages need to persist longer. Extended TTL is optional and configurable.
+
 ### Persistence
-- Allowed: in-memory or short-lived DB (e.g., SQLite/Postgres) **only if TTL enforced**
-- Disallowed: backups, long retention, archives, analytics stores
+
+**Default (v1):** In-memory storage
+- Simple implementation
+- Data lost on restart
+- Suitable for active conversations
+
+**Optional:** Lightweight persistence (e.g., SQLite)
+- Required for extended TTL (delayed message reading)
+- Must enforce TTL cleanup
+- No backups or replication
+- Data encrypted at rest
+
+**Disallowed:**
+- Long-term archives
+- Backups without TTL
+- Analytics stores
+- Replication to other systems
 
 ---
 
@@ -109,7 +129,7 @@ v1 assumes **HTTP polling** is sufficient.
 
 - When a conversation screen is open: poll every **1–2 seconds**
 - When app is backgrounded: no polling
-- APNS is used only as a wake-up signal
+- Push notifications (APNS) are used only as wake-up signals
 
 WebSockets may be added later but are out of scope for v1.
 
@@ -159,7 +179,7 @@ Exact paths and schemas may vary, but semantics must match.
 - Store ciphertext only ephemerally
 - Must enforce size limits
 - Must not log ciphertext
-- Should trigger silent APNS to registered devices (best-effort)
+- Should trigger silent push (APNS) to registered devices (best-effort)
 
 ---
 
@@ -188,7 +208,7 @@ Exact paths and schemas may vary, but semantics must match.
 **Invariants**
 - Must set burn flag with TTL
 - Should delete queued blobs immediately for that conversation
-- Should trigger silent APNS to registered devices (best-effort)
+- Should trigger silent push (APNS) to registered devices (best-effort)
 
 ---
 

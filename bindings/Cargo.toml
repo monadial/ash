@@ -1,0 +1,29 @@
+[package]
+name = "ash-bindings"
+version = "0.1.0"
+edition = "2021"
+description = "UniFFI bindings for ash-core"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]
+name = "ash_bindings"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["bindgen"]
+
+[features]
+bindgen = ["uniffi/cli"]
+
+[dependencies]
+ash-core = { path = "../core" }
+uniffi = { version = "0.28" }
+thiserror = "1.0"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }
+
+[dev-dependencies]
+uniffi = { version = "0.28", features = ["bindgen-tests"] }

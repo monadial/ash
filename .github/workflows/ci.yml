@@ -11,8 +11,8 @@ env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
-  test:
-    name: Test
+  test-core:
+    name: Test Core
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +29,36 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             core/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: ${{ runner.os }}-cargo-core-${{ hashFiles('core/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-core-
 
-      - name: Run tests
+      - name: Run core tests
         working-directory: core
+        run: cargo test --verbose
+
+  test-bindings:
+    name: Test Bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            bindings/target/
+          key: ${{ runner.os }}-cargo-bindings-${{ hashFiles('bindings/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-bindings-
+
+      - name: Run bindings tests
+        working-directory: bindings
         run: cargo test --verbose
 
   clippy:
@@ -47,9 +72,13 @@ jobs:
         with:
           components: clippy
 
-      - name: Run clippy
+      - name: Clippy core
         working-directory: core
         run: cargo clippy -- -D warnings
+
+      - name: Clippy bindings
+        working-directory: bindings
+        run: cargo clippy --lib -- -D warnings
 
   fmt:
     name: Format
@@ -62,8 +91,12 @@ jobs:
         with:
           components: rustfmt
 
-      - name: Check formatting
+      - name: Check core formatting
         working-directory: core
+        run: cargo fmt --check
+
+      - name: Check bindings formatting
+        working-directory: bindings
         run: cargo fmt --check
 
   doc:
@@ -75,7 +108,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-action@stable
 
-      - name: Build docs
+      - name: Build core docs
         working-directory: core
         run: cargo doc --no-deps
         env:

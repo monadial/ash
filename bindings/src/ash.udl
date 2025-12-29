@@ -1,0 +1,128 @@
+// ASH Core FFI Interface Definition
+// This file defines the public API exposed to Swift
+
+namespace ash {
+    // === Frame Operations ===
+
+    /// Create frames from pad bytes for QR transfer
+    [Throws=AshError]
+    sequence<Frame> create_frames(sequence<u8> pad_bytes, u32 max_payload);
+
+    /// Reconstruct pad from received frames
+    [Throws=AshError]
+    sequence<u8> reconstruct_pad(sequence<Frame> frames);
+
+    // === OTP Operations ===
+
+    /// Encrypt plaintext using OTP (XOR with key)
+    [Throws=AshError]
+    sequence<u8> encrypt(sequence<u8> key, sequence<u8> plaintext);
+
+    /// Decrypt ciphertext using OTP (XOR with key)
+    [Throws=AshError]
+    sequence<u8> decrypt(sequence<u8> key, sequence<u8> ciphertext);
+
+    // === Mnemonic Operations ===
+
+    /// Generate 6-word mnemonic checksum from pad bytes
+    sequence<string> generate_mnemonic(sequence<u8> pad_bytes);
+
+    /// Generate mnemonic with custom word count
+    sequence<string> generate_mnemonic_with_count(sequence<u8> pad_bytes, u32 word_count);
+};
+
+/// Pad size options
+enum PadSize {
+    /// 64 KB - ~50 messages, ~1-2 min transfer
+    "Small",
+    /// 256 KB - ~200 messages, ~4-5 min transfer
+    "Medium",
+    /// 1 MB - ~800 messages, ~15-20 min transfer
+    "Large",
+};
+
+/// Error types for ASH operations
+[Error]
+enum AshError {
+    /// Not enough bytes remaining in pad
+    "InsufficientPadBytes",
+    /// Entropy size doesn't match expected pad size
+    "InvalidEntropySize",
+    /// Pad is fully consumed
+    "PadExhausted",
+    /// Key and data lengths don't match
+    "LengthMismatch",
+    /// Frame data is too short
+    "FrameTooShort",
+    /// CRC checksum failed
+    "CrcMismatch",
+    /// Frame index exceeds total count
+    "FrameIndexOutOfBounds",
+    /// Frames have inconsistent totals
+    "FrameCountMismatch",
+    /// Some frames are missing
+    "MissingFrames",
+    /// Duplicate frame index
+    "DuplicateFrame",
+    /// Payload cannot be empty
+    "EmptyPayload",
+    /// Payload exceeds maximum size
+    "PayloadTooLarge",
+    /// No frames provided
+    "NoFrames",
+    /// Total frame count is zero
+    "ZeroTotalFrames",
+};
+
+/// One-Time Pad with single-use consumption semantics
+interface Pad {
+    /// Create pad from entropy bytes
+    [Throws=AshError, Name=from_entropy]
+    constructor(sequence<u8> entropy, PadSize size);
+
+    /// Create pad from raw bytes (for reconstruction)
+    [Name=from_bytes]
+    constructor(sequence<u8> bytes);
+
+    /// Consume next n bytes from pad
+    [Throws=AshError]
+    sequence<u8> consume(u32 n);
+
+    /// Get remaining bytes count
+    u64 remaining();
+
+    /// Get total pad size
+    u64 total_size();
+
+    /// Get consumed bytes count
+    u64 consumed();
+
+    /// Check if pad is exhausted
+    boolean is_exhausted();
+
+    /// Get raw bytes for ceremony transfer
+    sequence<u8> as_bytes();
+};
+
+/// Frame for QR code transfer
+interface Frame {
+    /// Create a new frame
+    [Throws=AshError]
+    constructor(u16 index, u16 total, sequence<u8> payload);
+
+    /// Encode frame to bytes
+    sequence<u8> encode();
+
+    /// Decode frame from bytes
+    [Throws=AshError, Name=decode]
+    constructor(sequence<u8> bytes);
+
+    /// Get frame index
+    u16 get_index();
+
+    /// Get total frame count
+    u16 get_total();
+
+    /// Get payload bytes
+    sequence<u8> get_payload();
+};

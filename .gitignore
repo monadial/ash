@@ -4,6 +4,13 @@
 **/*.rs.bk
 Cargo.lock
 !core/Cargo.lock
+!bindings/Cargo.lock
+
+# ===== Generated iOS artifacts =====
+apps/ios/AshCore/lib/
+apps/ios/AshCore/headers/
+apps/ios/AshCore/*.xcframework/
+apps/ios/AshCore/.swiftpm/
 
 # ===== iOS / Swift =====
 *.xcodeproj/xcuserdata/

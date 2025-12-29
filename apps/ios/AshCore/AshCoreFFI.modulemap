@@ -1,0 +1,4 @@
+module AshCoreFFI {
+    header "AshCoreFFI.h"
+    export *
+}

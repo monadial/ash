@@ -1,0 +1,293 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout title="Security Model" description="Explicit threat model, security guarantees, and limitations of the ASH protocol.">
+  <!-- Title Block -->
+  <header class="mb-8">
+    <h1 class="paper-title">
+      Security Model
+    </h1>
+    <p class="paper-subtitle">
+      Threat model, guarantees, and limitations
+    </p>
+  </header>
+
+  <!-- Introduction -->
+  <section>
+    <p>
+      This document describes the security properties of the ASH protocol.
+      ASH is designed to reduce risk, not eliminate it. Understanding what
+      ASH protects against—and what it does not—is essential for appropriate use.
+    </p>
+
+    <div class="abstract">
+      <div class="abstract-title">Design Philosophy</div>
+      <p class="mb-0">
+        ASH assumes that humans make mistakes, software is fallible, and infrastructure
+        should not be trusted. Security properties must be understandable by users,
+        not hidden in cryptographic black boxes. The system favors explicit user
+        actions over automatic background operations.
+      </p>
+    </div>
+  </section>
+
+  <!-- Threat Model -->
+  <section>
+    <h2 id="threat-model" class="section-heading">1. Threat Model</h2>
+
+    <p>
+      ASH is designed to protect against the following adversaries:
+    </p>
+
+    <h3 class="subsection-heading">1.1 Network Observers</h3>
+    <p>
+      An adversary who can observe, record, and analyze all network traffic between
+      clients and the relay server. This includes ISPs, nation-state surveillance
+      programs, and compromised network infrastructure.
+    </p>
+    <p>
+      <strong>Protection:</strong> All message content is encrypted with OTP before
+      transmission. Network observers see only encrypted blobs and metadata (timing,
+      message sizes).
+    </p>
+
+    <h3 class="subsection-heading">1.2 Compromised Relay Server</h3>
+    <p>
+      An adversary who has complete control of the relay server, including access
+      to all stored data, logs, and the ability to modify server behavior.
+    </p>
+    <p>
+      <strong>Protection:</strong> The relay never possesses key material. Compromise
+      reveals only encrypted blobs, conversation identifiers, and timing metadata.
+      The relay cannot decrypt messages or forge valid encrypted content.
+    </p>
+
+    <h3 class="subsection-heading">1.3 Future Cryptanalysis</h3>
+    <p>
+      Adversaries with access to quantum computers or future mathematical breakthroughs
+      that render current computational cryptography insecure.
+    </p>
+    <p>
+      <strong>Protection:</strong> OTP provides information-theoretic security.
+      Perfect secrecy is proven mathematically, not assumed based on computational
+      hardness. No future advances in computing can break OTP-encrypted messages.
+    </p>
+  </section>
+
+  <!-- Security Guarantees -->
+  <section>
+    <h2 id="guarantees" class="section-heading">2. Security Guarantees</h2>
+
+    <p>
+      When used correctly, ASH provides the following security properties:
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Perfect Secrecy</td>
+          <td>Ciphertext reveals no information about plaintext without the pad</td>
+        </tr>
+        <tr>
+          <td>Forward Secrecy</td>
+          <td>Compromise after message sent cannot reveal that message's content</td>
+        </tr>
+        <tr>
+          <td>Future Secrecy</td>
+          <td>No computational advances can break past encrypted messages</td>
+        </tr>
+        <tr>
+          <td>Pad Non-Reuse</td>
+          <td>Core library enforces strict single-use semantics for all pad bytes</td>
+        </tr>
+        <tr>
+          <td>Integrity Detection</td>
+          <td>Frame checksums detect accidental corruption during transfer</td>
+        </tr>
+        <tr>
+          <td>Human Verification</td>
+          <td>Mnemonic checksums allow users to verify ceremony success verbally</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Non-Guarantees -->
+  <section>
+    <h2 id="non-guarantees" class="section-heading">3. Non-Guarantees</h2>
+
+    <p>
+      ASH explicitly does not protect against the following threats. These
+      limitations are intentional design decisions, not implementation flaws.
+    </p>
+
+    <h3 class="subsection-heading">3.1 Compromised Device</h3>
+    <p>
+      If the user's device is compromised by malware, the operating system, or
+      hardware-level attacks, ASH cannot provide protection. A compromised device
+      can read messages before encryption or after decryption, capture screen
+      contents, or exfiltrate the pad.
+    </p>
+
+    <h3 class="subsection-heading">3.2 Malicious Participant</h3>
+    <p>
+      If the person you are communicating with intends to betray you, they can
+      screenshot messages, record conversations, or share content with third
+      parties. ASH requires trust between participants.
+    </p>
+
+    <h3 class="subsection-heading">3.3 Visual Observation</h3>
+    <p>
+      If an adversary can observe the QR codes during the ceremony (through
+      cameras, mirrors, or direct observation), they can capture the pad.
+      The ceremony must be performed in a location where visual observation
+      is not possible.
+    </p>
+
+    <h3 class="subsection-heading">3.4 Forensic Analysis</h3>
+    <p>
+      ASH performs best-effort memory wiping using volatile writes, but cannot
+      guarantee forensic irrecoverability. Physical device seizure may allow
+      recovery of data through advanced forensic techniques.
+    </p>
+
+    <h3 class="subsection-heading">3.5 Traffic Analysis</h3>
+    <p>
+      ASH does not provide anonymity or hide network metadata. Adversaries can
+      determine that ASH is being used, observe communication timing patterns,
+      and correlate activity between users based on timing.
+    </p>
+
+    <h3 class="subsection-heading">3.6 Coercion</h3>
+    <p>
+      While the pad exists, users can be compelled to decrypt messages. ASH
+      provides no deniability features. The burn function destroys data but
+      cannot be performed if the device is seized.
+    </p>
+  </section>
+
+  <!-- Trust Boundaries -->
+  <section>
+    <h2 id="trust-boundaries" class="section-heading">4. Trust Boundaries</h2>
+
+    <p>
+      ASH defines explicit trust levels for each component:
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Trust Level</th>
+          <th>Rationale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Core Library</td>
+          <td>Trusted</td>
+          <td>Cryptographic authority; small, auditable, zero dependencies</td>
+        </tr>
+        <tr>
+          <td>Mobile Application</td>
+          <td>Partial</td>
+          <td>Orchestration only; cannot modify cryptographic operations</td>
+        </tr>
+        <tr>
+          <td>Relay Server</td>
+          <td>Untrusted</td>
+          <td>Never sees plaintext or key material; assumed compromised</td>
+        </tr>
+        <tr>
+          <td>Network</td>
+          <td>Untrusted</td>
+          <td>Assumed hostile; all traffic is OTP-encrypted</td>
+        </tr>
+        <tr>
+          <td>Operating System</td>
+          <td>Trusted</td>
+          <td>Must trust OS for entropy, memory protection, secure storage</td>
+        </tr>
+        <tr>
+          <td>Conversation Partner</td>
+          <td>User Decision</td>
+          <td>ASH cannot protect against malicious participants</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- User Responsibilities -->
+  <section>
+    <h2 id="responsibilities" class="section-heading">5. User Responsibilities</h2>
+
+    <p>
+      Security in ASH is a shared responsibility. Users must:
+    </p>
+
+    <ol>
+      <li>
+        <strong>Perform the ceremony carefully.</strong> Do not rush. Scan all
+        frames. Verify the mnemonic checksum verbally with your partner.
+      </li>
+      <li>
+        <strong>Choose a private location.</strong> The ceremony must be performed
+        where visual observation is not possible—no cameras, mirrors, or observers.
+      </li>
+      <li>
+        <strong>Trust your conversation partner.</strong> ASH cannot prevent
+        screenshots or betrayal. Only communicate with people you trust.
+      </li>
+      <li>
+        <strong>Maintain device security.</strong> Keep your device updated,
+        avoid installing untrusted software, and use device encryption.
+      </li>
+      <li>
+        <strong>Understand the limitations.</strong> Read this document. Know
+        what ASH protects against and what it does not.
+      </li>
+    </ol>
+  </section>
+
+  <!-- Implementation Notes -->
+  <section>
+    <h2 id="implementation" class="section-heading">6. Implementation Notes</h2>
+
+    <h3 class="subsection-heading">6.1 Entropy Sources</h3>
+    <p>
+      Pad generation combines OS-provided cryptographic randomness with user
+      gesture entropy. This defense-in-depth approach ensures that compromise
+      of either source alone does not compromise pad randomness.
+    </p>
+
+    <h3 class="subsection-heading">6.2 Memory Protection</h3>
+    <p>
+      Sensitive data (pads, plaintext) is zeroed after use using volatile writes
+      that prevent compiler optimization from removing the wiping operations.
+      However, this does not guarantee forensic irrecoverability.
+    </p>
+
+    <h3 class="subsection-heading">6.3 Supply Chain</h3>
+    <p>
+      The core library has zero external dependencies to minimize supply chain
+      attack surface. All cryptographic primitives are implemented directly:
+      CRC-32, XOR encryption, and secure zeroing.
+    </p>
+  </section>
+
+  <!-- Footnote -->
+  <div class="footnote">
+    <p>
+      For security-critical deployments, conduct independent security audits
+      of the implementation. This document describes design intent; actual
+      security depends on correct implementation.
+    </p>
+  </div>
+</Layout>

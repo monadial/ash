@@ -23,6 +23,130 @@ Persistence is the exception, not the default.
 
 ---
 
+## Message Mode: Ephemeral Only
+
+ASH has a **single message mode**: ephemeral.
+
+There is no "persistent" mode. This is intentional:
+- Simplicity reduces attack surface
+- High-security users shouldn't want message history
+- If you need history, ASH is not the right tool
+
+### Server TTL (Configurable)
+
+Message TTL on the server is **configurable during ceremony**:
+
+| Setting | Default | Range | Notes |
+|---------|---------|-------|-------|
+| Message TTL | 5 minutes | 5 min – 7 days | Set during ceremony |
+| Burn flag TTL | 5 minutes | Fixed | Allows late clients to learn of burn |
+| Device token TTL | 24 hours | Fixed | Must re-register periodically |
+| Auth tokens | Until restart | N/A | Lost on server restart |
+
+**TTL options (configured at ceremony):**
+
+| Option | Duration | Use Case |
+|--------|----------|----------|
+| 5 minutes | 300s | Maximum ephemerality (default) |
+| 1 hour | 3,600s | Short conversations |
+| 24 hours | 86,400s | Async communication |
+| 7 days | 604,800s | Maximum (for busy schedules) |
+
+**Important warnings:**
+- Server restart = all unread messages AND auth tokens lost
+- Messages not ACKed within TTL are deleted
+- Clients must re-register after server restart
+
+### Server Restart Handling
+
+When the server restarts, **all RAM data is lost**:
+
+| Data | Effect | Client Action |
+|------|--------|---------------|
+| Unread messages | Lost permanently | User is warned at ceremony |
+| Auth token hashes | Lost | Must re-register conversation |
+| Burn token hashes | Lost | Must re-register conversation |
+| Device tokens | Lost | Must re-register device |
+| Burn flags | Lost | Conversation appears active |
+
+**Re-registration flow:**
+
+```
+Client                          Server (after restart)
+  │                                    │
+  │  POST /v1/messages                 │
+  │  Authorization: Bearer <auth_token>│
+  ├───────────────────────────────────►│
+  │◄─── 404 NOT_FOUND ─────────────────│
+  │     {"error": "Conversation not registered",
+  │      "code": "CONVERSATION_NOT_FOUND"}│
+  │                                    │
+  │  ┌─────────────────────────────────┤
+  │  │ Step 1: Re-register conversation│
+  │  └─────────────────────────────────┤
+  │  POST /v1/conversations            │
+  │  {                                 │
+  │    "conversation_id": "...",       │
+  │    "auth_token_hash": "sha256(auth_token)",
+  │    "burn_token_hash": "sha256(burn_token)"
+  │  }                                 │
+  ├───────────────────────────────────►│
+  │◄─── 200 OK ────────────────────────│
+  │                                    │
+  │  ┌─────────────────────────────────┤
+  │  │ Step 2: Re-register device      │
+  │  └─────────────────────────────────┤
+  │  POST /v1/register                 │
+  │  Authorization: Bearer <auth_token>│
+  │  {                                 │
+  │    "conversation_id": "...",       │
+  │    "device_token": "<apns_token>", │
+  │    "platform": "ios"               │
+  │  }                                 │
+  ├───────────────────────────────────►│
+  │◄─── 200 OK ────────────────────────│
+  │                                    │
+  │  (retry original request)          │
+  │                                    │
+```
+
+**What gets re-registered:**
+
+| Endpoint | Data | Purpose |
+|----------|------|---------|
+| `POST /v1/conversations` | auth_token_hash, burn_token_hash | API authentication + burn capability |
+| `POST /v1/register` | device_token, platform | Push notifications (APNS) |
+
+**Client responsibilities:**
+- Detect "conversation not found" errors (HTTP 404)
+- Re-register conversation with **both** auth and burn token hashes
+- Re-register device for push notifications
+- Retry failed requests after re-registration
+- Can re-register proactively on app launch (idempotent)
+
+**Why no persistence?**
+- Auth token hashes could be persisted to disk
+- Intentionally not done for maximum security
+- Server restart = clean slate
+- Acceptable tradeoff for high-security use case
+
+---
+
+### Disappearing Messages (Client-side)
+
+Separate from server TTL, clients can configure how long messages display on screen:
+
+| Option | Duration | Effect |
+|--------|----------|--------|
+| Off | 0 | Messages visible until app closes |
+| 30 seconds | 30s | Message disappears after viewing |
+| 1 minute | 60s | Message disappears after viewing |
+| 5 minutes | 300s | Message disappears after viewing |
+
+This is configured during ceremony and stored in ceremony metadata.
+
+---
+
 ## Data categories
 
 ASH handles a small number of clearly defined data categories:
@@ -169,33 +293,59 @@ Ciphertext produced by OTP encryption.
 - Held briefly in memory
 - Sent to backend
 - Discarded after successful send
+- **Wiped when app closes** (no local persistence)
 
 ---
 
-### Lifecycle (Backend)
-- Stored ephemerally
+### Lifecycle (Backend) - RAM Only
+
+```
+Message arrives → stored in RAM → held until ACK or TTL
+                                         │
+                    ┌────────────────────┼────────────────────┐
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+              Client ACK           TTL expires         Server restart
+            (msg displayed)        (5 min)
+                    │                    │                    │
+                    ▼                    ▼                    ▼
+               DELETE              DELETE                 LOST
+         + delivery report
+           via SSE
+```
+
+**Key behaviors:**
+- Stored in RAM only (no disk persistence)
 - Associated with conversation ID
-- TTL-limited
-- Deleted automatically on expiry or burn
+- Deleted immediately when client ACKs (message displayed)
+- Fallback: 5-minute TTL if no ACK received
+- Real-time delivery via SSE to connected clients
+- Delivery reports broadcast to sender when ACK received
+- Polling fallback for disconnected clients
+- **Server restart = all unread messages lost** (users warned at ceremony)
+- Background cleanup runs every 10 seconds
 
 ---
 
 ### Storage limits
 - Size-limited per blob
 - Count-limited per conversation
+- Limited by server RAM
 
 ---
 
-### Destruction
-- Automatic TTL expiry
-- Immediate deletion on burn
+### Destruction triggers
+1. **Client ACK** - message displayed on recipient's screen (immediate deletion + delivery report)
+2. **TTL expiry** - message stored for 5 minutes without ACK (automatic cleanup)
+3. **Burn signal** - conversation burned (immediate deletion of all messages)
+4. **Server restart** - all RAM cleared (data lost)
 
 ---
 
 ### Notes
 Encrypted blobs:
 - may be duplicated
-- may be lost
+- may be lost (especially on server restart)
 - may arrive out of order
 Clients must tolerate this.
 

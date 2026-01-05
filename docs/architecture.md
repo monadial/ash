@@ -78,11 +78,15 @@ The shared core is responsible for:
 
 - One-Time Pad (OTP) creation and management
 - Enforcing strict pad single-use semantics
+- Bidirectional pad consumption (Initiator from start, Responder from end)
 - OTP encryption and decryption
 - Ceremony rules (chunk sizing, ordering, invariants)
-- Frame encoding and decoding
-- Frame integrity validation
-- Mnemonic checksum generation
+- Ceremony metadata encoding/decoding
+- Frame encoding and decoding (basic and extended formats)
+- Frame integrity validation (CRC-32)
+- Optional passphrase-based frame encryption
+- Authorization token derivation (conversation ID, auth token, burn token)
+- Mnemonic checksum generation (6 words, 512-word custom wordlist)
 - Deterministic behavior across platforms
 - Best-effort memory wiping
 
@@ -223,14 +227,15 @@ It is:
 
 1. Sender gathers entropy
 2. Sender constructs pad
-3. Pad is chunked into frames
+3. Pad is chunked into frames (with ceremony metadata in frame 0)
 4. Frames are encoded and displayed as QR codes
 5. Receiver scans frames
 6. Frames are decoded and validated
 7. Pad is reconstructed
 8. Both devices compute mnemonic checksum
 9. Users visually verify checksum
-10. Conversation becomes active
+10. Authorization tokens are derived from pad bytes
+11. Conversation becomes active
 
 ---
 
@@ -254,32 +259,151 @@ There is **no key negotiation** after the ceremony.
 
 ---
 
+### Bidirectional Pad Consumption
+
+ASH uses a **bidirectional pad consumption** model to allow both parties to send messages independently:
+
+```
+Pad: [████████████████████████████████████████]
+      ↑                                      ↑
+      Initiator consumes →        ← Responder consumes
+```
+
+- **Initiator** (ceremony creator): Consumes bytes from the **start** of the pad
+- **Responder** (ceremony scanner): Consumes bytes from the **end** of the pad
+
+This design ensures:
+- No coordination needed between parties
+- Both can send messages simultaneously
+- Pad bytes never overlap (until exhaustion)
+
+---
+
 ### Sending a message
 
 1. User composes message
-2. App requests pad slice from `ash-core`
-3. Message is OTP-encrypted
-4. Pad bytes are consumed
+2. App requests pad slice from `ash-core` using their role (Initiator/Responder)
+3. Message is OTP-encrypted with consumed pad bytes
+4. Pad cursor advances (front for Initiator, back for Responder)
 5. Encrypted blob is sent to backend
 
 ---
 
 ### Receiving a message
 
-1. Encrypted blob is received
-2. App requests pad slice from `ash-core`
-3. Blob is OTP-decrypted
+1. Encrypted blob is received (via SSE or polling)
+2. App requests pad slice from `ash-core` using the **sender's** role
+3. Blob is OTP-decrypted using the same pad bytes
 4. Plaintext is displayed briefly
 5. Plaintext is discarded
 
 ---
 
-### Message lifecycle
+### Real-time delivery via SSE
 
+ASH uses **Server-Sent Events (SSE)** for real-time message delivery:
+
+```
+Alice                         Server                           Bob
+  │                              │                              │
+  │  Submit message              │                              │
+  ├─────────────────────────────►│  (store in RAM, start TTL)   │
+  │◄── blob_id ──────────────────│                              │
+  │                              │                              │
+  │                              │  SSE: {"type":"message",...} │
+  │                              │─────────────────────────────►│
+  │                              │                     (decrypt) │
+  │                              │                    (display)  │
+```
+
+**SSE event types:**
+- `message` - New encrypted message blob received
+- `delivered` - Message was displayed by recipient (delivery report)
+- `burned` - Conversation has been burned
+- `ping` - Keep-alive (every 15 seconds)
+
+**Connection:**
+- Endpoint: `GET /v1/messages/stream?conversation_id=...`
+- Requires auth token in `Authorization` header
+- Long-lived connection with automatic reconnection
+
+**Fallback:**
+- Polling via `GET /v1/messages` when SSE unavailable
+- Push notifications (APNS) wake app when backgrounded
+
+---
+
+### Message lifecycle (ephemeral only)
+
+ASH has a single messaging mode: **ephemeral**.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     CLIENT MESSAGE LIFECYCLE                     │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Message received → displayed on screen → ACK sent to server   │
+│                                                                  │
+│   App closed = all messages wiped from client                    │
+│                                                                  │
+│   No local persistence. No message history.                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Rules:
 - Plaintext exists only in memory
-- Display duration is limited
-- Messages are removed automatically
+- Messages visible only while app is open
+- **Close app = messages gone forever**
 - Burn action wipes all remaining state
+- No "persistent" mode - simplicity over convenience
+
+---
+
+## Authorization Token Architecture
+
+### Purpose
+
+Authorization tokens enable API authentication without accounts or identity.
+Both parties derive the same tokens from the shared pad, allowing the relay
+to verify requests without knowing who is making them.
+
+---
+
+### Token Types
+
+| Token | Pad Bytes | Purpose |
+|-------|-----------|---------|
+| Conversation ID | 0-31 | Identifies the conversation on the relay |
+| Auth Token | 32-95 | Authenticates API requests (messages, polling) |
+| Burn Token | 96-159 | Required specifically for burn operations |
+
+---
+
+### Derivation Process
+
+Tokens are derived by:
+1. Extracting specific byte ranges from the pad
+2. XOR-folding to 32-byte output
+3. Applying domain separation constant
+4. Multiple mixing rounds for diffusion
+5. Encoding as 64-character lowercase hex string
+
+---
+
+### Security Properties
+
+- **Deterministic**: Same pad produces same tokens on both devices
+- **Unpredictable**: Without pad, tokens cannot be computed or forged
+- **Separated**: Different tokens for different operations (defense in depth)
+- **Backend-safe**: Backend stores only hash(token), can verify but not forge
+
+---
+
+### Minimum Requirements
+
+Token derivation requires at least 160 bytes of pad data.
+All standard pad sizes (32 KB+) exceed this minimum.
 
 ---
 
@@ -287,9 +411,96 @@ There is **no key negotiation** after the ceremony.
 
 ### Purpose
 
-The backend is a **stateless or ephemeral relay**.
+The backend is a **stateless RAM-only relay**.
 
 It is intentionally simple and untrusted.
+
+---
+
+### Storage Model
+
+**RAM only** - all message data is stored in memory:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      SERVER (RAM ONLY)                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Messages held until:                                           │
+│   - Client ACK (message displayed) → immediate delete            │
+│   - TTL expires (unread) → automatic delete                      │
+│   - Server restart → ALL messages lost                           │
+│                                                                  │
+│   ⚠️ Users are warned: server restart = unread messages lost    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Why RAM only:**
+- No disk forensics possible
+- No data at rest
+- Truly ephemeral
+- Simpler implementation
+
+**Accepted tradeoff:**
+- Server crash/restart loses unread messages
+- For high-security, low-frequency use case, this is acceptable
+
+---
+
+### Message Flow (SSE with ACK)
+
+```
+Alice                         Server (RAM)                    Bob
+  │                              │                              │
+  │                              │◄─── SSE connect ─────────────│
+  │                              │                              │
+  │  POST /v1/messages           │                              │
+  ├─────────────────────────────►│  (store, start TTL)          │
+  │◄── {blob_id} ────────────────│                              │
+  │                              │                              │
+  │                              │───── SSE: message ──────────►│
+  │                              │                     (decrypt) │
+  │                              │                    (display)  │
+  │                              │◄─── POST /v1/ack ────────────│
+  │                              │     {blob_id}                 │
+  │◄── SSE: delivered ───────────│  (delete from RAM)           │
+  │     {blob_id}                │                              │
+```
+
+### Message Flow (Polling fallback with ACK)
+
+```
+Alice                         Server (RAM)                    Bob
+  │                              │                              │
+  │  POST /v1/messages           │                              │
+  ├─────────────────────────────►│  (store, start TTL)          │
+  │◄── {blob_id} ────────────────│                              │
+  │                              │────── push notification ────►│
+  │                              │                              │
+  │                              │         Bob opens app        │
+  │                              │◄─── GET /v1/messages ────────│
+  │                              │───── [messages] ────────────►│
+  │                              │                     (decrypt) │
+  │                              │                    (display)  │
+  │                              │◄─── POST /v1/ack ────────────│
+  │◄── SSE: delivered ───────────│  (delete from RAM)           │
+```
+
+### ACK and Delivery Reports
+
+When a recipient displays a message, their client sends an **ACK** to the server:
+
+1. **ACK Request**: `POST /v1/ack` with `blob_id`
+2. **Immediate Deletion**: Server deletes message from RAM
+3. **Delivery Report**: Server broadcasts `delivered` event via SSE to sender
+4. **Sender Notification**: Sender's UI can show delivery confirmation
+
+**ACK behavior:**
+- ACK is sent when message is **displayed**, not just received
+- Messages without ACK are deleted after TTL expiry (5 minutes)
+- ACK is idempotent (safe to retry)
+- Delivery report is best-effort (sender may be offline)
 
 ---
 
@@ -297,8 +508,9 @@ It is intentionally simple and untrusted.
 
 The backend is responsible for:
 
-- Accepting encrypted message blobs
-- Temporarily storing encrypted blobs
+- Accepting encrypted message blobs (store in RAM)
+- Holding messages until ACK or TTL expiry
+- Notifying sender when recipient ACKs ("delivered")
 - Relaying encrypted blobs to recipients
 - Propagating burn signals
 - Sending silent push notifications (APNS)
@@ -310,6 +522,7 @@ The backend is responsible for:
 
 The backend must never:
 
+- persist messages to disk
 - decrypt messages
 - inspect payload contents
 - identify users

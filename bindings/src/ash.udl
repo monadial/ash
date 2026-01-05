@@ -1,16 +1,22 @@
 // ASH Core FFI Interface Definition
 // This file defines the public API exposed to Swift
+//
+// Fountain code based QR transfer for reliable ceremony.
 
 namespace ash {
-    // === Frame Operations ===
+    // === Fountain Ceremony Operations ===
 
-    /// Create frames from pad bytes for QR transfer
+    /// Create a fountain frame generator for ceremony QR display.
+    ///
+    /// This is the main entry point for initiators. The generator produces
+    /// unlimited encoded blocks that can be displayed as QR codes.
     [Throws=AshError]
-    sequence<Frame> create_frames(sequence<u8> pad_bytes, u32 max_payload);
-
-    /// Reconstruct pad from received frames
-    [Throws=AshError]
-    sequence<u8> reconstruct_pad(sequence<Frame> frames);
+    FountainFrameGenerator create_fountain_generator(
+        CeremonyMetadata metadata,
+        sequence<u8> pad_bytes,
+        u32 block_size,
+        string? passphrase
+    );
 
     // === OTP Operations ===
 
@@ -29,16 +35,63 @@ namespace ash {
 
     /// Generate mnemonic with custom word count
     sequence<string> generate_mnemonic_with_count(sequence<u8> pad_bytes, u32 word_count);
+
+    // === Passphrase Validation ===
+
+    /// Validate passphrase meets requirements (4-64 printable ASCII chars)
+    boolean validate_passphrase(string passphrase);
+
+    /// Get minimum passphrase length
+    u32 get_min_passphrase_length();
+
+    /// Get maximum passphrase length
+    u32 get_max_passphrase_length();
+
+    // === Authorization Token Operations ===
+
+    /// Derive conversation ID from pad bytes (hex-encoded, 64 chars)
+    [Throws=AshError]
+    string derive_conversation_id(sequence<u8> pad_bytes);
+
+    /// Derive auth token from pad bytes (hex-encoded, 64 chars)
+    /// Used for API authentication (messages, polling, registration)
+    [Throws=AshError]
+    string derive_auth_token(sequence<u8> pad_bytes);
+
+    /// Derive burn token from pad bytes (hex-encoded, 64 chars)
+    /// Used specifically for burn operations (defense in depth)
+    [Throws=AshError]
+    string derive_burn_token(sequence<u8> pad_bytes);
+
+    /// Derive all tokens at once (conversation_id, auth_token, burn_token)
+    [Throws=AshError]
+    AuthTokens derive_all_tokens(sequence<u8> pad_bytes);
 };
 
 /// Pad size options
 enum PadSize {
-    /// 64 KB - ~50 messages, ~1-2 min transfer
+    /// 32 KB - ~25 messages, ~25 QR frames
+    "Tiny",
+    /// 64 KB - ~50 messages, ~45 QR frames
     "Small",
-    /// 256 KB - ~200 messages, ~4-5 min transfer
+    /// 256 KB - ~200 messages, ~177 QR frames
     "Medium",
-    /// 1 MB - ~800 messages, ~15-20 min transfer
+    /// 512 KB - ~400 messages, ~353 QR frames
     "Large",
+    /// 1 MB - ~800 messages, ~705 QR frames
+    "Huge",
+};
+
+/// Role in the conversation, determining pad consumption direction.
+///
+/// The role is established during the ceremony:
+/// - Initiator: The person who creates the ceremony (displays QR codes)
+/// - Responder: The person who scans the ceremony QR codes
+enum Role {
+    /// Initiator consumes from the start of the pad
+    "Initiator",
+    /// Responder consumes from the end of the pad
+    "Responder",
 };
 
 /// Error types for ASH operations
@@ -48,33 +101,66 @@ enum AshError {
     "InsufficientPadBytes",
     /// Entropy size doesn't match expected pad size
     "InvalidEntropySize",
-    /// Pad is fully consumed
-    "PadExhausted",
     /// Key and data lengths don't match
     "LengthMismatch",
-    /// Frame data is too short
-    "FrameTooShort",
     /// CRC checksum failed
     "CrcMismatch",
-    /// Frame index exceeds total count
-    "FrameIndexOutOfBounds",
-    /// Frames have inconsistent totals
-    "FrameCountMismatch",
-    /// Some frames are missing
-    "MissingFrames",
-    /// Duplicate frame index
-    "DuplicateFrame",
     /// Payload cannot be empty
     "EmptyPayload",
-    /// Payload exceeds maximum size
-    "PayloadTooLarge",
-    /// No frames provided
-    "NoFrames",
-    /// Total frame count is zero
-    "ZeroTotalFrames",
+    /// Fountain block is too short
+    "FountainBlockTooShort",
+    /// Metadata frame is too short
+    "MetadataTooShort",
+    /// Unsupported metadata version
+    "UnsupportedMetadataVersion",
+    /// Metadata URL is too long
+    "MetadataUrlTooLong",
+    /// Invalid UTF-8 in metadata URL
+    "InvalidMetadataUrl",
+    /// Pad is too small to derive authorization tokens
+    "PadTooSmallForTokens",
 };
 
-/// One-Time Pad with single-use consumption semantics
+/// Ceremony metadata transferred via QR frame 0
+/// Contains settings agreed upon during ceremony
+dictionary CeremonyMetadata {
+    /// Protocol version (always 1)
+    u8 version;
+    /// Message TTL in seconds (default 300 = 5 minutes)
+    u64 ttl_seconds;
+    /// Disappearing messages timeout in seconds (0 = off)
+    u32 disappearing_messages_seconds;
+    /// Relay server URL
+    string relay_url;
+};
+
+/// Authorization tokens derived from pad during ceremony
+dictionary AuthTokens {
+    /// Conversation ID (hex-encoded, 64 chars)
+    string conversation_id;
+    /// Auth token for API operations (hex-encoded, 64 chars)
+    string auth_token;
+    /// Burn token for burn operations (hex-encoded, 64 chars)
+    string burn_token;
+};
+
+/// Result of fountain ceremony decoding
+dictionary FountainCeremonyResult {
+    /// Ceremony metadata (settings)
+    CeremonyMetadata metadata;
+    /// Reconstructed pad bytes
+    sequence<u8> pad;
+    /// Number of blocks used for decoding
+    u32 blocks_used;
+};
+
+/// One-Time Pad with bidirectional consumption semantics
+///
+/// The pad uses bidirectional consumption:
+/// - Initiator consumes from the start of the pad
+/// - Responder consumes from the end of the pad
+///
+/// This allows both parties to send messages without coordination.
 interface Pad {
     /// Create pad from entropy bytes
     [Throws=AshError, Name=from_entropy]
@@ -84,45 +170,114 @@ interface Pad {
     [Name=from_bytes]
     constructor(sequence<u8> bytes);
 
-    /// Consume next n bytes from pad
-    [Throws=AshError]
-    sequence<u8> consume(u32 n);
+    /// Create pad from raw bytes with pre-existing consumption state
+    /// Used when restoring a pad from persistent storage.
+    [Name=from_bytes_with_state]
+    constructor(sequence<u8> bytes, u64 consumed_front, u64 consumed_back);
 
-    /// Get remaining bytes count
+    /// Consume next n bytes from pad based on role
+    /// - Initiator consumes from the start (moving forward)
+    /// - Responder consumes from the end (moving backward)
+    [Throws=AshError]
+    sequence<u8> consume(u32 n, Role role);
+
+    /// Get remaining bytes count (available for either role)
     u64 remaining();
 
     /// Get total pad size
     u64 total_size();
 
-    /// Get consumed bytes count
+    /// Get total consumed bytes count (both directions)
     u64 consumed();
+
+    /// Get bytes consumed from start (by Initiator)
+    u64 consumed_front();
+
+    /// Get bytes consumed from end (by Responder)
+    u64 consumed_back();
 
     /// Check if pad is exhausted
     boolean is_exhausted();
 
     /// Get raw bytes for ceremony transfer
     sequence<u8> as_bytes();
+
+    /// Check if we can send a message of the given length (dynamic allocation)
+    boolean can_send(u32 length, Role role);
+
+    /// Get the number of bytes available for sending (dynamic allocation)
+    u64 available_for_sending(Role role);
+
+    /// Update peer's consumption based on a received message
+    void update_peer_consumption(Role peer_role, u64 new_consumed);
+
+    /// Get the offset for the next message we send
+    u64 next_send_offset(Role role);
 };
 
-/// Frame for QR code transfer
-interface Frame {
-    /// Create a new frame
+/// Fountain frame generator for QR display.
+///
+/// Generates unlimited encoded blocks from ceremony data. The display
+/// cycles through blocks until the receiver signals completion.
+///
+/// # Block Types
+///
+/// - Blocks 0..K: Source blocks (direct data, no encoding overhead)
+/// - Blocks K+: XOR blocks (combinations of two source blocks)
+interface FountainFrameGenerator {
+    /// Generate the next QR frame bytes.
+    ///
+    /// Can be called infinitely - generates new blocks each time.
+    /// Blocks cycle through source blocks first, then XOR blocks.
+    sequence<u8> next_frame();
+
+    /// Generate a specific block by index.
+    ///
+    /// Useful for regenerating specific blocks or random access.
+    /// Same index always produces same block (deterministic).
+    sequence<u8> generate_frame(u32 index);
+
+    /// Number of source blocks (minimum needed for decoding).
+    u32 source_count();
+
+    /// Block size in bytes.
+    u32 block_size();
+
+    /// Total data size being transferred (metadata + pad).
+    u32 total_size();
+};
+
+/// Fountain frame receiver for QR scanning.
+///
+/// Collects scanned blocks and tracks decoding progress.
+/// Can decode from ANY sufficient subset of blocks.
+interface FountainFrameReceiver {
+    /// Create a new receiver.
+    ///
+    /// If passphrase was used for encryption, same passphrase must be provided.
+    constructor(string? passphrase);
+
+    /// Add a scanned QR frame.
+    ///
+    /// Returns true if decoding is now complete, false if more blocks needed.
+    /// Duplicate blocks are safely ignored.
     [Throws=AshError]
-    constructor(u16 index, u16 total, sequence<u8> payload);
+    boolean add_frame(sequence<u8> frame_bytes);
 
-    /// Encode frame to bytes
-    sequence<u8> encode();
+    /// Check if decoding is complete.
+    boolean is_complete();
 
-    /// Decode frame from bytes
-    [Throws=AshError, Name=decode]
-    constructor(sequence<u8> bytes);
+    /// Get decoding progress (0.0 to 1.0).
+    f64 progress();
 
-    /// Get frame index
-    u16 get_index();
+    /// Number of blocks received (including duplicates).
+    u32 blocks_received();
 
-    /// Get total frame count
-    u16 get_total();
+    /// Number of source blocks needed for complete decoding.
+    /// Returns 0 before the first block is received.
+    u32 source_count();
 
-    /// Get payload bytes
-    sequence<u8> get_payload();
+    /// Get the decoded ceremony result.
+    /// Returns null if decoding is not complete.
+    FountainCeremonyResult? get_result();
 };

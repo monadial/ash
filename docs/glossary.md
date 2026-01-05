@@ -9,9 +9,30 @@ When reading ASH documentation or code, **these definitions apply**.
 
 ## A
 
+### ACK (Acknowledge)
+A signal sent by the recipient to confirm a message has been displayed.
+
+When the recipient's app displays a decrypted message, it sends an ACK to the server:
+- Server immediately deletes the message from RAM
+- Server broadcasts a **Delivery Report** to the sender via SSE
+- ACK is idempotent (safe to retry if network fails)
+
+ACK is sent on **display**, not just receipt. This ensures the message was actually seen.
+
+---
+
 ### ASH
-The project name.  
+The project name.
 A secure, ephemeral messaging system designed for high-security, low-frequency communication using One-Time Pad encryption and explicit human verification.
+
+---
+
+### Auth Token
+A 256-bit token derived deterministically from pad bytes during ceremony.
+
+Used to authenticate API requests to the relay server. Both parties compute the same token from the shared pad, enabling authorization without accounts or identity.
+
+Derived from bytes 32-95 of the pad with domain separation.
 
 ---
 
@@ -38,7 +59,7 @@ Blobs:
 ---
 
 ### Burn
-An explicit action that irreversibly destroys a conversation’s state.
+An explicit action that irreversibly destroys a conversation's state.
 
 A burn:
 - wipes remaining pad material
@@ -46,6 +67,15 @@ A burn:
 - propagates best-effort to the other participant
 
 Burn is final and non-recoverable.
+
+---
+
+### Burn Token
+A 256-bit token derived deterministically from pad bytes during ceremony.
+
+Used specifically for burn operations on the relay server. Separate from the auth token to provide defense-in-depth: knowing the auth token is not enough to burn a conversation.
+
+Derived from bytes 96-159 of the pad with domain separation.
 
 ---
 
@@ -61,6 +91,18 @@ The ceremony involves:
 - mnemonic verification
 
 A ceremony must be restarted entirely on failure.
+
+---
+
+### Ceremony Metadata
+Settings transferred alongside the pad during ceremony, encoded in frame 0.
+
+Contains:
+- Message TTL (how long messages wait on server)
+- Disappearing messages timeout (how long messages show on screen)
+- Relay server URL
+
+Metadata is encoded in extended frame format with the METADATA flag.
 
 ---
 
@@ -96,10 +138,37 @@ Does not encode identity.
 
 ## D
 
+### Delivery Report
+A notification sent to the message sender when the recipient has displayed (ACKed) their message.
+
+Delivered via SSE as:
+```json
+{"type": "delivered", "blob_id": "uuid", "delivered_at": "..."}
+```
+
+Properties:
+- Best-effort delivery (sender may be offline)
+- Confirms message was **displayed**, not just received
+- Triggered immediately when server receives ACK
+- Enables sender's UI to show read/delivered status
+
+---
+
 ### Deterministic
 A property meaning the same input always produces the same output.
 
 ASH requires deterministic behavior in cryptographic and framing logic to enable testing and verification.
+
+---
+
+### Disappearing Messages
+A client-side display timer that automatically removes messages from the screen after viewing.
+
+Configured during ceremony as part of ceremony metadata:
+- 0 = off (messages persist on screen until app closes)
+- Non-zero = seconds until message disappears from UI after viewing
+
+This is separate from server TTL and provides additional ephemerality.
 
 ---
 
@@ -133,8 +202,36 @@ A chunk of pad data encoded for transfer during the ceremony.
 
 Frames:
 - have fixed maximum size
-- include integrity checks
+- include integrity checks (CRC-32)
 - are transferred via QR codes
+
+---
+
+### Extended Frame
+An enhanced frame format used for ceremony transfers with additional features.
+
+Extended frames include:
+- Magic byte (`0xA5`) for format identification
+- Flags byte for encryption and metadata indicators
+- Larger maximum payload (1500 bytes vs 1000 for basic frames)
+- Support for optional passphrase encryption
+- Ceremony metadata in frame 0
+
+Backwards compatible with basic frame format.
+
+---
+
+## I
+
+### Initiator
+The person who creates and initiates a ceremony.
+
+The initiator:
+- Generates the One-Time Pad
+- Displays QR codes for transfer
+- Consumes pad bytes from the **start** when sending messages
+
+See also: **Responder**, **Role**
 
 ---
 
@@ -237,8 +334,35 @@ The shared random byte sequence used for OTP encryption.
 
 Pads:
 - are generated during the ceremony
-- are consumed sequentially
+- are consumed sequentially (bidirectionally)
 - must never be reused
+
+---
+
+### Pad Size
+The size of the One-Time Pad, selected during ceremony creation.
+
+Available sizes:
+- Tiny: 32 KB (~25 messages, ~37 frames)
+- Small: 64 KB (~50 messages, ~74 frames)
+- Medium: 256 KB (~200 messages, ~295 frames)
+- Large: 512 KB (~400 messages, ~590 frames)
+- Huge: 1 MB (~800 messages, ~1179 frames)
+
+Larger pads allow more messages but require longer ceremony transfer times.
+
+---
+
+### Passphrase (Ceremony)
+An optional verbally-shared secret used to encrypt QR frame payloads during ceremony.
+
+Properties:
+- 4-64 printable ASCII characters
+- XOR'd with derived key stream
+- Different key per frame index
+- Protects against casual visual observation
+
+**NOT** a replacement for performing the ceremony privately.
 
 ---
 
@@ -252,9 +376,35 @@ Used in ASH v1 instead of persistent connections.
 ## R
 
 ### Relay
-Another term for the backend’s role.
+Another term for the backend's role.
 
 A relay forwards data without understanding it.
+
+---
+
+### Responder
+The person who receives and scans a ceremony.
+
+The responder:
+- Scans QR codes from the initiator
+- Reconstructs the One-Time Pad
+- Consumes pad bytes from the **end** when sending messages
+
+See also: **Initiator**, **Role**
+
+---
+
+### Role
+The designation of a participant in a conversation as either **Initiator** or **Responder**.
+
+Roles determine:
+- Which direction pad bytes are consumed (start vs end)
+- Which party created the ceremony
+
+Roles are:
+- Assigned during the ceremony
+- Fixed for the lifetime of the conversation
+- Used for bidirectional pad consumption
 
 ---
 
@@ -273,11 +423,72 @@ It is:
 ### Silent Push Notification
 A push notification used only to wake the app, not to display content.
 
-Used by ASH to prompt polling.
+Used by ASH to prompt SSE connection or polling.
+
+---
+
+### SSE (Server-Sent Events)
+A web technology enabling real-time, unidirectional data streaming from server to client.
+
+In ASH, SSE is used for:
+- Real-time message delivery without polling
+- Burn event propagation
+- Keep-alive pings (every 15 seconds)
+
+Endpoint: `GET /v1/messages/stream?conversation_id=...`
+
+SSE is the primary delivery mechanism. Polling is the fallback when SSE is unavailable.
+
+---
+
+### Server TTL
+The duration messages are stored on the relay server before automatic deletion.
+
+In ASH v1:
+- **Configurable** during ceremony (5 minutes to 7 days)
+- Default: 5 minutes (maximum ephemerality)
+- Maximum: 7 days (604,800 seconds)
+- Messages deleted on ACK or TTL expiry, whichever comes first
+- Stored in ceremony metadata (frame 0)
+
+See also: **Disappearing Messages** (client-side display timer)
 
 ---
 
 ## T
+
+### Token Re-registration
+The process of re-registering a conversation's tokens after server restart.
+
+Since all server data is stored in RAM only:
+- Server restart = all auth data lost
+- Clients receive 404 "conversation not found" errors
+
+**Re-registration steps:**
+
+1. **Conversation tokens** - `POST /v1/conversations`
+   ```json
+   {
+     "conversation_id": "...",
+     "auth_token_hash": "sha256(auth_token)",
+     "burn_token_hash": "sha256(burn_token)"
+   }
+   ```
+
+2. **Device token** - `POST /v1/register`
+   ```json
+   {
+     "conversation_id": "...",
+     "device_token": "<apns_token>",
+     "platform": "ios"
+   }
+   ```
+
+Both endpoints are idempotent. Clients can re-register proactively on app launch.
+
+This is intentional: no persistent server state for maximum security.
+
+---
 
 ### TTL (Time To Live)
 A duration after which data is automatically deleted.

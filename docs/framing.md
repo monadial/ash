@@ -209,6 +209,76 @@ After all frames received:
 
 ---
 
+## Extended frame format (ceremony frames)
+
+For ceremony transfer, an extended format is used that includes metadata and optional encryption.
+
+### Extended frame structure
+
+```
++-------+-------+------------------+------------------+------------------+------------------+
+| Magic | Flags | Frame Index      | Total Frames     | Payload          | CRC-32           |
+| (1B)  | (1B)  | (2 bytes BE)     | (2 bytes BE)     | (1-1500 bytes)   | (4 bytes BE)     |
++-------+-------+------------------+------------------+------------------+------------------+
+```
+
+### Field definitions
+
+| Field | Size | Description |
+|-------|------|-------------|
+| Magic | 1 byte | `0xA5` identifies extended format |
+| Flags | 1 byte | Bit flags (see below) |
+| Frame Index | 2 bytes | Zero-based index (big-endian) |
+| Total Frames | 2 bytes | Total frames in sequence (big-endian) |
+| Payload | Variable | Frame data (max 1500 bytes) |
+| CRC | 4 bytes | CRC-32 of all preceding bytes (big-endian) |
+
+### Flags
+
+| Bit | Name | Description |
+|-----|------|-------------|
+| 0 | ENCRYPTED | Payload is XOR'd with passphrase-derived key |
+| 1 | METADATA | Frame 0 contains ceremony metadata, not pad data |
+| 2-7 | Reserved | Must be 0 |
+
+### Ceremony metadata (frame 0)
+
+When the METADATA flag is set, frame 0 contains ceremony settings:
+
+```
+[version: u8][ttl: u64 BE][disappearing: u32 BE][url_len: u16 BE][url: bytes]
+```
+
+| Field | Size | Description |
+|-------|------|-------------|
+| Version | 1 byte | Protocol version (always 1) |
+| TTL | 8 bytes | Server message TTL in seconds (configurable, see below) |
+| Disappearing | 4 bytes | Client display TTL in seconds (0 = off) |
+| URL Length | 2 bytes | Relay URL length in bytes |
+| URL | Variable | Relay server URL (UTF-8, max 256 bytes) |
+
+**TTL options (configured at ceremony):**
+
+| Option | Value | Use Case |
+|--------|-------|----------|
+| 5 minutes | 300 | Maximum ephemerality (default) |
+| 1 hour | 3,600 | Short conversations |
+| 24 hours | 86,400 | Async communication |
+| 7 days | 604,800 | Maximum allowed |
+
+### Ceremony frame structure
+
+A complete ceremony transfer consists of:
+- Frame 0: Ceremony metadata (with METADATA flag)
+- Frames 1-N: Pad data chunks
+
+### Backwards compatibility
+
+If the first byte is not `0xA5`, the frame is decoded as a basic frame.
+This allows interoperability with older implementations.
+
+---
+
 ## Future considerations (out of scope for v1)
 
 - Fountain codes for out-of-order scanning

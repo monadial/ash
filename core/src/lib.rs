@@ -3,7 +3,7 @@
 //! This library provides the cryptographic primitives for ASH:
 //! - One-Time Pad generation and consumption
 //! - OTP encryption/decryption
-//! - Frame encoding/decoding for QR transfer
+//! - Fountain code encoding for reliable QR transfer
 //! - Mnemonic checksum generation
 //!
 //! # Security Properties
@@ -23,48 +23,58 @@
 //! - Store data persistently
 //! - Log sensitive data
 //!
-//! # Example
+//! # Example: Complete Ceremony Flow
 //!
 //! ```
-//! use ash_core::{Pad, PadSize, Frame, otp, frame, mnemonic};
+//! use ash_core::{Pad, PadSize, Role, CeremonyMetadata, frame, otp, mnemonic};
 //!
-//! // === CEREMONY (Sender) ===
+//! // === CEREMONY (Initiator) ===
 //!
 //! // 1. Create pad from entropy (caller gathers entropy)
 //! let entropy = vec![0u8; PadSize::Small.bytes()];
-//! let pad = Pad::new(&entropy, PadSize::Small).unwrap();
+//! let initiator_pad = Pad::new(&entropy, PadSize::Small).unwrap();
 //!
-//! // 2. Create frames for QR transfer
-//! let frames = frame::create_frames(pad.as_bytes(), 1000).unwrap();
+//! // 2. Create fountain frames for QR transfer
+//! let metadata = CeremonyMetadata::default();
+//! let mut generator = frame::create_fountain_ceremony(
+//!     &metadata,
+//!     initiator_pad.as_bytes(),
+//!     256,
+//!     None, // Optional passphrase
+//! ).unwrap();
 //!
 //! // 3. Generate mnemonic for verification
-//! let sender_mnemonic = mnemonic::generate_default(pad.as_bytes());
+//! let initiator_mnemonic = mnemonic::generate_default(initiator_pad.as_bytes());
 //!
-//! // === CEREMONY (Receiver) ===
+//! // === CEREMONY (Responder) ===
 //!
-//! // 4. Decode received frames (from QR scans)
-//! let encoded: Vec<Vec<u8>> = frames.iter().map(|f| f.encode()).collect();
-//! let decoded: Vec<Frame> = encoded.iter()
-//!     .map(|b| Frame::decode(b).unwrap())
-//!     .collect();
+//! // 4. Receive fountain frames (from QR scans)
+//! let mut receiver = frame::FountainFrameReceiver::new(None);
+//! while !receiver.is_complete() {
+//!     let frame = generator.next_frame();
+//!     receiver.add_frame(&frame).unwrap();
+//! }
 //!
-//! // 5. Reconstruct pad
-//! let pad_bytes = frame::reconstruct_pad(&decoded).unwrap();
-//! let mut receiver_pad = Pad::from_bytes(pad_bytes.clone());
+//! // 5. Get decoded pad
+//! let result = receiver.get_result().unwrap();
+//! let mut responder_pad = Pad::from_bytes(result.pad.clone());
 //!
 //! // 6. Verify mnemonic matches
-//! let receiver_mnemonic = mnemonic::generate_default(&pad_bytes);
-//! assert_eq!(sender_mnemonic, receiver_mnemonic);
+//! let responder_mnemonic = mnemonic::generate_default(&result.pad);
+//! assert_eq!(initiator_mnemonic, responder_mnemonic);
 //!
 //! // === MESSAGING ===
 //!
-//! // Encrypt a message
+//! // Responder sends a message (consumes from end)
 //! let plaintext = b"Hello, secure world!";
-//! let key = receiver_pad.consume(plaintext.len()).unwrap();
+//! let key = responder_pad.consume(plaintext.len(), Role::Responder).unwrap();
 //! let ciphertext = otp::encrypt(&key, plaintext).unwrap();
 //!
-//! // Decrypt a message (on sender side with their pad)
-//! // let decrypted = otp::decrypt(&key, &ciphertext).unwrap();
+//! // Initiator decrypts (using Responder role to get same bytes)
+//! let mut initiator = Pad::from_bytes(initiator_pad.as_bytes().to_vec());
+//! let decrypt_key = initiator.consume(ciphertext.len(), Role::Responder).unwrap();
+//! let decrypted = otp::decrypt(&decrypt_key, &ciphertext).unwrap();
+//! assert_eq!(decrypted, plaintext);
 //! ```
 
 // Note: unsafe is used ONLY in pad.rs for secure memory zeroing via write_volatile.
@@ -72,18 +82,27 @@
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 
+pub mod auth;
+pub mod ceremony;
 pub mod crc;
 pub mod error;
+pub mod fountain;
 pub mod frame;
 pub mod mnemonic;
 pub mod otp;
 pub mod pad;
+pub mod passphrase;
 pub mod wordlist;
 
 // Re-export main types at crate root
+pub use ceremony::CeremonyMetadata;
 pub use error::{Error, Result};
-pub use frame::Frame;
-pub use pad::{Pad, PadSize};
+pub use fountain::{EncodedBlock, FountainDecoder, FountainEncoder};
+pub use frame::{
+    create_fountain_ceremony, FountainCeremonyResult, FountainFrameGenerator,
+    FountainFrameReceiver, DEFAULT_BLOCK_SIZE,
+};
+pub use pad::{Pad, PadSize, Role};
 
 /// Library version.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -94,52 +113,70 @@ mod tests {
 
     #[test]
     fn full_ceremony_roundtrip() {
-        // Simulate complete ceremony and messaging flow
+        // Simulate complete ceremony and messaging flow using fountain codes
 
         // === Setup ===
         let entropy: Vec<u8> = (0..=255).cycle().take(PadSize::Small.bytes()).collect();
 
-        // === Sender creates pad ===
-        let sender_pad = Pad::new(&entropy, PadSize::Small).unwrap();
+        // === Initiator creates pad ===
+        let initiator_pad = Pad::new(&entropy, PadSize::Small).unwrap();
 
-        // === Sender creates frames ===
-        let frames = frame::create_frames(sender_pad.as_bytes(), 1000).unwrap();
-        assert!(!frames.is_empty());
+        // === Initiator creates fountain frames ===
+        let metadata = CeremonyMetadata::default();
+        let mut generator = frame::create_fountain_ceremony(
+            &metadata,
+            initiator_pad.as_bytes(),
+            256,
+            None,
+        )
+        .unwrap();
 
-        // === Sender generates mnemonic ===
-        let sender_mnemonic = mnemonic::generate_default(sender_pad.as_bytes());
-        assert_eq!(sender_mnemonic.len(), 6);
+        // === Initiator generates mnemonic ===
+        let initiator_mnemonic = mnemonic::generate_default(initiator_pad.as_bytes());
+        assert_eq!(initiator_mnemonic.len(), 6);
 
-        // === Simulate QR transfer ===
-        let encoded: Vec<Vec<u8>> = frames.iter().map(|f| f.encode()).collect();
+        // === Simulate QR transfer with fountain codes ===
+        let mut receiver = FountainFrameReceiver::new(None);
+        while !receiver.is_complete() {
+            let frame = generator.next_frame();
+            receiver.add_frame(&frame).unwrap();
+        }
 
-        // === Receiver decodes frames ===
-        let decoded: Vec<Frame> = encoded.iter().map(|b| Frame::decode(b).unwrap()).collect();
+        // === Responder gets decoded result ===
+        let result = receiver.get_result().unwrap();
+        let reconstructed = result.pad;
+        assert_eq!(reconstructed, initiator_pad.as_bytes());
 
-        // === Receiver reconstructs pad ===
-        let reconstructed = frame::reconstruct_pad(&decoded).unwrap();
-        assert_eq!(reconstructed, sender_pad.as_bytes());
-
-        // === Receiver generates mnemonic ===
-        let receiver_mnemonic = mnemonic::generate_default(&reconstructed);
+        // === Responder generates mnemonic ===
+        let responder_mnemonic = mnemonic::generate_default(&reconstructed);
 
         // === Verify mnemonics match ===
-        assert_eq!(sender_mnemonic, receiver_mnemonic);
+        assert_eq!(initiator_mnemonic, responder_mnemonic);
 
         // === Both parties can now message ===
-        let mut sender = Pad::from_bytes(sender_pad.as_bytes().to_vec());
-        let mut receiver = Pad::from_bytes(reconstructed);
+        // Both have the SAME pad bytes, but consume from opposite ends
+        let mut initiator = Pad::from_bytes(initiator_pad.as_bytes().to_vec());
+        let mut responder = Pad::from_bytes(reconstructed);
 
-        // Sender encrypts
-        let plaintext = b"Top secret message!";
-        let sender_key = sender.consume(plaintext.len()).unwrap();
-        let ciphertext = otp::encrypt(&sender_key, plaintext).unwrap();
+        // Initiator sends a message (consumes from start)
+        let plaintext1 = b"Hello from initiator!";
+        let init_key = initiator.consume(plaintext1.len(), Role::Initiator).unwrap();
+        let ciphertext1 = otp::encrypt(&init_key, plaintext1).unwrap();
 
-        // Receiver decrypts
-        let receiver_key = receiver.consume(ciphertext.len()).unwrap();
-        let decrypted = otp::decrypt(&receiver_key, &ciphertext).unwrap();
+        // Responder decrypts (using Initiator role because that's where the bytes came from)
+        let resp_decrypt_key = responder.consume(ciphertext1.len(), Role::Initiator).unwrap();
+        let decrypted1 = otp::decrypt(&resp_decrypt_key, &ciphertext1).unwrap();
+        assert_eq!(decrypted1, plaintext1);
 
-        assert_eq!(decrypted, plaintext);
+        // Responder sends a message (consumes from end)
+        let plaintext2 = b"Hello from responder!";
+        let resp_key = responder.consume(plaintext2.len(), Role::Responder).unwrap();
+        let ciphertext2 = otp::encrypt(&resp_key, plaintext2).unwrap();
+
+        // Initiator decrypts (using Responder role because that's where the bytes came from)
+        let init_decrypt_key = initiator.consume(ciphertext2.len(), Role::Responder).unwrap();
+        let decrypted2 = otp::decrypt(&init_decrypt_key, &ciphertext2).unwrap();
+        assert_eq!(decrypted2, plaintext2);
     }
 
     #[test]
@@ -147,25 +184,31 @@ mod tests {
         let entropy = vec![0u8; 100];
         let mut pad = Pad::from_bytes(entropy);
 
-        // Consume all bytes
-        pad.consume(100).unwrap();
+        // Consume 50 from initiator side, 50 from responder side
+        pad.consume(50, Role::Initiator).unwrap();
+        pad.consume(50, Role::Responder).unwrap();
         assert!(pad.is_exhausted());
 
         // Try to consume more
-        let result = pad.consume(1);
+        let result = pad.consume(1, Role::Initiator);
         assert!(result.is_err());
     }
 
     #[test]
-    fn frame_corruption_detected() {
-        let frame = Frame::new(0, 1, vec![1, 2, 3, 4, 5]).unwrap();
-        let mut encoded = frame.encode();
+    fn fountain_corruption_detected() {
+        let metadata = CeremonyMetadata::default();
+        let pad = vec![0u8; 1000];
+        let mut generator =
+            frame::create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
 
-        // Corrupt a byte
-        encoded[5] ^= 0xFF;
+        let mut frame = generator.next_frame();
+
+        // Corrupt a byte in the payload
+        frame[15] ^= 0xFF;
 
         // Should fail CRC check
-        let result = Frame::decode(&encoded);
+        let mut receiver = FountainFrameReceiver::new(None);
+        let result = receiver.add_frame(&frame);
         assert!(matches!(result, Err(Error::CrcMismatch { .. })));
     }
 

@@ -37,6 +37,7 @@ check_target() {
 
 check_target "aarch64-apple-ios"
 check_target "aarch64-apple-ios-sim"
+check_target "x86_64-apple-ios"
 
 cd "$BINDINGS_DIR"
 
@@ -44,9 +45,13 @@ cd "$BINDINGS_DIR"
 echo "Building for iOS device (aarch64-apple-ios)..."
 cargo build --release --target aarch64-apple-ios
 
-# Build for iOS simulator (arm64)
+# Build for iOS simulator (arm64 - Apple Silicon)
 echo "Building for iOS simulator (aarch64-apple-ios-sim)..."
 cargo build --release --target aarch64-apple-ios-sim
+
+# Build for iOS simulator (x86_64 - Intel Macs)
+echo "Building for iOS simulator (x86_64-apple-ios)..."
+cargo build --release --target x86_64-apple-ios
 
 # Generate Swift bindings
 echo "Generating Swift bindings..."
@@ -71,8 +76,13 @@ mkdir -p "$OUTPUT_DIR/headers"
 echo "Copying libraries..."
 cp "$BINDINGS_DIR/target/aarch64-apple-ios/release/libash_bindings.a" \
    "$OUTPUT_DIR/lib/libash_bindings-ios.a"
-cp "$BINDINGS_DIR/target/aarch64-apple-ios-sim/release/libash_bindings.a" \
-   "$OUTPUT_DIR/lib/libash_bindings-ios-sim.a"
+
+# Create universal simulator library (arm64 + x86_64)
+echo "Creating universal simulator library..."
+lipo -create \
+    "$BINDINGS_DIR/target/aarch64-apple-ios-sim/release/libash_bindings.a" \
+    "$BINDINGS_DIR/target/x86_64-apple-ios/release/libash_bindings.a" \
+    -output "$OUTPUT_DIR/lib/libash_bindings-ios-sim.a"
 
 # Copy headers to separate directory
 cp "$OUTPUT_DIR/AshCoreFFI.h" "$OUTPUT_DIR/headers/"

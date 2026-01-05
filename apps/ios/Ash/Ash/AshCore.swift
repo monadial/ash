@@ -2,13 +2,13 @@
 // Trust me, you don't want to mess with it!
 
 // swiftlint:disable all
-@preconcurrency import Foundation
+import Foundation
 
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
 #if canImport(AshCoreFFI)
-@preconcurrency import AshCoreFFI
+import AshCoreFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -225,7 +225,7 @@ fileprivate enum UniffiInternalError: LocalizedError {
     case unexpectedStaleHandle
     case rustPanic(_ message: String)
 
-    public var errorDescription: String? {
+    public nonisolated var errorDescription: String? {
         switch self {
         case .bufferOverflow: return "Reading the requested value would read past the end of the buffer"
         case .incompleteData: return "The buffer still has data after lifting its containing value"
@@ -415,22 +415,6 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
-    typealias FfiType = UInt16
-    typealias SwiftType = UInt16
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
-        return try lift(readInt(&buf))
-    }
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        writeInt(&buf, lower(value))
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -457,6 +441,22 @@ fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
+    typealias FfiType = Double
+    typealias SwiftType = Double
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Double {
+        return try lift(readDouble(&buf))
+    }
+
+    public static func write(_ value: Double, into buf: inout [UInt8]) {
+        writeDouble(&buf, lower(value))
     }
 }
 
@@ -529,37 +529,64 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 
 /**
- * Frame for QR code transfer
+ * Fountain frame generator for QR display.
+ *
+ * Generates unlimited encoded blocks from ceremony data. The display
+ * cycles through blocks until the receiver signals completion.
+ *
+ * # Block Types
+ *
+ * - Blocks 0..K: Source blocks (direct data, no encoding overhead)
+ * - Blocks K+: XOR blocks (combinations of two source blocks)
  */
-public protocol FrameProtocol : AnyObject {
+public protocol FountainFrameGeneratorProtocol : AnyObject {
     
     /**
-     * Encode frame to bytes
+     * Block size in bytes.
      */
-    func encode()  -> [UInt8]
+    func blockSize()  -> UInt32
     
     /**
-     * Get frame index
+     * Generate a specific block by index.
+     *
+     * Useful for regenerating specific blocks or random access.
+     * Same index always produces same block (deterministic).
      */
-    func getIndex()  -> UInt16
+    func generateFrame(index: UInt32)  -> [UInt8]
     
     /**
-     * Get payload bytes
+     * Generate the next QR frame bytes.
+     *
+     * Can be called infinitely - generates new blocks each time.
+     * Blocks cycle through source blocks first, then XOR blocks.
      */
-    func getPayload()  -> [UInt8]
+    func nextFrame()  -> [UInt8]
     
     /**
-     * Get total frame count
+     * Number of source blocks (minimum needed for decoding).
      */
-    func getTotal()  -> UInt16
+    func sourceCount()  -> UInt32
+    
+    /**
+     * Total data size being transferred (metadata + pad).
+     */
+    func totalSize()  -> UInt32
     
 }
 
 /**
- * Frame for QR code transfer
+ * Fountain frame generator for QR display.
+ *
+ * Generates unlimited encoded blocks from ceremony data. The display
+ * cycles through blocks until the receiver signals completion.
+ *
+ * # Block Types
+ *
+ * - Blocks 0..K: Source blocks (direct data, no encoding overhead)
+ * - Blocks K+: XOR blocks (combinations of two source blocks)
  */
-open class Frame:
-    FrameProtocol {
+open class FountainFrameGenerator:
+    FountainFrameGeneratorProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -593,81 +620,74 @@ open class Frame:
     @_documentation(visibility: private)
 #endif
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_ash_bindings_fn_clone_frame(self.pointer, $0) }
+        return try! rustCall { uniffi_ash_bindings_fn_clone_fountainframegenerator(self.pointer, $0) }
     }
-    /**
-     * Create a new frame
-     */
-public convenience init(index: UInt16, total: UInt16, payload: [UInt8])throws  {
-    let pointer =
-        try rustCallWithError(FfiConverterTypeAshError.lift) {
-    uniffi_ash_bindings_fn_constructor_frame_new(
-        FfiConverterUInt16.lower(index),
-        FfiConverterUInt16.lower(total),
-        FfiConverterSequenceUInt8.lower(payload),$0
-    )
-}
-    self.init(unsafeFromRawPointer: pointer)
-}
+    // No primary constructor declared for this class.
 
     deinit {
         guard let pointer = pointer else {
             return
         }
 
-        try! rustCall { uniffi_ash_bindings_fn_free_frame(pointer, $0) }
+        try! rustCall { uniffi_ash_bindings_fn_free_fountainframegenerator(pointer, $0) }
     }
 
     
-    /**
-     * Decode frame from bytes
-     */
-public static func decode(bytes: [UInt8])throws  -> Frame {
-    return try  FfiConverterTypeFrame.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
-    uniffi_ash_bindings_fn_constructor_frame_decode(
-        FfiConverterSequenceUInt8.lower(bytes),$0
-    )
-})
-}
-    
 
     
     /**
-     * Encode frame to bytes
+     * Block size in bytes.
      */
-open func encode() -> [UInt8] {
+open func blockSize() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframegenerator_block_size(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Generate a specific block by index.
+     *
+     * Useful for regenerating specific blocks or random access.
+     * Same index always produces same block (deterministic).
+     */
+open func generateFrame(index: UInt32) -> [UInt8] {
     return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
-    uniffi_ash_bindings_fn_method_frame_encode(self.uniffiClonePointer(),$0
+    uniffi_ash_bindings_fn_method_fountainframegenerator_generate_frame(self.uniffiClonePointer(),
+        FfiConverterUInt32.lower(index),$0
     )
 })
 }
     
     /**
-     * Get frame index
+     * Generate the next QR frame bytes.
+     *
+     * Can be called infinitely - generates new blocks each time.
+     * Blocks cycle through source blocks first, then XOR blocks.
      */
-open func getIndex() -> UInt16 {
-    return try!  FfiConverterUInt16.lift(try! rustCall() {
-    uniffi_ash_bindings_fn_method_frame_get_index(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Get payload bytes
-     */
-open func getPayload() -> [UInt8] {
+open func nextFrame() -> [UInt8] {
     return try!  FfiConverterSequenceUInt8.lift(try! rustCall() {
-    uniffi_ash_bindings_fn_method_frame_get_payload(self.uniffiClonePointer(),$0
+    uniffi_ash_bindings_fn_method_fountainframegenerator_next_frame(self.uniffiClonePointer(),$0
     )
 })
 }
     
     /**
-     * Get total frame count
+     * Number of source blocks (minimum needed for decoding).
      */
-open func getTotal() -> UInt16 {
-    return try!  FfiConverterUInt16.lift(try! rustCall() {
-    uniffi_ash_bindings_fn_method_frame_get_total(self.uniffiClonePointer(),$0
+open func sourceCount() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframegenerator_source_count(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Total data size being transferred (metadata + pad).
+     */
+open func totalSize() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframegenerator_total_size(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -678,20 +698,20 @@ open func getTotal() -> UInt16 {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public struct FfiConverterTypeFrame: FfiConverter {
+public struct FfiConverterTypeFountainFrameGenerator: FfiConverter {
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = Frame
+    typealias SwiftType = FountainFrameGenerator
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Frame {
-        return Frame(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameGenerator {
+        return FountainFrameGenerator(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: Frame) -> UnsafeMutableRawPointer {
+    public static func lower(_ value: FountainFrameGenerator) -> UnsafeMutableRawPointer {
         return value.uniffiClonePointer()
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Frame {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FountainFrameGenerator {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -702,7 +722,7 @@ public struct FfiConverterTypeFrame: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: Frame, into buf: inout [UInt8]) {
+    public static func write(_ value: FountainFrameGenerator, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -715,22 +735,265 @@ public struct FfiConverterTypeFrame: FfiConverter {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFrame_lift(_ pointer: UnsafeMutableRawPointer) throws -> Frame {
-    return try FfiConverterTypeFrame.lift(pointer)
+public func FfiConverterTypeFountainFrameGenerator_lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameGenerator {
+    return try FfiConverterTypeFountainFrameGenerator.lift(pointer)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFrame_lower(_ value: Frame) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeFrame.lower(value)
+public func FfiConverterTypeFountainFrameGenerator_lower(_ value: FountainFrameGenerator) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFountainFrameGenerator.lower(value)
 }
 
 
 
 
 /**
- * One-Time Pad with single-use consumption semantics
+ * Fountain frame receiver for QR scanning.
+ *
+ * Collects scanned blocks and tracks decoding progress.
+ * Can decode from ANY sufficient subset of blocks.
+ */
+public protocol FountainFrameReceiverProtocol : AnyObject {
+    
+    /**
+     * Add a scanned QR frame.
+     *
+     * Returns true if decoding is now complete, false if more blocks needed.
+     * Duplicate blocks are safely ignored.
+     */
+    func addFrame(frameBytes: [UInt8]) throws  -> Bool
+    
+    /**
+     * Number of blocks received (including duplicates).
+     */
+    func blocksReceived()  -> UInt32
+    
+    /**
+     * Get the decoded ceremony result.
+     * Returns null if decoding is not complete.
+     */
+    func getResult()  -> FountainCeremonyResult?
+    
+    /**
+     * Check if decoding is complete.
+     */
+    func isComplete()  -> Bool
+    
+    /**
+     * Get decoding progress (0.0 to 1.0).
+     */
+    func progress()  -> Double
+    
+    /**
+     * Number of source blocks needed for complete decoding.
+     * Returns 0 before the first block is received.
+     */
+    func sourceCount()  -> UInt32
+    
+}
+
+/**
+ * Fountain frame receiver for QR scanning.
+ *
+ * Collects scanned blocks and tracks decoding progress.
+ * Can decode from ANY sufficient subset of blocks.
+ */
+open class FountainFrameReceiver:
+    FountainFrameReceiverProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_ash_bindings_fn_clone_fountainframereceiver(self.pointer, $0) }
+    }
+    /**
+     * Create a new receiver.
+     *
+     * If passphrase was used for encryption, same passphrase must be provided.
+     */
+public convenience init(passphrase: String?) {
+    let pointer =
+        try! rustCall() {
+    uniffi_ash_bindings_fn_constructor_fountainframereceiver_new(
+        FfiConverterOptionString.lower(passphrase),$0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_ash_bindings_fn_free_fountainframereceiver(pointer, $0) }
+    }
+
+    
+
+    
+    /**
+     * Add a scanned QR frame.
+     *
+     * Returns true if decoding is now complete, false if more blocks needed.
+     * Duplicate blocks are safely ignored.
+     */
+open func addFrame(frameBytes: [UInt8])throws  -> Bool {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_add_frame(self.uniffiClonePointer(),
+        FfiConverterSequenceUInt8.lower(frameBytes),$0
+    )
+})
+}
+    
+    /**
+     * Number of blocks received (including duplicates).
+     */
+open func blocksReceived() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_blocks_received(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Get the decoded ceremony result.
+     * Returns null if decoding is not complete.
+     */
+open func getResult() -> FountainCeremonyResult? {
+    return try!  FfiConverterOptionTypeFountainCeremonyResult.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_get_result(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Check if decoding is complete.
+     */
+open func isComplete() -> Bool {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_is_complete(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Get decoding progress (0.0 to 1.0).
+     */
+open func progress() -> Double {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_progress(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Number of source blocks needed for complete decoding.
+     * Returns 0 before the first block is received.
+     */
+open func sourceCount() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_source_count(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFountainFrameReceiver: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FountainFrameReceiver
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameReceiver {
+        return FountainFrameReceiver(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FountainFrameReceiver) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FountainFrameReceiver {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FountainFrameReceiver, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFountainFrameReceiver_lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameReceiver {
+    return try FfiConverterTypeFountainFrameReceiver.lift(pointer)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFountainFrameReceiver_lower(_ value: FountainFrameReceiver) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFountainFrameReceiver.lower(value)
+}
+
+
+
+
+/**
+ * One-Time Pad with bidirectional consumption semantics
+ *
+ * The pad uses bidirectional consumption:
+ * - Initiator consumes from the start of the pad
+ * - Responder consumes from the end of the pad
+ *
+ * This allows both parties to send messages without coordination.
  */
 public protocol PadProtocol : AnyObject {
     
@@ -740,14 +1003,36 @@ public protocol PadProtocol : AnyObject {
     func asBytes()  -> [UInt8]
     
     /**
-     * Consume next n bytes from pad
+     * Get the number of bytes available for sending (dynamic allocation)
      */
-    func consume(n: UInt32) throws  -> [UInt8]
+    func availableForSending(role: Role)  -> UInt64
     
     /**
-     * Get consumed bytes count
+     * Check if we can send a message of the given length (dynamic allocation)
+     */
+    func canSend(length: UInt32, role: Role)  -> Bool
+    
+    /**
+     * Consume next n bytes from pad based on role
+     * - Initiator consumes from the start (moving forward)
+     * - Responder consumes from the end (moving backward)
+     */
+    func consume(n: UInt32, role: Role) throws  -> [UInt8]
+    
+    /**
+     * Get total consumed bytes count (both directions)
      */
     func consumed()  -> UInt64
+    
+    /**
+     * Get bytes consumed from end (by Responder)
+     */
+    func consumedBack()  -> UInt64
+    
+    /**
+     * Get bytes consumed from start (by Initiator)
+     */
+    func consumedFront()  -> UInt64
     
     /**
      * Check if pad is exhausted
@@ -755,7 +1040,12 @@ public protocol PadProtocol : AnyObject {
     func isExhausted()  -> Bool
     
     /**
-     * Get remaining bytes count
+     * Get the offset for the next message we send
+     */
+    func nextSendOffset(role: Role)  -> UInt64
+    
+    /**
+     * Get remaining bytes count (available for either role)
      */
     func remaining()  -> UInt64
     
@@ -764,10 +1054,21 @@ public protocol PadProtocol : AnyObject {
      */
     func totalSize()  -> UInt64
     
+    /**
+     * Update peer's consumption based on a received message
+     */
+    func updatePeerConsumption(peerRole: Role, newConsumed: UInt64) 
+    
 }
 
 /**
- * One-Time Pad with single-use consumption semantics
+ * One-Time Pad with bidirectional consumption semantics
+ *
+ * The pad uses bidirectional consumption:
+ * - Initiator consumes from the start of the pad
+ * - Responder consumes from the end of the pad
+ *
+ * This allows both parties to send messages without coordination.
  */
 open class Pad:
     PadProtocol {
@@ -829,6 +1130,20 @@ public static func fromBytes(bytes: [UInt8]) -> Pad {
 }
     
     /**
+     * Create pad from raw bytes with pre-existing consumption state
+     * Used when restoring a pad from persistent storage.
+     */
+public static func fromBytesWithState(bytes: [UInt8], consumedFront: UInt64, consumedBack: UInt64) -> Pad {
+    return try!  FfiConverterTypePad.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_constructor_pad_from_bytes_with_state(
+        FfiConverterSequenceUInt8.lower(bytes),
+        FfiConverterUInt64.lower(consumedFront),
+        FfiConverterUInt64.lower(consumedBack),$0
+    )
+})
+}
+    
+    /**
      * Create pad from entropy bytes
      */
 public static func fromEntropy(entropy: [UInt8], size: PadSize)throws  -> Pad {
@@ -853,22 +1168,68 @@ open func asBytes() -> [UInt8] {
 }
     
     /**
-     * Consume next n bytes from pad
+     * Get the number of bytes available for sending (dynamic allocation)
      */
-open func consume(n: UInt32)throws  -> [UInt8] {
-    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
-    uniffi_ash_bindings_fn_method_pad_consume(self.uniffiClonePointer(),
-        FfiConverterUInt32.lower(n),$0
+open func availableForSending(role: Role) -> UInt64 {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_pad_available_for_sending(self.uniffiClonePointer(),
+        FfiConverterTypeRole.lower(role),$0
     )
 })
 }
     
     /**
-     * Get consumed bytes count
+     * Check if we can send a message of the given length (dynamic allocation)
+     */
+open func canSend(length: UInt32, role: Role) -> Bool {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_pad_can_send(self.uniffiClonePointer(),
+        FfiConverterUInt32.lower(length),
+        FfiConverterTypeRole.lower(role),$0
+    )
+})
+}
+    
+    /**
+     * Consume next n bytes from pad based on role
+     * - Initiator consumes from the start (moving forward)
+     * - Responder consumes from the end (moving backward)
+     */
+open func consume(n: UInt32, role: Role)throws  -> [UInt8] {
+    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_method_pad_consume(self.uniffiClonePointer(),
+        FfiConverterUInt32.lower(n),
+        FfiConverterTypeRole.lower(role),$0
+    )
+})
+}
+    
+    /**
+     * Get total consumed bytes count (both directions)
      */
 open func consumed() -> UInt64 {
     return try!  FfiConverterUInt64.lift(try! rustCall() {
     uniffi_ash_bindings_fn_method_pad_consumed(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Get bytes consumed from end (by Responder)
+     */
+open func consumedBack() -> UInt64 {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_pad_consumed_back(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Get bytes consumed from start (by Initiator)
+     */
+open func consumedFront() -> UInt64 {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_pad_consumed_front(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -884,7 +1245,18 @@ open func isExhausted() -> Bool {
 }
     
     /**
-     * Get remaining bytes count
+     * Get the offset for the next message we send
+     */
+open func nextSendOffset(role: Role) -> UInt64 {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_pad_next_send_offset(self.uniffiClonePointer(),
+        FfiConverterTypeRole.lower(role),$0
+    )
+})
+}
+    
+    /**
+     * Get remaining bytes count (available for either role)
      */
 open func remaining() -> UInt64 {
     return try!  FfiConverterUInt64.lift(try! rustCall() {
@@ -901,6 +1273,17 @@ open func totalSize() -> UInt64 {
     uniffi_ash_bindings_fn_method_pad_total_size(self.uniffiClonePointer(),$0
     )
 })
+}
+    
+    /**
+     * Update peer's consumption based on a received message
+     */
+open func updatePeerConsumption(peerRole: Role, newConsumed: UInt64) {try! rustCall() {
+    uniffi_ash_bindings_fn_method_pad_update_peer_consumption(self.uniffiClonePointer(),
+        FfiConverterTypeRole.lower(peerRole),
+        FfiConverterUInt64.lower(newConsumed),$0
+    )
+}
 }
     
 
@@ -959,6 +1342,306 @@ public func FfiConverterTypePad_lower(_ value: Pad) -> UnsafeMutableRawPointer {
 
 
 /**
+ * Authorization tokens derived from pad during ceremony
+ */
+public struct AuthTokens {
+    /**
+     * Conversation ID (hex-encoded, 64 chars)
+     */
+    public let conversationId: String
+    /**
+     * Auth token for API operations (hex-encoded, 64 chars)
+     */
+    public let authToken: String
+    /**
+     * Burn token for burn operations (hex-encoded, 64 chars)
+     */
+    public let burnToken: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Conversation ID (hex-encoded, 64 chars)
+         */conversationId: String, 
+        /**
+         * Auth token for API operations (hex-encoded, 64 chars)
+         */authToken: String, 
+        /**
+         * Burn token for burn operations (hex-encoded, 64 chars)
+         */burnToken: String) {
+        self.conversationId = conversationId
+        self.authToken = authToken
+        self.burnToken = burnToken
+    }
+}
+
+
+
+extension AuthTokens: Equatable, Hashable {
+    public static func ==(lhs: AuthTokens, rhs: AuthTokens) -> Bool {
+        if lhs.conversationId != rhs.conversationId {
+            return false
+        }
+        if lhs.authToken != rhs.authToken {
+            return false
+        }
+        if lhs.burnToken != rhs.burnToken {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(conversationId)
+        hasher.combine(authToken)
+        hasher.combine(burnToken)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAuthTokens: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AuthTokens {
+        return
+            try AuthTokens(
+                conversationId: FfiConverterString.read(from: &buf), 
+                authToken: FfiConverterString.read(from: &buf), 
+                burnToken: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AuthTokens, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.conversationId, into: &buf)
+        FfiConverterString.write(value.authToken, into: &buf)
+        FfiConverterString.write(value.burnToken, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAuthTokens_lift(_ buf: RustBuffer) throws -> AuthTokens {
+    return try FfiConverterTypeAuthTokens.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAuthTokens_lower(_ value: AuthTokens) -> RustBuffer {
+    return FfiConverterTypeAuthTokens.lower(value)
+}
+
+
+/**
+ * Ceremony metadata transferred via QR frame 0
+ * Contains settings agreed upon during ceremony
+ */
+public struct CeremonyMetadata {
+    /**
+     * Protocol version (always 1)
+     */
+    public let version: UInt8
+    /**
+     * Message TTL in seconds (default 300 = 5 minutes)
+     */
+    public let ttlSeconds: UInt64
+    /**
+     * Disappearing messages timeout in seconds (0 = off)
+     */
+    public let disappearingMessagesSeconds: UInt32
+    /**
+     * Relay server URL
+     */
+    public let relayUrl: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Protocol version (always 1)
+         */version: UInt8, 
+        /**
+         * Message TTL in seconds (default 300 = 5 minutes)
+         */ttlSeconds: UInt64, 
+        /**
+         * Disappearing messages timeout in seconds (0 = off)
+         */disappearingMessagesSeconds: UInt32, 
+        /**
+         * Relay server URL
+         */relayUrl: String) {
+        self.version = version
+        self.ttlSeconds = ttlSeconds
+        self.disappearingMessagesSeconds = disappearingMessagesSeconds
+        self.relayUrl = relayUrl
+    }
+}
+
+
+
+extension CeremonyMetadata: Equatable, Hashable {
+    public static func ==(lhs: CeremonyMetadata, rhs: CeremonyMetadata) -> Bool {
+        if lhs.version != rhs.version {
+            return false
+        }
+        if lhs.ttlSeconds != rhs.ttlSeconds {
+            return false
+        }
+        if lhs.disappearingMessagesSeconds != rhs.disappearingMessagesSeconds {
+            return false
+        }
+        if lhs.relayUrl != rhs.relayUrl {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(version)
+        hasher.combine(ttlSeconds)
+        hasher.combine(disappearingMessagesSeconds)
+        hasher.combine(relayUrl)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CeremonyMetadata {
+        return
+            try CeremonyMetadata(
+                version: FfiConverterUInt8.read(from: &buf), 
+                ttlSeconds: FfiConverterUInt64.read(from: &buf), 
+                disappearingMessagesSeconds: FfiConverterUInt32.read(from: &buf), 
+                relayUrl: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CeremonyMetadata, into buf: inout [UInt8]) {
+        FfiConverterUInt8.write(value.version, into: &buf)
+        FfiConverterUInt64.write(value.ttlSeconds, into: &buf)
+        FfiConverterUInt32.write(value.disappearingMessagesSeconds, into: &buf)
+        FfiConverterString.write(value.relayUrl, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCeremonyMetadata_lift(_ buf: RustBuffer) throws -> CeremonyMetadata {
+    return try FfiConverterTypeCeremonyMetadata.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCeremonyMetadata_lower(_ value: CeremonyMetadata) -> RustBuffer {
+    return FfiConverterTypeCeremonyMetadata.lower(value)
+}
+
+
+/**
+ * Result of fountain ceremony decoding
+ */
+public struct FountainCeremonyResult {
+    /**
+     * Ceremony metadata (settings)
+     */
+    public let metadata: CeremonyMetadata
+    /**
+     * Reconstructed pad bytes
+     */
+    public let pad: [UInt8]
+    /**
+     * Number of blocks used for decoding
+     */
+    public let blocksUsed: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Ceremony metadata (settings)
+         */metadata: CeremonyMetadata, 
+        /**
+         * Reconstructed pad bytes
+         */pad: [UInt8], 
+        /**
+         * Number of blocks used for decoding
+         */blocksUsed: UInt32) {
+        self.metadata = metadata
+        self.pad = pad
+        self.blocksUsed = blocksUsed
+    }
+}
+
+
+
+extension FountainCeremonyResult: Equatable, Hashable {
+    public static func ==(lhs: FountainCeremonyResult, rhs: FountainCeremonyResult) -> Bool {
+        if lhs.metadata != rhs.metadata {
+            return false
+        }
+        if lhs.pad != rhs.pad {
+            return false
+        }
+        if lhs.blocksUsed != rhs.blocksUsed {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(metadata)
+        hasher.combine(pad)
+        hasher.combine(blocksUsed)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFountainCeremonyResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FountainCeremonyResult {
+        return
+            try FountainCeremonyResult(
+                metadata: FfiConverterTypeCeremonyMetadata.read(from: &buf), 
+                pad: FfiConverterSequenceUInt8.read(from: &buf), 
+                blocksUsed: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FountainCeremonyResult, into buf: inout [UInt8]) {
+        FfiConverterTypeCeremonyMetadata.write(value.metadata, into: &buf)
+        FfiConverterSequenceUInt8.write(value.pad, into: &buf)
+        FfiConverterUInt32.write(value.blocksUsed, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFountainCeremonyResult_lift(_ buf: RustBuffer) throws -> FountainCeremonyResult {
+    return try FfiConverterTypeFountainCeremonyResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFountainCeremonyResult_lower(_ value: FountainCeremonyResult) -> RustBuffer {
+    return FfiConverterTypeFountainCeremonyResult.lower(value)
+}
+
+
+/**
  * Error types for ASH operations
  */
 public enum AshError {
@@ -976,19 +1659,9 @@ public enum AshError {
     case InvalidEntropySize(message: String)
     
     /**
-     * Pad is fully consumed
-     */
-    case PadExhausted(message: String)
-    
-    /**
      * Key and data lengths don't match
      */
     case LengthMismatch(message: String)
-    
-    /**
-     * Frame data is too short
-     */
-    case FrameTooShort(message: String)
     
     /**
      * CRC checksum failed
@@ -996,44 +1669,39 @@ public enum AshError {
     case CrcMismatch(message: String)
     
     /**
-     * Frame index exceeds total count
-     */
-    case FrameIndexOutOfBounds(message: String)
-    
-    /**
-     * Frames have inconsistent totals
-     */
-    case FrameCountMismatch(message: String)
-    
-    /**
-     * Some frames are missing
-     */
-    case MissingFrames(message: String)
-    
-    /**
-     * Duplicate frame index
-     */
-    case DuplicateFrame(message: String)
-    
-    /**
      * Payload cannot be empty
      */
     case EmptyPayload(message: String)
     
     /**
-     * Payload exceeds maximum size
+     * Fountain block is too short
      */
-    case PayloadTooLarge(message: String)
+    case FountainBlockTooShort(message: String)
     
     /**
-     * No frames provided
+     * Metadata frame is too short
      */
-    case NoFrames(message: String)
+    case MetadataTooShort(message: String)
     
     /**
-     * Total frame count is zero
+     * Unsupported metadata version
      */
-    case ZeroTotalFrames(message: String)
+    case UnsupportedMetadataVersion(message: String)
+    
+    /**
+     * Metadata URL is too long
+     */
+    case MetadataUrlTooLong(message: String)
+    
+    /**
+     * Invalid UTF-8 in metadata URL
+     */
+    case InvalidMetadataUrl(message: String)
+    
+    /**
+     * Pad is too small to derive authorization tokens
+     */
+    case PadTooSmallForTokens(message: String)
     
 }
 
@@ -1059,51 +1727,39 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 3: return .PadExhausted(
+        case 3: return .LengthMismatch(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 4: return .LengthMismatch(
+        case 4: return .CrcMismatch(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 5: return .FrameTooShort(
+        case 5: return .EmptyPayload(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 6: return .CrcMismatch(
+        case 6: return .FountainBlockTooShort(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 7: return .FrameIndexOutOfBounds(
+        case 7: return .MetadataTooShort(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 8: return .FrameCountMismatch(
+        case 8: return .UnsupportedMetadataVersion(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 9: return .MissingFrames(
+        case 9: return .MetadataUrlTooLong(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 10: return .DuplicateFrame(
+        case 10: return .InvalidMetadataUrl(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 11: return .EmptyPayload(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
-        case 12: return .PayloadTooLarge(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
-        case 13: return .NoFrames(
-            message: try FfiConverterString.read(from: &buf)
-        )
-        
-        case 14: return .ZeroTotalFrames(
+        case 11: return .PadTooSmallForTokens(
             message: try FfiConverterString.read(from: &buf)
         )
         
@@ -1122,30 +1778,24 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(1))
         case .InvalidEntropySize(_ /* message is ignored*/):
             writeInt(&buf, Int32(2))
-        case .PadExhausted(_ /* message is ignored*/):
-            writeInt(&buf, Int32(3))
         case .LengthMismatch(_ /* message is ignored*/):
-            writeInt(&buf, Int32(4))
-        case .FrameTooShort(_ /* message is ignored*/):
-            writeInt(&buf, Int32(5))
+            writeInt(&buf, Int32(3))
         case .CrcMismatch(_ /* message is ignored*/):
-            writeInt(&buf, Int32(6))
-        case .FrameIndexOutOfBounds(_ /* message is ignored*/):
-            writeInt(&buf, Int32(7))
-        case .FrameCountMismatch(_ /* message is ignored*/):
-            writeInt(&buf, Int32(8))
-        case .MissingFrames(_ /* message is ignored*/):
-            writeInt(&buf, Int32(9))
-        case .DuplicateFrame(_ /* message is ignored*/):
-            writeInt(&buf, Int32(10))
+            writeInt(&buf, Int32(4))
         case .EmptyPayload(_ /* message is ignored*/):
+            writeInt(&buf, Int32(5))
+        case .FountainBlockTooShort(_ /* message is ignored*/):
+            writeInt(&buf, Int32(6))
+        case .MetadataTooShort(_ /* message is ignored*/):
+            writeInt(&buf, Int32(7))
+        case .UnsupportedMetadataVersion(_ /* message is ignored*/):
+            writeInt(&buf, Int32(8))
+        case .MetadataUrlTooLong(_ /* message is ignored*/):
+            writeInt(&buf, Int32(9))
+        case .InvalidMetadataUrl(_ /* message is ignored*/):
+            writeInt(&buf, Int32(10))
+        case .PadTooSmallForTokens(_ /* message is ignored*/):
             writeInt(&buf, Int32(11))
-        case .PayloadTooLarge(_ /* message is ignored*/):
-            writeInt(&buf, Int32(12))
-        case .NoFrames(_ /* message is ignored*/):
-            writeInt(&buf, Int32(13))
-        case .ZeroTotalFrames(_ /* message is ignored*/):
-            writeInt(&buf, Int32(14))
 
         
         }
@@ -1170,17 +1820,25 @@ extension AshError: Foundation.LocalizedError {
 public enum PadSize {
     
     /**
-     * 64 KB - ~50 messages, ~1-2 min transfer
+     * 32 KB - ~25 messages, ~25 QR frames
+     */
+    case tiny
+    /**
+     * 64 KB - ~50 messages, ~45 QR frames
      */
     case small
     /**
-     * 256 KB - ~200 messages, ~4-5 min transfer
+     * 256 KB - ~200 messages, ~177 QR frames
      */
     case medium
     /**
-     * 1 MB - ~800 messages, ~15-20 min transfer
+     * 512 KB - ~400 messages, ~353 QR frames
      */
     case large
+    /**
+     * 1 MB - ~800 messages, ~705 QR frames
+     */
+    case huge
 }
 
 
@@ -1194,11 +1852,15 @@ public struct FfiConverterTypePadSize: FfiConverterRustBuffer {
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
-        case 1: return .small
+        case 1: return .tiny
         
-        case 2: return .medium
+        case 2: return .small
         
-        case 3: return .large
+        case 3: return .medium
+        
+        case 4: return .large
+        
+        case 5: return .huge
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1208,16 +1870,24 @@ public struct FfiConverterTypePadSize: FfiConverterRustBuffer {
         switch value {
         
         
-        case .small:
+        case .tiny:
             writeInt(&buf, Int32(1))
         
         
-        case .medium:
+        case .small:
             writeInt(&buf, Int32(2))
         
         
-        case .large:
+        case .medium:
             writeInt(&buf, Int32(3))
+        
+        
+        case .large:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .huge:
+            writeInt(&buf, Int32(5))
         
         }
     }
@@ -1243,6 +1913,131 @@ public func FfiConverterTypePadSize_lower(_ value: PadSize) -> RustBuffer {
 extension PadSize: Equatable, Hashable {}
 
 
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Role in the conversation, determining pad consumption direction.
+ *
+ * The role is established during the ceremony:
+ * - Initiator: The person who creates the ceremony (displays QR codes)
+ * - Responder: The person who scans the ceremony QR codes
+ */
+
+public enum Role {
+    
+    /**
+     * Initiator consumes from the start of the pad
+     */
+    case initiator
+    /**
+     * Responder consumes from the end of the pad
+     */
+    case responder
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRole: FfiConverterRustBuffer {
+    typealias SwiftType = Role
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Role {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .initiator
+        
+        case 2: return .responder
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Role, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .initiator:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .responder:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRole_lift(_ buf: RustBuffer) throws -> Role {
+    return try FfiConverterTypeRole.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRole_lower(_ value: Role) -> RustBuffer {
+    return FfiConverterTypeRole.lower(value)
+}
+
+
+
+extension Role: Equatable, Hashable {}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeFountainCeremonyResult: FfiConverterRustBuffer {
+    typealias SwiftType = FountainCeremonyResult?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeFountainCeremonyResult.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeFountainCeremonyResult.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
@@ -1293,39 +2088,19 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         return seq
     }
 }
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterSequenceTypeFrame: FfiConverterRustBuffer {
-    typealias SwiftType = [Frame]
-
-    public static func write(_ value: [Frame], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeFrame.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Frame] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [Frame]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeFrame.read(from: &buf))
-        }
-        return seq
-    }
-}
 /**
- * Create frames from pad bytes for QR transfer
+ * Create a fountain frame generator for ceremony QR display.
+ *
+ * This is the main entry point for initiators. The generator produces
+ * unlimited encoded blocks that can be displayed as QR codes.
  */
-public nonisolated func createFrames(padBytes: [UInt8], maxPayload: UInt32)throws  -> [Frame] {
-    return try  FfiConverterSequenceTypeFrame.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
-    uniffi_ash_bindings_fn_func_create_frames(
+public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8], blockSize: UInt32, passphrase: String?)throws  -> FountainFrameGenerator {
+    return try  FfiConverterTypeFountainFrameGenerator.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_func_create_fountain_generator(
+        FfiConverterTypeCeremonyMetadata.lower(metadata),
         FfiConverterSequenceUInt8.lower(padBytes),
-        FfiConverterUInt32.lower(maxPayload),$0
+        FfiConverterUInt32.lower(blockSize),
+        FfiConverterOptionString.lower(passphrase),$0
     )
 })
 }
@@ -1337,6 +2112,48 @@ public nonisolated func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UI
     uniffi_ash_bindings_fn_func_decrypt(
         FfiConverterSequenceUInt8.lower(key),
         FfiConverterSequenceUInt8.lower(ciphertext),$0
+    )
+})
+}
+/**
+ * Derive all tokens at once (conversation_id, auth_token, burn_token)
+ */
+public func deriveAllTokens(padBytes: [UInt8])throws  -> AuthTokens {
+    return try  FfiConverterTypeAuthTokens.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_func_derive_all_tokens(
+        FfiConverterSequenceUInt8.lower(padBytes),$0
+    )
+})
+}
+/**
+ * Derive auth token from pad bytes (hex-encoded, 64 chars)
+ * Used for API authentication (messages, polling, registration)
+ */
+public func deriveAuthToken(padBytes: [UInt8])throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_func_derive_auth_token(
+        FfiConverterSequenceUInt8.lower(padBytes),$0
+    )
+})
+}
+/**
+ * Derive burn token from pad bytes (hex-encoded, 64 chars)
+ * Used specifically for burn operations (defense in depth)
+ */
+public func deriveBurnToken(padBytes: [UInt8])throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_func_derive_burn_token(
+        FfiConverterSequenceUInt8.lower(padBytes),$0
+    )
+})
+}
+/**
+ * Derive conversation ID from pad bytes (hex-encoded, 64 chars)
+ */
+public func deriveConversationId(padBytes: [UInt8])throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_func_derive_conversation_id(
+        FfiConverterSequenceUInt8.lower(padBytes),$0
     )
 })
 }
@@ -1373,12 +2190,30 @@ public nonisolated func generateMnemonicWithCount(padBytes: [UInt8], wordCount: 
 })
 }
 /**
- * Reconstruct pad from received frames
+ * Get maximum passphrase length
  */
-public nonisolated func reconstructPad(frames: [Frame])throws  -> [UInt8] {
-    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
-    uniffi_ash_bindings_fn_func_reconstruct_pad(
-        FfiConverterSequenceTypeFrame.lower(frames),$0
+public func getMaxPassphraseLength() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_max_passphrase_length($0
+    )
+})
+}
+/**
+ * Get minimum passphrase length
+ */
+public func getMinPassphraseLength() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_min_passphrase_length($0
+    )
+})
+}
+/**
+ * Validate passphrase meets requirements (4-64 printable ASCII chars)
+ */
+public func validatePassphrase(passphrase: String) -> Bool {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_validate_passphrase(
+        FfiConverterString.lower(passphrase),$0
     )
 })
 }
@@ -1398,10 +2233,22 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_create_frames() != 30542) {
+    if (uniffi_ash_bindings_checksum_func_create_fountain_generator() != 21416) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_decrypt() != 24750) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_derive_all_tokens() != 49844) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_derive_auth_token() != 14058) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_derive_burn_token() != 56541) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_derive_conversation_id() != 20229) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_encrypt() != 28557) {
@@ -1413,31 +2260,73 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_func_generate_mnemonic_with_count() != 38577) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_reconstruct_pad() != 57265) {
+    if (uniffi_ash_bindings_checksum_func_get_max_passphrase_length() != 19825) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_method_frame_encode() != 41007) {
+    if (uniffi_ash_bindings_checksum_func_get_min_passphrase_length() != 46202) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_method_frame_get_index() != 3514) {
+    if (uniffi_ash_bindings_checksum_func_validate_passphrase() != 11471) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_method_frame_get_payload() != 26916) {
+    if (uniffi_ash_bindings_checksum_method_fountainframegenerator_block_size() != 4068) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_method_frame_get_total() != 33409) {
+    if (uniffi_ash_bindings_checksum_method_fountainframegenerator_generate_frame() != 37404) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframegenerator_next_frame() != 55964) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframegenerator_source_count() != 49617) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframegenerator_total_size() != 57404) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_add_frame() != 42009) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_blocks_received() != 21566) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_get_result() != 17120) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_is_complete() != 55359) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_progress() != 18933) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_source_count() != 43225) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_method_pad_as_bytes() != 57196) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_method_pad_consume() != 25970) {
+    if (uniffi_ash_bindings_checksum_method_pad_available_for_sending() != 19640) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_pad_can_send() != 58381) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_pad_consume() != 64469) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_method_pad_consumed() != 16684) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ash_bindings_checksum_method_pad_consumed_back() != 8290) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_pad_consumed_front() != 32220) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ash_bindings_checksum_method_pad_is_exhausted() != 34846) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_pad_next_send_offset() != 20689) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_method_pad_remaining() != 32900) {
@@ -1446,13 +2335,16 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_method_pad_total_size() != 20873) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_constructor_frame_decode() != 40558) {
+    if (uniffi_ash_bindings_checksum_method_pad_update_peer_consumption() != 28070) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_constructor_frame_new() != 6507) {
+    if (uniffi_ash_bindings_checksum_constructor_fountainframereceiver_new() != 36123) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_constructor_pad_from_bytes() != 21075) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_constructor_pad_from_bytes_with_state() != 25438) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_constructor_pad_from_entropy() != 28891) {

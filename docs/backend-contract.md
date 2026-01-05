@@ -89,17 +89,27 @@ If a device is offline, it receives burn when it next connects.
 - `conversation_id -> registered device tokens (APNS)`
 - operational counters (aggregate)
 
-### TTL policy (v1 defaults)
+### TTL policy (v1)
 
-| Data type | Default TTL | Extended TTL |
-|-----------|-------------|--------------|
-| Encrypted blobs | 30 seconds | Up to 48 hours (for delayed reading) |
-| Burn flag | 5 minutes | - |
-| Device tokens | 24 hours | - |
+| Data type | Default | Range | Notes |
+|-----------|---------|-------|-------|
+| Encrypted blobs | 5 min | 5 min – 7 days | Configured at ceremony, deleted on ACK or expiry |
+| Auth token hashes | ∞ | N/A | Lost on server restart (RAM only) |
+| Burn flag | 5 min | Fixed | Allows late-arriving clients to learn of burn |
+| Device tokens | 24 hours | Fixed | Must re-register periodically |
 
-The backend must delete expired data automatically.
+The backend must delete expired data automatically via background cleanup task (runs every 10 seconds).
 
-**Note on extended TTL:** When a push notification wakes a device but the user doesn't open the app immediately, messages need to persist longer. Extended TTL is optional and configurable.
+**Message TTL:**
+- Configured during ceremony (stored in ceremony metadata)
+- Default: 5 minutes (maximum ephemerality)
+- Maximum: 7 days (604,800 seconds)
+- Messages deleted on ACK or TTL expiry, whichever comes first
+
+**Server restart:**
+- All RAM data lost (messages, auth tokens, device tokens)
+- Clients must re-register conversation after restart
+- Server returns 404 "conversation not found" for unknown conversations
 
 ### Persistence
 
@@ -124,29 +134,70 @@ The backend must delete expired data automatically.
 
 ## Transport model
 
-### Polling-first (v1)
-v1 assumes **HTTP polling** is sufficient.
+### SSE + Polling (v1)
 
+v1 uses **Server-Sent Events (SSE)** for real-time delivery with polling as fallback.
+
+**Primary: SSE (Server-Sent Events)**
+- Long-lived HTTP connection for real-time message delivery
+- Endpoint: `GET /v1/messages/stream?conversation_id=...`
+- Keep-alive ping every 15 seconds
+- Automatically broadcasts new messages and burn events
+- Requires auth token in `Authorization` header
+
+**Fallback: HTTP Polling**
+- Used when SSE connection unavailable
 - When a conversation screen is open: poll every **1–2 seconds**
 - When app is backgrounded: no polling
-- Push notifications (APNS) are used only as wake-up signals
 
-WebSockets may be added later but are out of scope for v1.
+**Wake-up: Push Notifications (APNS)**
+- Silent push notifications wake the app when backgrounded
+- App then connects via SSE or polls for messages
+- Best-effort delivery (not guaranteed)
 
 ---
 
 ## Authentication / authorization model
 
-v1 uses **no accounts**.
+v1 uses **no accounts** but requires **token-based authorization**.
 
-Access control is minimal and based on possession of the Conversation ID.
+### Token-based authorization
 
-The backend may add **opaque capability tokens** (server-issued) to reduce abuse, but must follow:
+Both ceremony participants derive tokens from the shared pad:
+- **Conversation ID** - Identifies the conversation (derived from pad bytes 0-31)
+- **Auth Token** - Authenticates API requests (derived from pad bytes 32-95)
+- **Burn Token** - Required for burn operations only (derived from pad bytes 96-159)
 
-- Tokens must not encode user identity
-- Tokens must not include PII
-- Tokens must be revocable/expirable
-- Tokens must not require escrow-like key management
+### Registration flow
+
+After ceremony, both parties register with the backend:
+
+```
+POST /v1/conversations
+{
+  "conversation_id": "...",
+  "auth_token_hash": "sha256(...)",  // 64 hex chars
+  "burn_token_hash": "sha256(...)"   // 64 hex chars
+}
+```
+
+The backend stores only **hashes** of tokens. It can verify but not forge tokens.
+
+### Authorization headers
+
+All protected endpoints require:
+```
+Authorization: Bearer <auth_token>
+```
+
+For burn operations, use `burn_token` instead of `auth_token` (defense in depth).
+
+### Token properties
+
+- Tokens do not encode user identity
+- Tokens do not include PII
+- Tokens are deterministically derived from pad
+- Both parties derive identical tokens from shared pad
 
 ---
 
@@ -155,16 +206,58 @@ The backend may add **opaque capability tokens** (server-issued) to reduce abuse
 This section describes required behaviors.  
 Exact paths and schemas may vary, but semantics must match.
 
+### 0) Register conversation
+
+**Goal:** Register a conversation's authorization tokens with the server.
+
+- Endpoint: `POST /v1/conversations`
+- Input:
+  ```json
+  {
+    "conversation_id": "hex string (64 chars)",
+    "auth_token_hash": "sha256 hash (64 hex chars)",
+    "burn_token_hash": "sha256 hash (64 hex chars)"
+  }
+  ```
+- Success: `200 OK` with `{"success": true}`
+- Errors:
+  - `400 INVALID_INPUT` - malformed request
+
+**Invariants:**
+- Must store only hashes (cannot reverse to get tokens)
+- Idempotent (both parties call after ceremony)
+- Must be called again after server restart
+- No authorization header required (uses conversation_id as identifier)
+
+---
+
 ### 1) Register device for push notifications
 
 **Goal:** Associate a device token with a conversation (ephemerally).
 
-- Input: `conversation_id`, `device_token`, optional `platform`
-- Output: success or failure
+- Endpoint: `POST /v1/register`
+- Headers: `Authorization: Bearer <auth_token>`
+- Input:
+  ```json
+  {
+    "conversation_id": "...",
+    "device_token": "apns device token",
+    "platform": "ios" | "macos"
+  }
+  ```
+- Success: `200 OK` with `{"success": true}`
+- Errors:
+  - `400 INVALID_INPUT` - invalid device token
+  - `401 MISSING_AUTH` - no Authorization header
+  - `401 UNAUTHORIZED` - invalid token
+  - `404 CONVERSATION_NOT_FOUND` - must register conversation first
+  - `410 CONVERSATION_BURNED` - conversation was burned
 
-**Invariants**
-- Must not store device token longer than TTL policy
+**Invariants:**
+- Requires valid auth token
+- Must not store device token longer than TTL policy (24 hours)
 - Must not associate token with identity
+- Must be called again after server restart
 
 ---
 
@@ -172,14 +265,31 @@ Exact paths and schemas may vary, but semantics must match.
 
 **Goal:** Accept opaque ciphertext for a conversation.
 
-- Input: `conversation_id`, `ciphertext`, optional `client_sequence`
-- Output: accepted or rejected
+- Endpoint: `POST /v1/messages`
+- Headers: `Authorization: Bearer <auth_token>`
+- Input:
+  ```json
+  {
+    "conversation_id": "...",
+    "ciphertext": "base64 encoded",
+    "sequence": 123  // optional
+  }
+  ```
+- Success: `200 OK` with `{"accepted": true, "blob_id": "uuid"}`
+- Errors:
+  - `400 INVALID_INPUT` - invalid base64 or missing fields
+  - `401 MISSING_AUTH` / `401 UNAUTHORIZED` - auth errors
+  - `404 CONVERSATION_NOT_FOUND` - re-register required
+  - `410 CONVERSATION_BURNED` - conversation was burned
+  - `413 PAYLOAD_TOO_LARGE` - ciphertext > 8KB
+  - `429 QUEUE_FULL` - too many pending messages (50 max)
 
-**Invariants**
+**Invariants:**
 - Store ciphertext only ephemerally
 - Must enforce size limits
 - Must not log ciphertext
 - Should trigger silent push (APNS) to registered devices (best-effort)
+- Should broadcast via SSE to connected clients
 
 ---
 
@@ -187,37 +297,181 @@ Exact paths and schemas may vary, but semantics must match.
 
 **Goal:** Return new ciphertext blobs for a conversation.
 
-- Input: `conversation_id`, optional `since` cursor
-- Output: list of ciphertext blobs, plus next cursor
+- Endpoint: `GET /v1/messages?conversation_id=...&cursor=...`
+- Headers: `Authorization: Bearer <auth_token>`
+- Success: `200 OK` with:
+  ```json
+  {
+    "messages": [
+      {"id": "uuid", "sequence": 123, "ciphertext": "base64", "received_at": "..."}
+    ],
+    "next_cursor": "base64 encoded cursor",
+    "burned": false
+  }
+  ```
+- Errors:
+  - `401 MISSING_AUTH` / `401 UNAUTHORIZED` - auth errors
+  - `404 CONVERSATION_NOT_FOUND` - re-register required
 
-**Invariants**
+**Invariants:**
 - Must not reorder blobs unnecessarily
 - Must allow duplicates (client must tolerate)
 - Must allow empty responses
 - Must not block indefinitely (short timeouts)
+- Returns `burned: true` if conversation was burned
 
 ---
 
-### 4) Burn conversation
+### 4) Acknowledge message (ACK)
+
+**Goal:** Confirm message was displayed and trigger deletion.
+
+- Endpoint: `POST /v1/ack`
+- Headers: `Authorization: Bearer <auth_token>`
+- Input:
+  ```json
+  {
+    "conversation_id": "...",
+    "blob_id": "uuid"
+  }
+  ```
+- Success: `200 OK` with `{"accepted": true}`
+- Errors:
+  - `401 MISSING_AUTH` / `401 UNAUTHORIZED` - auth errors
+  - `404 CONVERSATION_NOT_FOUND` - re-register required
+
+**Invariants:**
+- Must delete the blob from RAM immediately
+- Must broadcast `delivered` event via SSE to conversation participants
+- ACK is idempotent (ACKing already-deleted blob returns success)
+- Must not log blob contents
+
+**SSE delivery event:**
+```json
+{"type": "delivered", "blob_id": "uuid", "delivered_at": "..."}
+```
+
+---
+
+### 5) Burn conversation
 
 **Goal:** Signal all participants to wipe state.
 
-- Input: `conversation_id`
-- Output: accepted
+- Endpoint: `POST /v1/burn`
+- Headers: `Authorization: Bearer <burn_token>` (**burn token, not auth token**)
+- Input:
+  ```json
+  {
+    "conversation_id": "..."
+  }
+  ```
+- Success: `200 OK` with `{"accepted": true}`
+- Errors:
+  - `401 MISSING_AUTH` / `401 UNAUTHORIZED` - invalid burn token
+  - `404 CONVERSATION_NOT_FOUND` - re-register required
 
-**Invariants**
+**Invariants:**
+- Requires **burn token** (not auth token) for defense in depth
 - Must set burn flag with TTL
-- Should delete queued blobs immediately for that conversation
+- Must delete queued blobs immediately for that conversation
+- Must remove auth token hashes
 - Should trigger silent push (APNS) to registered devices (best-effort)
+- Must broadcast `burned` event via SSE
 
 ---
 
-### 5) Poll burn status (optional)
+### 6) Poll burn status (optional)
 
-If burn status is not piggybacked on message poll, the backend may expose burn status:
+**Goal:** Check if conversation has been burned.
 
-- Input: `conversation_id`, optional cursor
-- Output: burn status and timestamp (if burned)
+- Endpoint: `GET /v1/burn?conversation_id=...`
+- Headers: `Authorization: Bearer <auth_token>`
+- Success: `200 OK` with:
+  ```json
+  {
+    "burned": true,
+    "burned_at": "2025-01-04T12:00:00Z"
+  }
+  ```
+- Errors:
+  - `401 MISSING_AUTH` / `401 UNAUTHORIZED` - auth errors
+  - `404 CONVERSATION_NOT_FOUND` - re-register required
+
+**Note:** Burn status is also returned in poll response (`burned` field).
+
+---
+
+### 7) SSE message stream
+
+**Goal:** Provide real-time message delivery via Server-Sent Events.
+
+- Endpoint: `GET /v1/messages/stream?conversation_id=...`
+- Headers: `Authorization: Bearer <auth_token>`
+- Success: `200 OK` with SSE stream (Content-Type: text/event-stream)
+- Errors:
+  - `401 MISSING_AUTH` / `401 UNAUTHORIZED` - auth errors
+  - `404 CONVERSATION_NOT_FOUND` - re-register required
+
+**Event types:**
+```json
+{"type": "message", "id": "uuid", "sequence": 123, "ciphertext": "base64...", "received_at": "..."}
+{"type": "delivered", "blob_id": "uuid", "delivered_at": "..."}
+{"type": "burned", "burned_at": "2025-01-04T12:00:00Z"}
+{"type": "ping"}
+```
+
+**Invariants:**
+- Connection requires valid auth token
+- Keep-alive ping every 15 seconds
+- Messages broadcast to all connected clients for conversation
+- Burns broadcast immediately to all connected clients
+- Must handle reconnection gracefully
+- Client should reconnect on connection loss
+
+---
+
+## HTTP Status Codes
+
+All error responses follow a consistent format:
+
+```json
+{
+  "error": "Human-readable error message",
+  "code": "MACHINE_READABLE_CODE"
+}
+```
+
+### Success codes
+
+| Code | Meaning |
+|------|---------|
+| `200 OK` | Request successful |
+
+### Client error codes
+
+| Code | Error Code | Meaning | Client Action |
+|------|------------|---------|---------------|
+| `400 BAD_REQUEST` | `INVALID_INPUT` | Malformed request | Fix request format |
+| `400 BAD_REQUEST` | `INVALID_AUTH` | Invalid Authorization header format | Use `Bearer <token>` |
+| `401 UNAUTHORIZED` | `MISSING_AUTH` | Missing Authorization header | Add auth header |
+| `401 UNAUTHORIZED` | `UNAUTHORIZED` | Invalid or expired token | Check token, re-register |
+| `404 NOT_FOUND` | `CONVERSATION_NOT_FOUND` | Conversation not registered | Re-register conversation |
+| `410 GONE` | `CONVERSATION_BURNED` | Conversation has been burned | Remove local state |
+| `413 PAYLOAD_TOO_LARGE` | `PAYLOAD_TOO_LARGE` | Ciphertext exceeds 8KB limit | Reduce message size |
+| `429 TOO_MANY_REQUESTS` | `QUEUE_FULL` | Message queue full (50 max) | Retry later |
+
+### Server error codes
+
+| Code | Error Code | Meaning |
+|------|------------|---------|
+| `500 INTERNAL_SERVER_ERROR` | `INTERNAL_ERROR` | Server error | Retry later |
+
+### Re-registration trigger
+
+When receiving `404 CONVERSATION_NOT_FOUND`, clients must:
+1. Call `POST /v1/conversations` with token hashes
+2. Call `POST /v1/register` with device token
+3. Retry the failed request
 
 ---
 

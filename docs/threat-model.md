@@ -216,14 +216,18 @@ ASH does **not** defend against a compromised operating system.
 - Cold boot attacks
 
 **Defenses**
-- Ephemeral message lifecycle
+- Ephemeral message lifecycle (default)
 - Best-effort wipe
 - Reliance on OS protections
 
 **Residual risk**
 - Partial or full recovery possible
+- **Higher risk with persistent mode** — see [persistent-messages.md](persistent-messages.md)
 
 ASH does **not** claim forensic resistance.
+
+> **Note**: Conversations with persistent storage enabled have increased forensic exposure.
+> Encrypted message blobs are stored on disk and may be recoverable until the conversation is burned.
 
 ---
 

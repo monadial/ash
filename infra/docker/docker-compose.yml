@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend
+    container_name: ash-backend
+    environment:
+      - BIND_ADDR=0.0.0.0
+      - PORT=8080
+      - STORAGE_MODE=memory
+      - BLOB_TTL_SECS=300
+      - BLOB_EXTENDED_TTL_SECS=172800
+      - BLOB_PERSISTENT_TTL_SECS=604800
+      - BURN_TTL_SECS=300
+      - DEVICE_TOKEN_TTL_SECS=86400
+      - MAX_CIPHERTEXT_SIZE=8192
+      - MAX_BLOBS_PER_CONVERSATION=50
+      - CLEANUP_INTERVAL_SECS=10
+      - RUST_LOG=ash_backend=debug,tower_http=info
+    expose:
+      - "8080"
+    networks:
+      - ash-internal
+    restart: unless-stopped
+    # Uncomment for SQLite persistence:
+    # volumes:
+    #   - ash-data:/data
+    # environment:
+    #   - STORAGE_MODE=sqlite
+    #   - SQLITE_PATH=/data/ash_relay.db
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.nginx
+    container_name: ash-nginx
+    ports:
+      - "8443:443"    # mTLS port (HTTPS with client cert)
+      - "8080:8080"   # Health check port (plain HTTP, internal)
+    volumes:
+      - ../certs/ca:/etc/nginx/ssl/ca:ro
+      - ../certs/server:/etc/nginx/ssl/server:ro
+    depends_on:
+      - backend
+    networks:
+      - ash-internal
+      - ash-external
+    restart: unless-stopped
+
+networks:
+  ash-internal:
+    driver: bridge
+    internal: true
+  ash-external:
+    driver: bridge
+
+# Uncomment for SQLite persistence:
+# volumes:
+#   ash-data:

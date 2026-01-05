@@ -116,15 +116,20 @@ See **Pad Sizing** section below for details.
 ### Phase 3: Verification
 
 1. Both devices compute mnemonic checksum from pad
-2. Both devices display checksum (e.g., 4-6 words)
+2. Both devices display checksum (6 words by default)
 3. Users verbally confirm checksums match
 4. Both users explicitly confirm match in app
 
-**Mnemonic wordlist:**
-- Custom wordlist (not BIP-39)
-- Optimized for verbal clarity
-- Distinct pronunciation across words
-- Minimal confusion between similar words
+**Mnemonic specification:**
+- Custom 512-word wordlist (not BIP-39)
+- 9 bits per word (512 = 2^9)
+- 6 words = 54 bits of verification entropy
+- Words are 3-7 characters, lowercase ASCII only
+- Optimized for verbal clarity:
+  - Distinct pronunciation across words
+  - No homophones (e.g., no "night/knight")
+  - Minimal confusion between similar words
+  - Cross-language usability
 
 **Verification rules:**
 - Checksum is deterministic from pad bytes
@@ -133,13 +138,34 @@ See **Pad Sizing** section below for details.
 
 ---
 
+### Phase 3b: Settings Configuration (Sender)
+
+Before verification, the sender configures conversation settings:
+
+1. **Message TTL** - How long unread messages stay on server
+   - 5 minutes (default, maximum ephemerality)
+   - 1 hour
+   - 24 hours
+   - 7 days (maximum)
+
+2. **Disappearing Messages** - How long messages display on screen
+   - Off (persist until app closes)
+   - 30 seconds
+   - 1 minute
+   - 5 minutes
+
+These settings are encoded in ceremony metadata (frame 0).
+
+---
+
 ### Phase 4: Activation
 
 1. Both devices mark conversation as active
 2. Pad is stored in secure storage
-3. Conversation ID is generated
-4. Ceremony state is cleared
-5. Messaging becomes available
+3. Authorization tokens derived from pad bytes
+4. Client registers with backend (token hashes)
+5. Ceremony state is cleared
+6. Messaging becomes available
 
 ---
 
@@ -191,10 +217,43 @@ Timeouts are enforced by the app, not `ash-core`.
 
 ### What the ceremony does NOT protect against
 
-- Visual observation of QR codes
+- Visual observation of QR codes (mitigated by optional passphrase)
 - Compromised devices
 - Malicious participants
 - Coerced participation
+
+---
+
+## Optional passphrase protection
+
+QR frame payloads can optionally be encrypted with a verbally-shared passphrase.
+
+### Purpose
+
+- Protects against casual visual observation (shoulder-surfing)
+- Adds additional layer beyond physical proximity
+- **NOT** a replacement for performing the ceremony privately
+
+### How it works
+
+1. Before ceremony, participants verbally agree on a passphrase
+2. Sender enters passphrase before generating QR codes
+3. Frame payloads are XOR'd with a derived key stream
+4. Frame headers (index, total) remain unencrypted for progress tracking
+5. Receiver enters same passphrase to decrypt frames
+
+### Passphrase requirements
+
+- 4-64 printable ASCII characters
+- Should be spoken, not typed from shared source
+- Should be memorable but unpredictable
+- Different passphrases per frame index (prevents replay)
+
+### Security note
+
+Passphrase encryption uses simple XOR with CRC-32 chaining for key expansion.
+This is designed for convenience against casual observation, not cryptographic security.
+The ceremony should still be performed in a private setting.
 
 ---
 
@@ -242,15 +301,19 @@ Users select pad size before entropy collection via a slider.
 
 ---
 
-### Size options (v1 recommended)
+### Size options (v1)
 
-| Size | Capacity | Frames | Transfer time |
-|------|----------|--------|---------------|
-| Small (64 KB) | ~50 short messages | ~65 frames | ~1-2 min |
-| Medium (256 KB) | ~200 short messages | ~260 frames | ~4-5 min |
-| Large (1 MB) | ~800 short messages | ~1000 frames | ~15-20 min |
+| Size | Bytes | Capacity | Frames (~900B payload) | Transfer time |
+|------|-------|----------|------------------------|---------------|
+| Tiny (32 KB) | 32,768 | ~25 short messages | ~37 frames | ~30-45 sec |
+| Small (64 KB) | 65,536 | ~50 short messages | ~74 frames | ~1-2 min |
+| Medium (256 KB) | 262,144 | ~200 short messages | ~295 frames | ~5 min |
+| Large (512 KB) | 524,288 | ~400 short messages | ~590 frames | ~10 min |
+| Huge (1 MB) | 1,048,576 | ~800 short messages | ~1179 frames | ~20 min |
 
 **Notes:**
+- Frame counts include 1 metadata frame + data frames
+- Frame counts assume ~890 byte effective payload (900 max - 10 byte overhead)
 - Capacity assumes average message size of ~1 KB (text + overhead)
 - Transfer time assumes ~1 second per frame scan
 - Location messages consume more pad bytes than text

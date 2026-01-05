@@ -1,0 +1,231 @@
+/*
+  Localizable.strings
+  Ash
+
+  English (Base) localization
+*/
+
+// MARK: - Common
+
+"common.cancel" = "Cancel";
+"common.save" = "Save";
+"common.done" = "Done";
+"common.continue" = "Continue";
+"common.back" = "Back";
+"common.delete" = "Delete";
+"common.settings" = "Settings";
+"common.rename" = "Rename";
+"common.error" = "Error";
+"common.ok" = "OK";
+
+// MARK: - Conversations Screen
+
+"conversations.title" = "Conversations";
+"conversations.empty.title" = "No Conversations";
+"conversations.empty.message" = "Start a secure conversation by performing a ceremony with another device.";
+"conversations.empty.action" = "New Conversation";
+"conversations.new" = "New";
+"conversations.burn" = "Burn";
+"conversations.burn.title" = "Burn Conversation?";
+"conversations.burn.message" = "This will permanently destroy all messages and the encryption pad. This cannot be undone.";
+"conversations.remaining" = "%@ remaining";
+
+// MARK: - Messaging Screen
+
+"messaging.empty.title" = "No Messages";
+"messaging.empty.message" = "Messages are ephemeral and disappear after viewing";
+"messaging.input.placeholder" = "Message";
+"messaging.send" = "Send message";
+"messaging.peer.burned" = "This conversation has been burned";
+"messaging.location" = "Location";
+
+// MARK: - Conversation Settings
+
+"settings.conversation.title" = "Settings";
+"settings.privacy" = "Privacy";
+"settings.privacy.secret_mode" = "Secret Mode";
+"settings.privacy.secret_mode.description" = "Hold to reveal messages";
+"settings.privacy.secret_mode.footer" = "When enabled, incoming messages stay encrypted until you hold the bubble to reveal them.";
+"settings.relay" = "Relay Server";
+"settings.relay.url" = "Server URL";
+"settings.relay.test" = "Test Connection";
+"settings.relay.connected" = "Connected - %@";
+"settings.persistence" = "Message Persistence";
+"settings.persistence.delayed" = "Delayed Reading";
+"settings.persistence.delayed.description" = "Messages persist for 48 hours";
+"settings.persistence.delayed.footer.on" = "Messages will be available for up to 48 hours, allowing delayed reading.";
+"settings.persistence.delayed.footer.off" = "Messages expire in 30 seconds (real-time mode).";
+
+// MARK: - Rename Dialog
+
+"rename.title" = "Rename Conversation";
+"rename.placeholder" = "Name";
+"rename.message" = "Enter a custom name or leave empty to use mnemonic words";
+
+// MARK: - Ceremony - General
+
+"ceremony.title" = "New Conversation";
+
+// MARK: - Ceremony - Role Selection
+
+"ceremony.role.title" = "Choose Your Role";
+"ceremony.role.subtitle" = "One device initiates, the other receives";
+"ceremony.role.initiate" = "Initiate";
+"ceremony.role.initiate.description" = "Generate pad and display QR codes";
+"ceremony.role.receive" = "Receive";
+"ceremony.role.receive.description" = "Scan QR codes from other device";
+
+// MARK: - Ceremony - Pad Size Selection
+
+"ceremony.padsize.title" = "Select Pad Size";
+"ceremony.padsize.subtitle" = "Larger pads = more messages, longer transfer";
+"ceremony.padsize.small" = "64 KB";
+"ceremony.padsize.small.description" = "~100 messages • Quick transfer";
+"ceremony.padsize.medium" = "256 KB";
+"ceremony.padsize.medium.description" = "~400 messages • Balanced";
+"ceremony.padsize.large" = "1 MB";
+"ceremony.padsize.large.description" = "~1,600 messages • Extended use";
+
+// MARK: - Ceremony - Passphrase
+
+"ceremony.passphrase.title" = "Passphrase Protection";
+"ceremony.passphrase.toggle" = "Encrypt QR codes";
+"ceremony.passphrase.toggle.description" = "Both parties must agree on the same passphrase";
+"ceremony.passphrase.placeholder" = "Enter passphrase";
+"ceremony.passphrase.valid" = "Passphrase valid";
+"ceremony.passphrase.invalid" = "4-64 printable characters required";
+"ceremony.passphrase.hint" = "Speak this passphrase aloud to your partner";
+"ceremony.passphrase.receiver.toggle" = "Sender used passphrase";
+"ceremony.passphrase.receiver.hint" = "Enter the same passphrase spoken by sender";
+
+// MARK: - Ceremony - Consent
+
+"ceremony.consent.title" = "Security Verification";
+"ceremony.consent.subtitle" = "Confirm before proceeding";
+"ceremony.consent.environment" = "I confirm no one is watching my screen";
+"ceremony.consent.environment.detail" = "Ensure you have visual privacy - no cameras, mirrors, or people who can see your display";
+"ceremony.consent.surveillance" = "I am not under surveillance or coercion";
+"ceremony.consent.surveillance.detail" = "Do not proceed if you are being forced or monitored by others";
+"ceremony.consent.ethics" = "I understand the ethical responsibilities";
+"ceremony.consent.ethics.detail" = "This tool is for legitimate private communication only";
+"ceremony.consent.understand" = "I understand this creates unrecoverable keys";
+"ceremony.consent.understand.detail" = "If you lose access, messages cannot be recovered - there is no backup";
+"ceremony.consent.relay_warning" = "I understand relay limitations";
+"ceremony.consent.relay_warning.detail" = "If the relay server is unavailable, you may not receive messages or notifications until connectivity is restored";
+"ceremony.consent.proceed" = "I Understand & Proceed";
+"ceremony.consent.ethics.link" = "Read Ethics Guidelines";
+
+// MARK: - Ceremony - Entropy
+
+"ceremony.entropy.title" = "Generate Entropy";
+"ceremony.entropy.subtitle" = "Draw random patterns anywhere on screen";
+"ceremony.entropy.hint" = "Touch and draw here";
+"ceremony.entropy.progress" = "Keep drawing...";
+"ceremony.entropy.progress.hint" = "Random patterns increase security";
+"ceremony.entropy.complete" = "Entropy collected!";
+"ceremony.entropy.complete.hint" = "Generating secure pad...";
+
+// MARK: - Ceremony - Generating
+
+"ceremony.generating.pad" = "Generating secure pad...";
+"ceremony.generating.qr" = "Generating QR Codes";
+"ceremony.generating.qr.subtitle" = "Preparing %d frames for transfer...";
+
+// MARK: - Ceremony - Transfer (Sender)
+
+"ceremony.transfer.sender.title" = "Streaming QR Codes";
+"ceremony.transfer.sender.subtitle" = "Let the other device scan continuously";
+"ceremony.transfer.sender.frame" = "Frame %d of %d";
+"ceremony.transfer.sender.fps" = "%d fps";
+"ceremony.transfer.sender.ready" = "Receiver Ready";
+
+// MARK: - Ceremony - Transfer (Receiver)
+
+"ceremony.transfer.receiver.title" = "Scan QR Codes";
+"ceremony.transfer.receiver.subtitle" = "Point camera at the streaming QR codes";
+"ceremony.transfer.receiver.waiting" = "Waiting for first frame...";
+"ceremony.transfer.receiver.scanning" = "Scanning frames...";
+"ceremony.transfer.receiver.complete" = "All frames received!";
+"ceremony.transfer.receiver.passphrase.title" = "Passphrase protection";
+"ceremony.transfer.receiver.passphrase.enabled" = "Passphrase enabled";
+
+// MARK: - Ceremony - Verification
+
+"ceremony.verify.title" = "Verify Checksum";
+"ceremony.verify.subtitle" = "Confirm these words match the other device";
+"ceremony.verify.name.title" = "Name this conversation";
+"ceremony.verify.name.placeholder" = "e.g. Alice, Work, Family";
+"ceremony.verify.name.hint" = "Optional - helps you identify this conversation";
+"ceremony.verify.match" = "Words Match";
+"ceremony.verify.nomatch" = "Words Don't Match";
+
+// MARK: - Ceremony - Complete
+
+"ceremony.complete.title" = "Ceremony Complete";
+"ceremony.complete.subtitle" = "Your secure conversation is ready";
+"ceremony.complete.action" = "Start Messaging";
+
+// MARK: - Ceremony - Failed
+
+"ceremony.failed.title" = "Ceremony Failed";
+"ceremony.failed.retry" = "Try Again";
+
+// MARK: - Encrypted Message
+
+"message.encrypted" = "Hold to reveal";
+
+// MARK: - App Settings
+
+"appsettings.title" = "Settings";
+"appsettings.relay.title" = "Default Relay Server";
+"appsettings.relay.url" = "Server URL";
+"appsettings.relay.test" = "Test Connection";
+"appsettings.security" = "Security";
+"appsettings.security.burnall" = "Burn All Conversations";
+"appsettings.security.burnall.description" = "Permanently destroy all data";
+"appsettings.security.burnall.title" = "Burn Everything?";
+"appsettings.security.burnall.message" = "This will permanently destroy ALL conversations, messages, and encryption pads. This cannot be undone.";
+"appsettings.about" = "About";
+"appsettings.version" = "Version";
+"appsettings.ethics" = "Ethics Guidelines";
+
+// MARK: - Ethics
+
+"ethics.title" = "Ethics Guidelines";
+"ethics.intro" = "ASH is designed for legitimate private communication. By using this application, you agree to:";
+"ethics.principle.1.title" = "Respect Privacy";
+"ethics.principle.1.detail" = "Use this tool only for communications where both parties consent and have a legitimate need for privacy.";
+"ethics.principle.2.title" = "No Harmful Use";
+"ethics.principle.2.detail" = "Do not use ASH to plan, coordinate, or facilitate illegal activities, harassment, or harm to others.";
+"ethics.principle.3.title" = "Honest Communication";
+"ethics.principle.3.detail" = "Be truthful with your communication partners about the nature and purpose of your conversations.";
+"ethics.principle.4.title" = "Accept Responsibility";
+"ethics.principle.4.detail" = "You are solely responsible for the content of your messages and how you use this tool.";
+"ethics.principle.5.title" = "Understand Limitations";
+"ethics.principle.5.detail" = "ASH provides technical privacy but cannot protect against physical surveillance, compromised devices, or coerced disclosure.";
+"ethics.footer" = "ASH was created to protect legitimate privacy needs such as journalist-source communication, whistleblowing, personal privacy, and human rights work. Misuse undermines these important purposes.";
+
+// MARK: - Errors
+
+"error.insufficient_pad" = "Insufficient pad remaining";
+"error.decryption_failed" = "Failed to decrypt message";
+"error.invalid_url" = "Invalid URL";
+"error.connection_failed" = "Connection failed";
+"error.server_error" = "Server returned error";
+"error.no_connection" = "No connection to relay";
+"error.relay_error" = "Relay error";
+
+// MARK: - Delivery Status
+
+"delivery.sending" = "Sending...";
+"delivery.sent" = "Sent";
+"delivery.failed" = "Failed to send";
+"delivery.tap_to_retry" = "Tap to retry";
+
+// MARK: - Accessibility
+
+"accessibility.send_message" = "Send message";
+"accessibility.conversation" = "%@, %@ remaining, %@";
+"accessibility.qr_frame" = "QR Code frame %d of %d";
+"accessibility.scanned_frames" = "Scanned %d of %d frames";
+"accessibility.expires_in" = "Expires in %@";

@@ -1,7 +1,14 @@
 //! Error types for ash-core.
 //!
 //! All errors are explicit and designed for clear FFI boundary communication.
-//! No external dependencies - implements std::error::Error manually.
+//! No external dependencies - implements `std::error::Error` manually.
+//!
+//! # Error Categories
+//!
+//! - **Pad errors**: `InsufficientPadBytes`, `InvalidEntropySize`, `PadTooSmallForTokens`
+//! - **OTP errors**: `LengthMismatch`
+//! - **Fountain errors**: `FountainBlockTooShort`, `CrcMismatch`, `EmptyPayload`
+//! - **Metadata errors**: `MetadataTooShort`, `UnsupportedMetadataVersion`, `MetadataUrlTooLong`, `InvalidMetadataUrl`
 
 use std::error::Error as StdError;
 use std::fmt;
@@ -10,9 +17,15 @@ use std::fmt;
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Errors that can occur during ash-core operations.
+///
+/// Each variant includes relevant context for debugging and error messages
+/// are designed to be clear when displayed to users.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
+    // ==================== Pad Errors ====================
     /// Not enough bytes remaining in the pad for the requested operation.
+    ///
+    /// Occurs when trying to consume more bytes than available.
     InsufficientPadBytes {
         /// Number of bytes requested.
         needed: usize,
@@ -21,6 +34,8 @@ pub enum Error {
     },
 
     /// Entropy provided does not match expected pad size.
+    ///
+    /// Occurs when creating a pad with wrong-sized entropy.
     InvalidEntropySize {
         /// Actual entropy size provided.
         size: usize,
@@ -28,26 +43,31 @@ pub enum Error {
         expected: usize,
     },
 
-    /// Attempted to consume from an already exhausted pad.
-    PadExhausted,
+    /// Pad is too small to derive authorization tokens.
+    ///
+    /// Token derivation requires a minimum pad size (512 bytes).
+    PadTooSmallForTokens {
+        /// Actual pad size in bytes.
+        size: usize,
+        /// Minimum required size for token derivation.
+        minimum: usize,
+    },
 
+    // ==================== OTP Errors ====================
     /// Key and data lengths don't match for OTP operation.
+    ///
+    /// OTP requires key length to exactly match data length.
     LengthMismatch {
-        /// Length of the pad slice.
+        /// Length of the key/pad slice.
         pad_len: usize,
         /// Length of the data.
         data_len: usize,
     },
 
-    /// Frame data is too short to be valid.
-    FrameTooShort {
-        /// Actual frame size.
-        size: usize,
-        /// Minimum required size.
-        minimum: usize,
-    },
-
+    // ==================== Fountain/Frame Errors ====================
     /// CRC checksum verification failed.
+    ///
+    /// Data integrity check failed - data may be corrupted.
     CrcMismatch {
         /// Expected CRC value.
         expected: u32,
@@ -55,50 +75,54 @@ pub enum Error {
         actual: u32,
     },
 
-    /// Frame index exceeds total frame count.
-    FrameIndexOutOfBounds {
-        /// Frame index that was out of bounds.
-        index: u16,
-        /// Total number of frames.
-        total: u16,
-    },
-
-    /// Frames have inconsistent total counts.
-    FrameCountMismatch {
-        /// Expected total frame count.
-        expected: u16,
-        /// Actual total frame count found.
-        actual: u16,
-    },
-
-    /// Some frames are missing from the sequence.
-    MissingFrames {
-        /// List of missing frame indices.
-        missing: Vec<u16>,
-    },
-
-    /// Same frame index appears more than once.
-    DuplicateFrame {
-        /// The duplicated frame index.
-        index: u16,
-    },
-
     /// Payload cannot be empty.
+    ///
+    /// Frame or block data must contain at least one byte.
     EmptyPayload,
 
-    /// Payload exceeds maximum allowed size.
-    PayloadTooLarge {
-        /// Actual payload size.
+    /// Fountain-encoded block is too short.
+    ///
+    /// Block must contain at least header + 1 byte + CRC.
+    FountainBlockTooShort {
+        /// Actual size in bytes.
         size: usize,
-        /// Maximum allowed size.
+        /// Minimum required size.
+        minimum: usize,
+    },
+
+    // ==================== Metadata Errors ====================
+    /// Metadata frame is too short.
+    ///
+    /// Ceremony metadata requires a minimum size.
+    MetadataTooShort {
+        /// Actual size in bytes.
+        size: usize,
+        /// Minimum required size.
+        minimum: usize,
+    },
+
+    /// Unsupported metadata version.
+    ///
+    /// Only version 1 is currently supported.
+    UnsupportedMetadataVersion {
+        /// The unsupported version number.
+        version: u8,
+    },
+
+    /// Relay URL in metadata is too long.
+    ///
+    /// URL must fit in a single metadata frame.
+    MetadataUrlTooLong {
+        /// Actual URL length.
+        len: usize,
+        /// Maximum allowed length.
         max: usize,
     },
 
-    /// No frames were provided for reconstruction.
-    NoFrames,
-
-    /// Total frame count cannot be zero.
-    ZeroTotalFrames,
+    /// Invalid UTF-8 in metadata URL.
+    ///
+    /// Relay URL must be valid UTF-8.
+    InvalidMetadataUrl,
 }
 
 impl fmt::Display for Error {
@@ -118,19 +142,18 @@ impl fmt::Display for Error {
                     size, expected
                 )
             }
-            Error::PadExhausted => write!(f, "pad already exhausted"),
+            Error::PadTooSmallForTokens { size, minimum } => {
+                write!(
+                    f,
+                    "pad too small for token derivation: {} bytes, minimum is {}",
+                    size, minimum
+                )
+            }
             Error::LengthMismatch { pad_len, data_len } => {
                 write!(
                     f,
-                    "length mismatch: pad slice has {} bytes, data has {} bytes",
+                    "length mismatch: key has {} bytes, data has {} bytes",
                     pad_len, data_len
-                )
-            }
-            Error::FrameTooShort { size, minimum } => {
-                write!(
-                    f,
-                    "frame too short: got {} bytes, minimum is {}",
-                    size, minimum
                 )
             }
             Error::CrcMismatch { expected, actual } => {
@@ -140,37 +163,33 @@ impl fmt::Display for Error {
                     expected, actual
                 )
             }
-            Error::FrameIndexOutOfBounds { index, total } => {
+            Error::EmptyPayload => write!(f, "payload cannot be empty"),
+            Error::FountainBlockTooShort { size, minimum } => {
                 write!(
                     f,
-                    "frame index out of bounds: index {} >= total {}",
-                    index, total
+                    "fountain block too short: got {} bytes, minimum is {}",
+                    size, minimum
                 )
             }
-            Error::FrameCountMismatch { expected, actual } => {
+            Error::MetadataTooShort { size, minimum } => {
                 write!(
                     f,
-                    "frame count mismatch: expected {}, got {}",
-                    expected, actual
+                    "metadata too short: got {} bytes, minimum is {}",
+                    size, minimum
                 )
             }
-            Error::MissingFrames { missing } => {
-                write!(f, "missing frames: {:?}", missing)
+            Error::UnsupportedMetadataVersion { version } => {
+                write!(f, "unsupported metadata version: {}", version)
             }
-            Error::DuplicateFrame { index } => {
-                write!(f, "duplicate frame at index {}", index)
-            }
-            Error::EmptyPayload => write!(f, "empty payload not allowed"),
-            Error::PayloadTooLarge { size, max } => {
+            Error::MetadataUrlTooLong { len, max } => {
                 write!(
                     f,
-                    "payload too large: {} bytes exceeds maximum {}",
-                    size, max
+                    "metadata URL too long: {} bytes exceeds maximum {}",
+                    len, max
                 )
             }
-            Error::NoFrames => write!(f, "no frames provided"),
-            Error::ZeroTotalFrames => {
-                write!(f, "invalid total frame count: cannot be zero")
+            Error::InvalidMetadataUrl => {
+                write!(f, "invalid UTF-8 in metadata URL")
             }
         }
     }
@@ -199,11 +218,24 @@ mod tests {
         };
         assert!(err.to_string().contains("0xdeadbeef"));
         assert!(err.to_string().contains("0xcafebabe"));
+
+        let err = Error::EmptyPayload;
+        assert_eq!(err.to_string(), "payload cannot be empty");
     }
 
     #[test]
     fn error_implements_std_error() {
-        let err = Error::PadExhausted;
+        let err = Error::EmptyPayload;
         let _: &dyn StdError = &err;
+    }
+
+    #[test]
+    fn error_is_clone_and_eq() {
+        let err1 = Error::CrcMismatch {
+            expected: 123,
+            actual: 456,
+        };
+        let err2 = err1.clone();
+        assert_eq!(err1, err2);
     }
 }

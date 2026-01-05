@@ -34,9 +34,22 @@
 		C3B2DD982F0281E000D5DF37 /* AshUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AshUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C34BC47B2F09737600785598 /* Exceptions for "Ash" folder in "Ash" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = C3B2DD802F0281DF00D5DF37 /* Ash */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C3B2DD832F0281DF00D5DF37 /* Ash */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C34BC47B2F09737600785598 /* Exceptions for "Ash" folder in "Ash" target */,
+			);
 			path = Ash;
 			sourceTree = "<group>";
 		};
@@ -207,6 +220,7 @@
 			knownRegions = (
 				en,
 				Base,
+				sk,
 			);
 			mainGroup = C3B2DD782F0281DF00D5DF37;
 			minimizedProjectReferenceProxies = 1;
@@ -410,12 +424,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Ash/AshDebug.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = J4EH3APKGY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Ash/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used to scan QR codes during the secure key exchange ceremony.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID is used to protect your secure conversations from unauthorized access.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to share your current position in a one-shot encrypted message.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -426,7 +445,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.monadial.Ash;
+				PRODUCT_BUNDLE_IDENTIFIER = com.monadial.ash.protocol;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -446,7 +465,11 @@
 				DEVELOPMENT_TEAM = J4EH3APKGY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Ash/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used to scan QR codes during the secure key exchange ceremony.";
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "Face ID is used to protect your secure conversations from unauthorized access.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to share your current position in a one-shot encrypted message.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -457,7 +480,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.monadial.Ash;
+				PRODUCT_BUNDLE_IDENTIFIER = com.monadial.ash.protocol;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

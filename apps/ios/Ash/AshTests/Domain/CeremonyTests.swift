@@ -334,9 +334,10 @@ struct CeremonyFrameCountTests {
 
         // Create ceremony metadata
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 172800, // 48 hours
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103, // default flags
             relayUrl: "https://relay.ash.test"
         )
 
@@ -361,9 +362,10 @@ struct CeremonyFrameCountTests {
         let padBytes = [UInt8](repeating: 0xCD, count: Int(PadSize.medium.bytes))
 
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -386,9 +388,10 @@ struct CeremonyFrameCountTests {
         let padBytes = [UInt8](repeating: 0xEF, count: Int(PadSize.large.bytes))
 
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -411,9 +414,10 @@ struct CeremonyFrameCountTests {
         let padBytes = [UInt8](repeating: 0x11, count: Int(PadSize.tiny.bytes))
 
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -436,9 +440,10 @@ struct CeremonyFrameCountTests {
         let padBytes = [UInt8](repeating: 0xFF, count: Int(PadSize.huge.bytes))
 
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -462,9 +467,10 @@ struct CeremonyFrameCountTests {
         let padBytes = [UInt8](repeating: 0x42, count: Int(PadSize.small.bytes))
 
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 604800, // 7 days
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -493,9 +499,10 @@ struct CeremonyFrameCountTests {
         let padBytes = [UInt8](repeating: 0x00, count: 10000)
 
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 3600,
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103,
             relayUrl: "https://test.relay"
         )
 
@@ -522,9 +529,10 @@ struct CeremonyFrameCountTests {
         let originalPad = [UInt8]((0..<1000).map { UInt8($0 % 256) })
 
         let metadata = CeremonyMetadata(
-            version: 3,
+            version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
+            notificationFlags: 0x0103,
             relayUrl: "https://roundtrip.test"
         )
 

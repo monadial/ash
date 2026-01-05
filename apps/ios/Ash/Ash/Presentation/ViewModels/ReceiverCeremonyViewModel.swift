@@ -34,6 +34,9 @@ final class ReceiverCeremonyViewModel {
     var passphrase: String = ""
     var conversationName: String = ""
 
+    /// Selected accent color for the conversation
+    var selectedColor: ConversationColor = .orange
+
     // MARK: - Initialization
 
     init(dependencies: Dependencies) {
@@ -47,6 +50,44 @@ final class ReceiverCeremonyViewModel {
         guard isPassphraseEnabled else { return true }
         guard !passphrase.isEmpty else { return false }
         return validatePassphrase(passphrase: passphrase)
+    }
+
+    // MARK: - Received Metadata Display
+
+    /// Human-readable list of enabled notification preferences
+    var receivedNotificationDescriptions: [String] {
+        guard let metadata = receivedMetadata else { return [] }
+        var descriptions: [String] = []
+        if metadata.notifyNewMessage { descriptions.append("New messages") }
+        if metadata.notifyMessageExpiring { descriptions.append("Expiring warnings") }
+        if metadata.notifyMessageExpired { descriptions.append("Expired messages") }
+        if metadata.notifyDeliveryFailed { descriptions.append("Delivery failures") }
+        return descriptions
+    }
+
+    /// Formatted relay URL for display
+    var receivedRelayURL: String {
+        receivedMetadata?.relayURL ?? ""
+    }
+
+    /// Formatted TTL for display
+    var receivedTTLDescription: String {
+        guard let ttl = receivedMetadata?.ttlSeconds else { return "" }
+        switch ttl {
+        case 0..<3600: return "\(ttl / 60) minutes"
+        case 3600..<86400: return "\(ttl / 3600) hours"
+        default: return "\(ttl / 86400) days"
+        }
+    }
+
+    /// Formatted disappearing messages for display
+    var receivedDisappearingDescription: String {
+        guard let seconds = receivedMetadata?.disappearingMessagesSeconds, seconds > 0 else { return "Off" }
+        switch seconds {
+        case 0..<60: return "\(seconds) seconds"
+        case 60..<3600: return "\(seconds / 60) minutes"
+        default: return "\(seconds / 3600) hours"
+        }
     }
 
     // MARK: - Scanning Setup
@@ -122,12 +163,17 @@ final class ReceiverCeremonyViewModel {
         let metadata = CeremonyMetadataSwift(
             ttlSeconds: result.metadata.ttlSeconds,
             disappearingMessagesSeconds: result.metadata.disappearingMessagesSeconds,
+            notificationFlags: result.metadata.notificationFlags,
             relayURL: result.metadata.relayUrl
         )
         receivedMetadata = metadata
         generatedPadBytes = result.pad
 
-        Log.info(.ceremony, "Decoded metadata: ttl=\(metadata.ttlSeconds)s, disappearing=\(metadata.disappearingMessagesSeconds)s")
+        // Decode color from notification flags (bits 12-15) and apply it
+        let decodedColor = NotificationFlagsConstants.decodeColor(from: result.metadata.notificationFlags)
+        selectedColor = decodedColor
+
+        Log.info(.ceremony, "Decoded metadata: ttl=\(metadata.ttlSeconds)s, disappearing=\(metadata.disappearingMessagesSeconds)s, color=\(decodedColor.rawValue)")
 
         // Generate mnemonic for verification
         let mnemonic = generateMnemonic(padBytes: result.pad)
@@ -167,7 +213,8 @@ final class ReceiverCeremonyViewModel {
                 role: .responder,
                 relayURL: relayURL,
                 customName: finalName,
-                disappearingMessages: disappearingMessages
+                disappearingMessages: disappearingMessages,
+                accentColor: selectedColor
             )
 
             Log.info(.ceremony, "Ceremony completed: conversation \(conversation.id.prefix(8)), role=responder, pad=\(padBytes.count) bytes")
@@ -197,6 +244,7 @@ final class ReceiverCeremonyViewModel {
         sourceBlockCount = 0
         receivedFrameCount = 0
         progress = 0.0
+        selectedColor = .orange
     }
 
     func cancel() {

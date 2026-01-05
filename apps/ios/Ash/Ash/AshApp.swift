@@ -132,6 +132,9 @@ struct RootView: View {
                         onUpdateRelayURL: { url in
                             Task { await viewModel.updateConversationRelayURL(conversation, url: url) }
                         },
+                        onUpdateColor: { color in
+                            Task { await viewModel.updateConversationColor(conversation, color: color) }
+                        },
                         onDismiss: {
                             // Reload conversations to get updated state (pad consumption, cursor, etc.)
                             await viewModel.loadConversations()

@@ -2,7 +2,7 @@
 //  MessagingScreen.swift
 //  Ash
 //
-//  Presentation Layer - Messaging interface screen
+//  Messaging interface - Modern redesign with custom colors
 //
 
 import SwiftUI
@@ -15,6 +15,7 @@ struct MessagingScreen: View {
     let onBurn: () -> Void
     let onRename: (String) -> Void
     let onUpdateRelayURL: (String) -> Void
+    let onUpdateColor: (ConversationColor) -> Void
     var onDismiss: (() async -> Void)?
 
     @State private var viewModel: MessagingViewModel?
@@ -27,13 +28,17 @@ struct MessagingScreen: View {
     var body: some View {
         Group {
             if let vm = viewModel {
-                MessagingContent(viewModel: vm)
+                MessagingContent(
+                    viewModel: vm,
+                    accentColor: conversation.accentColor.color
+                )
             } else {
                 ProgressView()
             }
         }
         .navigationTitle(conversation.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(conversation.accentColor.color.opacity(0.1), for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -65,6 +70,7 @@ struct MessagingScreen: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(conversation.accentColor.color)
                 }
             }
         }
@@ -101,7 +107,10 @@ struct MessagingScreen: View {
         }
         .sheet(isPresented: $isShowingInfo) {
             ConversationInfoScreen(
-                conversation: viewModel?.currentConversation ?? conversation
+                conversation: viewModel?.currentConversation ?? conversation,
+                onColorChange: { color in
+                    onUpdateColor(color)
+                }
             )
             .presentationDetents([.large])
         }
@@ -122,7 +131,6 @@ struct MessagingScreen: View {
             await viewModel?.onAppear()
         }
         .onDisappear {
-            // Use Task to handle async cleanup
             Task {
                 await viewModel?.onDisappear()
                 await onDismiss?()
@@ -131,7 +139,7 @@ struct MessagingScreen: View {
     }
 }
 
-// MARK: - Conversation Relay Settings Sheet
+// MARK: - Conversation Settings Sheet
 
 private struct ConversationSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -145,71 +153,138 @@ private struct ConversationSettingsSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("Server URL")
-                            .font(.caption)
+            ScrollView {
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(spacing: 16) {
+                        Image(systemName: "server.rack")
+                            .font(.system(size: 48, weight: .light))
+                            .foregroundStyle(conversation.accentColor.color)
+                            .padding(20)
+                            .background(conversation.accentColor.color.opacity(0.1), in: Circle())
+
+                        Text("Relay Settings")
+                            .font(.title2.bold())
+
+                        Text("Configure the relay server for this conversation")
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 24)
+                    .padding(.bottom, 24)
+                    .padding(.horizontal, 20)
+
+                    // Server URL
+                    VStack(spacing: 0) {
+                        HStack {
+                            Image(systemName: "link")
+                                .font(.title3)
+                                .foregroundStyle(conversation.accentColor.color)
+                                .frame(width: 32)
+                            Text("Server URL")
+                                .font(.subheadline.bold())
+                            Spacer()
+                        }
+                        .padding(16)
+
+                        Divider().padding(.leading, 56)
+
                         TextField("https://relay.example.com", text: $relayURL)
                             .textContentType(.URL)
                             .keyboardType(.URL)
                             .autocapitalization(.none)
                             .autocorrectionDisabled()
-                    }
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
 
-                    Button {
-                        Task { await testConnection() }
-                    } label: {
-                        HStack {
-                            Label("Test Connection", systemImage: "antenna.radiowaves.left.and.right")
-                            Spacer()
-                            if isTestingConnection {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else if let result = connectionTestResult {
-                                switch result {
-                                case .success:
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(.green)
-                                case .failure:
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.red)
+                        Divider().padding(.leading, 56)
+
+                        // Test connection
+                        Button {
+                            Task { await testConnection() }
+                        } label: {
+                            HStack {
+                                Label("Test Connection", systemImage: "antenna.radiowaves.left.and.right")
+                                    .font(.subheadline)
+                                Spacer()
+                                if isTestingConnection {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else if let result = connectionTestResult {
+                                    switch result {
+                                    case .success:
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(.green)
+                                    case .failure:
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.red)
+                                    }
                                 }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
                         }
-                    }
-                    .disabled(isTestingConnection || relayURL.isEmpty)
+                        .disabled(isTestingConnection || relayURL.isEmpty)
 
-                    if let result = connectionTestResult {
-                        switch result {
-                        case .success(let version):
-                            Text("Connected - \(version)")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        case .failure(let error):
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
+                        if let result = connectionTestResult {
+                            Divider().padding(.leading, 56)
+                            HStack {
+                                switch result {
+                                case .success(let version, let latencyMs):
+                                    Label("Connected - \(version) (\(latencyMs)ms)", systemImage: "checkmark")
+                                        .font(.caption)
+                                        .foregroundStyle(.green)
+                                case .failure(let error):
+                                    Label(error, systemImage: "exclamationmark.triangle")
+                                        .font(.caption)
+                                        .foregroundStyle(.red)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                         }
                     }
-                } header: {
-                    Text("Relay Server")
-                } footer: {
-                    Text("Messages are stored in server RAM for \(MessageTTL.displayName) and deleted on delivery or expiry.")
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal, 20)
+
+                    // Info
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .foregroundStyle(.secondary)
+                        Text("Messages are stored in server RAM for \(MessageTTL.displayName) and deleted on delivery or expiry.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+
+                    // Save button
+                    Button {
+                        onSave(relayURL)
+                    } label: {
+                        Text("Save")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(conversation.accentColor.color, in: Capsule())
+                    }
+                    .disabled(relayURL.isEmpty)
+                    .opacity(relayURL.isEmpty ? 0.5 : 1)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 24)
+                    .padding(.bottom, 40)
                 }
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave(relayURL)
-                    }
-                    .disabled(relayURL.isEmpty)
                 }
             }
             .onAppear {
@@ -229,11 +304,14 @@ private struct ConversationSettingsSheet: View {
             return
         }
 
+        let startTime = Date()
+
         do {
             var request = URLRequest(url: url)
             request.timeoutInterval = 10
 
             let (data, response) = try await URLSession.shared.data(for: request)
+            let latencyMs = Int(Date().timeIntervalSince(startTime) * 1000)
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
@@ -243,9 +321,9 @@ private struct ConversationSettingsSheet: View {
 
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let version = json["version"] as? String {
-                connectionTestResult = .success(version: "v\(version)")
+                connectionTestResult = .success(version: "v\(version)", latencyMs: latencyMs)
             } else {
-                connectionTestResult = .success(version: "OK")
+                connectionTestResult = .success(version: "OK", latencyMs: latencyMs)
             }
         } catch {
             connectionTestResult = .failure(error: error.localizedDescription)
@@ -257,6 +335,7 @@ private struct ConversationSettingsSheet: View {
 
 private struct MessagingContent: View {
     @Bindable var viewModel: MessagingViewModel
+    let accentColor: Color
     @FocusState private var isInputFocused: Bool
     @State private var selectedMessageForInfo: Message?
 
@@ -279,16 +358,13 @@ private struct MessagingContent: View {
                         .padding(.top, Spacing.md)
 
                         if viewModel.messages.isEmpty {
-                            ContentUnavailableView(
-                                "No Messages",
-                                systemImage: "bubble.left.and.bubble.right",
-                                description: Text("Messages are ephemeral and disappear after viewing")
-                            )
-                            .padding(.top, Spacing.xxl)
+                            EmptyMessagesView(accentColor: accentColor)
+                                .padding(.top, Spacing.xxl)
                         } else {
                             ForEach(viewModel.messages) { message in
                                 MessageBubbleView(
                                     message: message,
+                                    accentColor: accentColor,
                                     onRetry: {
                                         if case .failed = message.deliveryStatus {
                                             Task { await viewModel.retryMessage(message) }
@@ -323,6 +399,7 @@ private struct MessagingContent: View {
                 MessageInputView(
                     text: $viewModel.messageText,
                     isFocused: $isInputFocused,
+                    accentColor: accentColor,
                     canSend: viewModel.canSendMessage,
                     currentBytes: viewModel.currentMessageBytes,
                     isApproachingLimit: viewModel.isApproachingLimit,
@@ -341,9 +418,33 @@ private struct MessagingContent: View {
             }
         }
         .sheet(item: $selectedMessageForInfo) { message in
-            MessageDetailView(message: message)
+            MessageDetailView(message: message, accentColor: accentColor)
                 .presentationDetents([.medium, .large])
         }
+    }
+}
+
+// MARK: - Empty Messages View
+
+private struct EmptyMessagesView: View {
+    let accentColor: Color
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 48, weight: .light))
+                .foregroundStyle(accentColor.opacity(0.5))
+
+            VStack(spacing: 4) {
+                Text("No Messages")
+                    .font(.headline)
+                Text("Messages are ephemeral and disappear after viewing")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(40)
     }
 }
 
@@ -375,7 +476,7 @@ private struct PadUsageHeaderView: View {
         VStack(spacing: Spacing.xs) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "lock.shield.fill")
-                    .foregroundStyle(Color.ashSecure)
+                    .foregroundStyle(conversation.accentColor.color)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(conversation.formattedRemaining) remaining")
@@ -385,6 +486,7 @@ private struct PadUsageHeaderView: View {
                     DualUsageBar(
                         myUsage: conversation.myUsagePercentage,
                         peerUsage: conversation.peerUsagePercentage,
+                        accentColor: conversation.accentColor.color,
                         height: 4
                     )
                     .frame(width: 80)
@@ -433,11 +535,13 @@ private struct RelayStatusIndicator: View {
 
 private struct MessageBubbleView: View {
     let message: Message
+    let accentColor: Color
     let onRetry: (() -> Void)?
     let onInfo: (() -> Void)?
 
-    init(message: Message, onRetry: (() -> Void)? = nil, onInfo: (() -> Void)? = nil) {
+    init(message: Message, accentColor: Color, onRetry: (() -> Void)? = nil, onInfo: (() -> Void)? = nil) {
         self.message = message
+        self.accentColor = accentColor
         self.onRetry = onRetry
         self.onInfo = onInfo
     }
@@ -474,7 +578,7 @@ private struct MessageBubbleView: View {
                 // Status row
                 HStack(spacing: 6) {
                     if let expiresAt = message.expiresAt {
-                        ExpiryIndicatorView(expiresAt: expiresAt)
+                        ExpiryIndicatorView(expiresAt: expiresAt, accentColor: accentColor)
                     }
                     Text(message.formattedTime)
                         .font(.caption2)
@@ -514,11 +618,12 @@ private struct MessageBubbleView: View {
                 LocationBubbleContent(
                     latitude: lat,
                     longitude: lon,
-                    isOutgoing: message.isOutgoing
+                    isOutgoing: message.isOutgoing,
+                    accentColor: accentColor
                 )
             }
         }
-        .background(message.isOutgoing ? Color.ashSecure : Color(uiColor: .secondarySystemBackground))
+        .background(message.isOutgoing ? accentColor : Color(uiColor: .secondarySystemBackground))
         .foregroundStyle(message.isOutgoing ? Color.white : Color.primary)
     }
 }
@@ -529,10 +634,10 @@ private struct LocationBubbleContent: View {
     let latitude: Double
     let longitude: Double
     let isOutgoing: Bool
+    let accentColor: Color
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            // Header
             HStack(spacing: Spacing.xs) {
                 Image(systemName: "location.fill")
                     .font(.caption)
@@ -540,11 +645,9 @@ private struct LocationBubbleContent: View {
                     .font(.caption.bold())
             }
 
-            // Coordinates
             Text(String(format: "%.6f, %.6f", latitude, longitude))
                 .font(.system(.caption, design: .monospaced))
 
-            // Open in Maps button
             Button {
                 openInMaps()
             } label: {
@@ -558,7 +661,7 @@ private struct LocationBubbleContent: View {
                 .padding(.vertical, Spacing.xxs)
                 .background(
                     Capsule()
-                        .fill(isOutgoing ? Color.white.opacity(0.2) : Color.ashSecure.opacity(0.15))
+                        .fill(isOutgoing ? Color.white.opacity(0.2) : accentColor.opacity(0.15))
                 )
             }
             .buttonStyle(.plain)
@@ -568,7 +671,6 @@ private struct LocationBubbleContent: View {
     }
 
     private func openInMaps() {
-        // Use Apple Maps URL scheme
         let urlString = "maps://?ll=\(latitude),\(longitude)&q=Shared%20Location"
         if let url = URL(string: urlString) {
             UIApplication.shared.open(url)
@@ -622,16 +724,14 @@ private struct DeliveryStatusView: View {
 
 private struct ExpiryIndicatorView: View {
     let expiresAt: Date
+    let accentColor: Color
     @State private var remainingTime: TimeInterval = 0
 
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    /// Estimate initial TTL from the message creation time
-    /// Uses common TTL values to determine the total duration
     private var estimatedTotalTime: TimeInterval {
         let elapsed = Date().timeIntervalSince(expiresAt.addingTimeInterval(-remainingTime))
         let total = elapsed + remainingTime
-        // Round to nearest common TTL value for progress calculation
         let commonTTLs: [TimeInterval] = [60, 300, 1800, 3600, 21600, 86400, 172800, 604800]
         return commonTTLs.first { $0 >= total * 0.9 } ?? total
     }
@@ -656,12 +756,11 @@ private struct ExpiryIndicatorView: View {
         } else if progress < 0.25 {
             return Color.ashWarning
         }
-        return Color.ashSecure.opacity(0.6)
+        return accentColor.opacity(0.6)
     }
 
     var body: some View {
         HStack(spacing: 4) {
-            // Progress ring
             ZStack {
                 Circle()
                     .stroke(Color.secondary.opacity(0.2), lineWidth: 2)
@@ -673,7 +772,6 @@ private struct ExpiryIndicatorView: View {
             }
             .frame(width: 14, height: 14)
 
-            // Human readable time
             Text(formatHumanReadable(remainingTime))
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(indicatorColor)
@@ -722,6 +820,7 @@ private struct ExpiryIndicatorView: View {
 private struct MessageInputView: View {
     @Binding var text: String
     var isFocused: FocusState<Bool>.Binding
+    let accentColor: Color
     let canSend: Bool
     let currentBytes: Int
     let isApproachingLimit: Bool
@@ -733,12 +832,10 @@ private struct MessageInputView: View {
     let onSend: () -> Void
     let onSendLocation: () -> Void
 
-    /// Show size indicator when message is > 1KB
     private var showSizeIndicator: Bool {
         currentBytes > 1024
     }
 
-    /// Color for the size indicator
     private var sizeIndicatorColor: Color {
         if isMessageTooLarge {
             return Color.ashDanger
@@ -748,7 +845,6 @@ private struct MessageInputView: View {
         return Color.secondary
     }
 
-    /// Combined error message (size or location)
     private var errorMessage: String? {
         sizeError ?? locationError
     }
@@ -780,7 +876,7 @@ private struct MessageInputView: View {
                     } else {
                         Image(systemName: "location.fill")
                             .font(.system(size: 20))
-                            .foregroundStyle(Color.ashSecure)
+                            .foregroundStyle(accentColor)
                             .frame(width: 28, height: 28)
                     }
                 }
@@ -820,7 +916,7 @@ private struct MessageInputView: View {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.system(size: 32))
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(canSend ? Color.ashSecure : Color.secondary)
+                        .foregroundStyle(canSend ? accentColor : Color.secondary)
                 }
                 .disabled(!canSend)
                 .accessibilityLabel("Send message")

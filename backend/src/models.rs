@@ -11,6 +11,70 @@ use uuid::Uuid;
 /// Base64-encoded string derived from shared secret
 pub type ConversationId = String;
 
+// ============================================================================
+// Notification Flags (matches core/src/ceremony.rs)
+// ============================================================================
+
+/// Notification flag constants for push notification preferences.
+/// These match the Rust core definitions exactly.
+pub mod notification_flags {
+    /// Notify when new message arrives (receiver)
+    pub const NOTIFY_NEW_MESSAGE: u16 = 1 << 0;
+    /// Notify before message expires - 5min and 1min warnings (receiver)
+    pub const NOTIFY_MESSAGE_EXPIRING: u16 = 1 << 1;
+    /// Notify when message expires (receiver)
+    pub const NOTIFY_MESSAGE_EXPIRED: u16 = 1 << 2;
+    /// Notify if message TTL expires unread (sender)
+    pub const NOTIFY_DELIVERY_FAILED: u16 = 1 << 8;
+    /// Reserved for future read receipts
+    pub const NOTIFY_MESSAGE_READ: u16 = 1 << 9;
+
+    /// Default flags: new message + expiring + delivery failed
+    pub const DEFAULT: u16 = NOTIFY_NEW_MESSAGE | NOTIFY_MESSAGE_EXPIRING | NOTIFY_DELIVERY_FAILED;
+}
+
+/// Conversation notification preferences stored per-conversation
+#[derive(Debug, Clone, Default)]
+pub struct ConversationPrefs {
+    /// 16-bit notification flags
+    pub notification_flags: u16,
+    /// Message TTL in seconds (for expiry notifications)
+    pub ttl_seconds: u64,
+    /// When the preferences were registered
+    pub created_at: DateTime<Utc>,
+}
+
+impl ConversationPrefs {
+    pub fn new(notification_flags: u16, ttl_seconds: u64) -> Self {
+        Self {
+            notification_flags,
+            ttl_seconds,
+            created_at: Utc::now(),
+        }
+    }
+
+    /// Check if a specific notification flag is set
+    pub fn has_flag(&self, flag: u16) -> bool {
+        (self.notification_flags & flag) != 0
+    }
+
+    pub fn notify_new_message(&self) -> bool {
+        self.has_flag(notification_flags::NOTIFY_NEW_MESSAGE)
+    }
+
+    pub fn notify_message_expiring(&self) -> bool {
+        self.has_flag(notification_flags::NOTIFY_MESSAGE_EXPIRING)
+    }
+
+    pub fn notify_message_expired(&self) -> bool {
+        self.has_flag(notification_flags::NOTIFY_MESSAGE_EXPIRED)
+    }
+
+    pub fn notify_delivery_failed(&self) -> bool {
+        self.has_flag(notification_flags::NOTIFY_DELIVERY_FAILED)
+    }
+}
+
 /// Message sequence number for ordering
 pub type SequenceNumber = u64;
 
@@ -115,6 +179,20 @@ pub struct RegisterConversationRequest {
     pub auth_token_hash: String,
     /// SHA-256 hash of burn token (hex-encoded, 64 chars)
     pub burn_token_hash: String,
+    /// Notification preferences (16-bit flags, optional for backwards compat)
+    #[serde(default = "default_notification_flags")]
+    pub notification_flags: u16,
+    /// Message TTL in seconds (for expiry notifications)
+    #[serde(default = "default_ttl_seconds")]
+    pub ttl_seconds: u64,
+}
+
+fn default_notification_flags() -> u16 {
+    notification_flags::DEFAULT
+}
+
+fn default_ttl_seconds() -> u64 {
+    300 // 5 minutes default
 }
 
 /// Register conversation response

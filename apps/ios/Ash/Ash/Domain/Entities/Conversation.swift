@@ -164,6 +164,9 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
     /// How long messages remain visible on screen after viewing (client-side only)
     var disappearingMessages: DisappearingMessages
 
+    /// Custom accent color for this conversation
+    var accentColor: ConversationColor
+
     // MARK: - Relay State
 
     /// Last known cursor position for polling messages
@@ -191,7 +194,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, createdAt, lastActivity, remainingBytes, totalBytes
         case unreadCount, mnemonicChecksum, customName, sendOffset, peerConsumed
-        case relayURL, disappearingMessages, role, relayCursor, activitySequence
+        case relayURL, disappearingMessages, accentColor, role, relayCursor, activitySequence
         case processedIncomingSequences, peerBurnedAt
         case authToken, burnToken
     }
@@ -211,6 +214,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         peerConsumed = try container.decodeIfPresent(UInt64.self, forKey: .peerConsumed) ?? 0
         relayURL = try container.decode(String.self, forKey: .relayURL)
         disappearingMessages = try container.decodeIfPresent(DisappearingMessages.self, forKey: .disappearingMessages) ?? .off
+        accentColor = try container.decodeIfPresent(ConversationColor.self, forKey: .accentColor) ?? .orange
         relayCursor = try container.decodeIfPresent(String.self, forKey: .relayCursor)
         activitySequence = try container.decodeIfPresent(UInt64.self, forKey: .activitySequence) ?? 0
         peerBurnedAt = try container.decodeIfPresent(Date.self, forKey: .peerBurnedAt)
@@ -234,6 +238,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         try container.encode(peerConsumed, forKey: .peerConsumed)
         try container.encode(relayURL, forKey: .relayURL)
         try container.encode(disappearingMessages, forKey: .disappearingMessages)
+        try container.encode(accentColor, forKey: .accentColor)
         try container.encodeIfPresent(relayCursor, forKey: .relayCursor)
         try container.encode(activitySequence, forKey: .activitySequence)
         try container.encodeIfPresent(peerBurnedAt, forKey: .peerBurnedAt)
@@ -256,6 +261,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         peerConsumed: UInt64,
         relayURL: String,
         disappearingMessages: DisappearingMessages = .off,
+        accentColor: ConversationColor = .orange,
         relayCursor: String? = nil,
         activitySequence: UInt64 = 0,
         peerBurnedAt: Date? = nil,
@@ -276,6 +282,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         self.peerConsumed = peerConsumed
         self.relayURL = relayURL
         self.disappearingMessages = disappearingMessages
+        self.accentColor = accentColor
         self.relayCursor = relayCursor
         self.activitySequence = activitySequence
         self.peerBurnedAt = peerBurnedAt
@@ -408,6 +415,7 @@ extension Conversation {
         relayURL: String,
         customName: String? = nil,
         disappearingMessages: DisappearingMessages = .off,
+        accentColor: ConversationColor = .orange,
         authToken: String,
         burnToken: String
     ) -> Conversation {
@@ -427,6 +435,7 @@ extension Conversation {
             peerConsumed: 0,
             relayURL: relayURL,
             disappearingMessages: disappearingMessages,
+            accentColor: accentColor,
             authToken: authToken,
             burnToken: burnToken
         )
@@ -454,6 +463,13 @@ extension Conversation {
     func withRelayURL(_ url: String) -> Conversation {
         var copy = self
         copy.relayURL = url
+        return copy
+    }
+
+    /// Create a copy with updated accent color
+    func withAccentColor(_ color: ConversationColor) -> Conversation {
+        var copy = self
+        copy.accentColor = color
         return copy
     }
 

@@ -65,6 +65,7 @@ struct UsageBar: View {
 struct DualUsageBar: View {
     let myUsage: Double
     let peerUsage: Double
+    var accentColor: Color = .accentColor
     var height: CGFloat = 6
 
     private var remaining: Double {
@@ -74,7 +75,7 @@ struct DualUsageBar: View {
     private var remainingColor: Color {
         if remaining < 0.1 { return .red }
         if remaining < 0.3 { return .orange }
-        return .accentColor
+        return accentColor
     }
 
     var body: some View {
@@ -84,7 +85,7 @@ struct DualUsageBar: View {
                     .fill(remainingColor.opacity(0.2))
 
                 Capsule()
-                    .fill(Color.accentColor)
+                    .fill(accentColor)
                     .frame(width: max(0, geometry.size.width * min(1, myUsage)))
 
                 HStack {

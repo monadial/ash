@@ -119,13 +119,17 @@ struct ConsentState: Equatable {
     var ethicsUnderstood: Bool = false        // Understands ethical use
     var keyLossUnderstood: Bool = false       // Understands no recovery
     var relayWarningUnderstood: Bool = false  // Understands relay limitations
+    var dataLossUnderstood: Bool = false      // Understands relay data is ephemeral
+    var burnUnderstood: Bool = false          // Understands burn destroys keys
 
     var allConfirmed: Bool {
         environmentConfirmed &&
         notUnderSurveillance &&
         ethicsUnderstood &&
         keyLossUnderstood &&
-        relayWarningUnderstood
+        relayWarningUnderstood &&
+        dataLossUnderstood &&
+        burnUnderstood
     }
 }
 

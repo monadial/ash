@@ -14,22 +14,62 @@
 import Foundation
 import CryptoKit
 
+/// Notification flag constants for push notification preferences
+/// These match the Rust core definitions
+enum NotificationFlagsConstants {
+    static let notifyNewMessage: UInt16 = 1 << 0
+    static let notifyMessageExpiring: UInt16 = 1 << 1
+    static let notifyMessageExpired: UInt16 = 1 << 2
+    static let notifyDeliveryFailed: UInt16 = 1 << 8
+    static let notifyMessageRead: UInt16 = 1 << 9
+
+    /// Default: new message + expiring + delivery failed
+    static let defaultFlags: UInt16 = notifyNewMessage | notifyMessageExpiring | notifyDeliveryFailed
+
+    // Color encoding in bits 12-15 (4 bits for up to 16 colors)
+    static let colorShift: UInt16 = 12
+    static let colorMask: UInt16 = 0xF000  // bits 12-15
+
+    /// Encode color index into notification flags
+    static func encodeColor(_ color: ConversationColor, into flags: UInt16) -> UInt16 {
+        let colorIndex = UInt16(ConversationColor.allCases.firstIndex(of: color) ?? 0)
+        return (flags & ~colorMask) | (colorIndex << colorShift)
+    }
+
+    /// Decode color from notification flags
+    static func decodeColor(from flags: UInt16) -> ConversationColor {
+        let colorIndex = Int((flags & colorMask) >> colorShift)
+        let allColors = ConversationColor.allCases
+        guard colorIndex < allColors.count else { return .orange }
+        return allColors[colorIndex]
+    }
+}
+
 /// Ceremony metadata that gets transferred via QR
-/// Contains TTL, disappearing messages setting, and relay URL
+/// Contains TTL, disappearing messages setting, notification preferences, and relay URL
 struct CeremonyMetadataSwift: Sendable {
     let ttlSeconds: UInt64
     let disappearingMessagesSeconds: UInt32
+    let notificationFlags: UInt16
     let relayURL: String
 
     init(
         ttlSeconds: UInt64 = MessageTTL.defaultSeconds,
         disappearingMessagesSeconds: UInt32 = 0,
+        notificationFlags: UInt16 = NotificationFlagsConstants.defaultFlags,
         relayURL: String
     ) {
         self.ttlSeconds = ttlSeconds
         self.disappearingMessagesSeconds = disappearingMessagesSeconds
+        self.notificationFlags = notificationFlags
         self.relayURL = relayURL
     }
+
+    // Helper methods for checking flags
+    var notifyNewMessage: Bool { (notificationFlags & NotificationFlagsConstants.notifyNewMessage) != 0 }
+    var notifyMessageExpiring: Bool { (notificationFlags & NotificationFlagsConstants.notifyMessageExpiring) != 0 }
+    var notifyMessageExpired: Bool { (notificationFlags & NotificationFlagsConstants.notifyMessageExpired) != 0 }
+    var notifyDeliveryFailed: Bool { (notificationFlags & NotificationFlagsConstants.notifyDeliveryFailed) != 0 }
 }
 
 /// Result of decoding fountain ceremony frames
@@ -67,13 +107,15 @@ protocol PerformCeremonyUseCaseProtocol: Sendable {
     ///   - relayURL: The relay server URL
     ///   - customName: Optional custom name for the conversation
     ///   - disappearingMessages: Display TTL setting for messages (client-side)
+    ///   - accentColor: Accent color for the conversation UI
     func finalizeCeremony(
         padBytes: [UInt8],
         mnemonic: [String],
         role: ConversationRole,
         relayURL: String,
         customName: String?,
-        disappearingMessages: DisappearingMessages
+        disappearingMessages: DisappearingMessages,
+        accentColor: ConversationColor
     ) async throws -> Conversation
 }
 
@@ -135,6 +177,7 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
             version: 1,
             ttlSeconds: metadata.ttlSeconds,
             disappearingMessagesSeconds: metadata.disappearingMessagesSeconds,
+            notificationFlags: metadata.notificationFlags,
             relayUrl: metadata.relayURL
         )
 
@@ -162,15 +205,16 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
         role: ConversationRole,
         relayURL: String,
         customName: String?,
-        disappearingMessages: DisappearingMessages
+        disappearingMessages: DisappearingMessages,
+        accentColor: ConversationColor
     ) async throws -> Conversation {
-        Log.info(.ceremony, "Finalizing ceremony (\(padBytes.count) bytes, disappearing=\(disappearingMessages.displayName))")
+        Log.info(.ceremony, "Finalizing ceremony (\(padBytes.count) bytes, disappearing=\(disappearingMessages.displayName), color=\(accentColor.rawValue))")
 
         // Derive authorization tokens from pad bytes
         let tokens = try Ash.deriveAllTokens(padBytes: padBytes)
         Log.debug(.ceremony, "Authorization tokens derived")
 
-        // Create conversation with disappearing messages setting
+        // Create conversation with disappearing messages setting and accent color
         let conversation = Conversation.fromCeremony(
             padBytes: padBytes,
             mnemonic: mnemonic,
@@ -178,6 +222,7 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
             relayURL: relayURL,
             customName: customName,
             disappearingMessages: disappearingMessages,
+            accentColor: accentColor,
             authToken: tokens.authToken,
             burnToken: tokens.burnToken
         )

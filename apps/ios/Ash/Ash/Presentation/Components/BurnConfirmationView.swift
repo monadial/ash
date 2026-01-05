@@ -2,8 +2,7 @@
 //  BurnConfirmationView.swift
 //  Ash
 //
-//  Unified burn confirmation component
-//  Simplified ephemeral design - immediate burn only
+//  Unified burn confirmation component - Modern danger design
 //
 
 import SwiftUI
@@ -25,6 +24,7 @@ struct BurnConfirmationView: View {
 
     @State private var confirmText = ""
     @State private var contentHeight: CGFloat = 0
+    @State private var isAnimating = false
     @FocusState private var isTextFieldFocused: Bool
 
     private let requiredText = "BURN"
@@ -45,9 +45,9 @@ struct BurnConfirmationView: View {
     private var subtitle: String {
         switch burnType {
         case .conversation:
-            return "This conversation will be destroyed"
+            return "This action cannot be undone"
         case .all:
-            return "All conversations will be destroyed"
+            return "Emergency destruction of all data"
         }
     }
 
@@ -55,26 +55,43 @@ struct BurnConfirmationView: View {
         VStack(spacing: 0) {
             // Drag indicator
             Capsule()
-                .fill(Color.secondary.opacity(0.4))
+                .fill(Color.ashDanger.opacity(0.4))
                 .frame(width: 36, height: 5)
                 .padding(.top, Spacing.md)
                 .padding(.bottom, Spacing.lg)
 
-            // Icon
+            // Animated flame icon
             ZStack {
+                // Outer glow
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.ashDanger.opacity(0.3), Color.ashDanger.opacity(0)],
+                            center: .center,
+                            startRadius: 30,
+                            endRadius: 60
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(isAnimating ? 1.1 : 1.0)
+
+                // Inner circle
                 Circle()
                     .fill(Color.ashDanger.opacity(0.15))
-                    .frame(width: 80, height: 80)
+                    .frame(width: 88, height: 88)
 
+                // Flame icon
                 Image(systemName: "flame.fill")
-                    .font(.system(size: 36))
+                    .font(.system(size: 44))
                     .foregroundStyle(Color.ashDanger)
+                    .scaleEffect(isAnimating ? 1.05 : 1.0)
             }
             .padding(.bottom, Spacing.lg)
 
             // Title
             Text(title)
                 .font(.title2.bold())
+                .foregroundStyle(Color.ashDanger)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.lg)
 
@@ -85,73 +102,150 @@ struct BurnConfirmationView: View {
                 .padding(.top, Spacing.xs)
                 .padding(.bottom, Spacing.lg)
 
-            // What will be destroyed
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                DestructionRow(icon: "key.fill", text: "Encryption pad")
-                DestructionRow(icon: "bubble.left.and.bubble.right.fill", text: "All messages")
-                DestructionRow(icon: "arrow.counterclockwise.circle.fill", text: "Cannot be recovered")
+            // Warning card
+            VStack(spacing: 0) {
+                // Header
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.ashDanger)
+
+                    Text("Will be permanently destroyed")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.ashDanger)
+
+                    Spacer()
+                }
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(Color.ashDanger.opacity(0.1))
+
+                // Items
+                VStack(spacing: 0) {
+                    DestructionRow(
+                        icon: "key.fill",
+                        text: "Encryption pad & keys",
+                        isFirst: true
+                    )
+
+                    Divider().padding(.leading, 48)
+
+                    DestructionRow(
+                        icon: "bubble.left.and.bubble.right.fill",
+                        text: "All message history",
+                        isFirst: false
+                    )
+
+                    Divider().padding(.leading, 48)
+
+                    DestructionRow(
+                        icon: "person.2.fill",
+                        text: "Connection with peer",
+                        isFirst: false
+                    )
+
+                    if burnType.isAll {
+                        Divider().padding(.leading, 48)
+
+                        DestructionRow(
+                            icon: "tray.full.fill",
+                            text: "All conversations",
+                            isFirst: false
+                        )
+                    }
+                }
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
             }
-            .padding(Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+            .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemBackground))
+                    .strokeBorder(Color.ashDanger.opacity(0.2), lineWidth: 1)
             )
             .padding(.horizontal, Spacing.lg)
 
-            Spacer()
-                .frame(height: Spacing.xl)
+            Spacer().frame(height: Spacing.xl)
 
-            // Confirmation input
+            // Confirmation input section
             VStack(spacing: Spacing.sm) {
-                Text("Type \"\(requiredText)\" to confirm")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "keyboard")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("Type \"\(requiredText)\" to confirm")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
 
-                TextField("", text: $confirmText)
-                    .font(.title3.bold())
-                    .multilineTextAlignment(.center)
-                    .padding(Spacing.md)
-                    .background(
-                        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                            .stroke(canBurn ? Color.ashDanger : Color(uiColor: .separator), lineWidth: canBurn ? 2 : 1)
-                    )
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.characters)
-                    .focused($isTextFieldFocused)
+                HStack(spacing: Spacing.sm) {
+                    TextField("", text: $confirmText)
+                        .font(.title3.bold().monospaced())
+                        .multilineTextAlignment(.center)
+                        .padding(.vertical, Spacing.sm)
+                        .padding(.horizontal, Spacing.md)
+                        .background(
+                            RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+                                .fill(canBurn ? Color.ashDanger.opacity(0.1) : Color(uiColor: .tertiarySystemFill))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+                                .strokeBorder(
+                                    canBurn ? Color.ashDanger : Color.clear,
+                                    lineWidth: 2
+                                )
+                        )
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.characters)
+                        .focused($isTextFieldFocused)
+
+                    // Checkmark indicator
+                    ZStack {
+                        Circle()
+                            .fill(canBurn ? Color.ashDanger : Color(uiColor: .systemFill))
+                            .frame(width: 36, height: 36)
+
+                        Image(systemName: canBurn ? "checkmark" : "xmark")
+                            .font(.body.weight(.bold))
+                            .foregroundStyle(canBurn ? .white : .secondary)
+                    }
+                }
             }
             .padding(.horizontal, Spacing.lg)
 
-            Spacer()
-                .frame(height: Spacing.lg)
+            Spacer().frame(height: Spacing.lg)
 
-            // Buttons
+            // Action buttons
             VStack(spacing: Spacing.sm) {
+                // Burn button
                 Button {
                     onConfirm()
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "flame.fill")
-                        Text(burnType.isAll ? "Burn Everything" : "Burn Conversation")
+                            .font(.headline)
+                        Text(burnType.isAll ? "Burn Everything" : "Burn Forever")
+                            .font(.headline)
                     }
-                    .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.md)
-                    .background(
-                        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                            .fill(canBurn ? Color.ashDanger : Color.gray.opacity(0.5))
-                    )
+                    .background(canBurn ? Color.ashDanger : Color(uiColor: .systemFill))
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(!canBurn)
+                .animation(.easeInOut(duration: 0.2), value: canBurn)
 
-                Button("Cancel") {
+                // Cancel button
+                Button {
                     onCancel()
+                } label: {
+                    Text("Cancel")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.sm)
                 }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.vertical, Spacing.sm)
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.lg)
@@ -167,11 +261,14 @@ struct BurnConfirmationView: View {
         .onPreferenceChange(ContentHeightPreferenceKey.self) { height in
             contentHeight = height
         }
-        .presentationDetents([.height(contentHeight > 0 ? contentHeight : 600)])
+        .presentationDetents([.height(contentHeight > 0 ? contentHeight : 650)])
         .presentationDragIndicator(.hidden)
         .background(Color(uiColor: .systemBackground))
         .onAppear {
             isTextFieldFocused = true
+            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                isAnimating = true
+            }
         }
     }
 }
@@ -183,21 +280,37 @@ private struct ContentHeightPreferenceKey: PreferenceKey {
     }
 }
 
-// MARK: - Helper Views
+// MARK: - Destruction Row
 
 private struct DestructionRow: View {
     let icon: String
     let text: String
+    let isFirst: Bool
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
-            Image(systemName: icon)
-                .foregroundStyle(Color.ashDanger.opacity(0.8))
-                .frame(width: 20)
+            ZStack {
+                Circle()
+                    .fill(Color.ashDanger.opacity(0.1))
+                    .frame(width: 32, height: 32)
+
+                Image(systemName: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.ashDanger)
+            }
+
             Text(text)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary)
+
+            Spacer()
+
+            Image(systemName: "xmark.circle.fill")
+                .font(.body)
+                .foregroundStyle(Color.ashDanger.opacity(0.6))
         }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
     }
 }
 
@@ -214,7 +327,7 @@ extension BurnConfirmationView.BurnType {
 
 #Preview("Single Conversation") {
     BurnConfirmationView(
-        burnType: .conversation(name: "Alpha Bravo Charlie"),
+        burnType: .conversation(name: "Alpha Bravo"),
         onConfirm: {},
         onCancel: {}
     )

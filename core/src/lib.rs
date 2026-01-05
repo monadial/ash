@@ -95,7 +95,7 @@ pub mod passphrase;
 pub mod wordlist;
 
 // Re-export main types at crate root
-pub use ceremony::CeremonyMetadata;
+pub use ceremony::{CeremonyMetadata, NotificationFlags, DEFAULT_TTL_SECONDS, METADATA_VERSION};
 pub use error::{Error, Result};
 pub use fountain::{EncodedBlock, FountainDecoder, FountainEncoder};
 pub use frame::{

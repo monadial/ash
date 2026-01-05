@@ -2,118 +2,158 @@
 //  ConversationsScreen.swift
 //  Ash
 //
-//  Conversations list
+//  Conversations list - Modern redesign
 //
 
 import SwiftUI
 
-// Liquid Glass redesign applied
-
 struct ConversationsScreen: View {
     @Bindable var viewModel: AppViewModel
     @State private var conversationToBurn: Conversation?
+    @State private var conversationForInfo: Conversation?
 
     var body: some View {
-        GlassEffectContainer {
-            Group {
-                if viewModel.conversations.isEmpty {
-                    emptyState
-                } else {
-                    conversationsList
-                }
+        Group {
+            if viewModel.conversations.isEmpty {
+                emptyState
+            } else {
+                conversationsList
             }
-            .glassEffect()
-            .navigationTitle("Conversations")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        viewModel.showSettings()
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .buttonStyle(.glassProminent)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Conversations")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    viewModel.showSettings()
+                } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.body)
                 }
+                .tint(Color.ashAccent)
+            }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.startNewConversation()
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .buttonStyle(.glassProminent)
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.startNewConversation()
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
                 }
+                .tint(Color.ashAccent)
             }
-            .sheet(item: $conversationToBurn) { conversation in
-                BurnConfirmationView(
-                    burnType: .conversation(name: conversation.displayName),
-                    onConfirm: {
-                        // Capture conversation before dismissing sheet
-                        let conversationToDelete = conversation
-                        // First dismiss the sheet
-                        conversationToBurn = nil
-                        // Then burn after a brief delay to allow UI to update
-                        Task {
-                            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
-                            await viewModel.burnConversation(conversationToDelete)
-                        }
-                    },
-                    onCancel: {
-                        conversationToBurn = nil
+        }
+        .sheet(item: $conversationToBurn) { conversation in
+            BurnConfirmationView(
+                burnType: .conversation(name: conversation.displayName),
+                onConfirm: {
+                    let conversationToDelete = conversation
+                    conversationToBurn = nil
+                    Task {
+                        try? await Task.sleep(nanoseconds: 100_000_000)
+                        await viewModel.burnConversation(conversationToDelete)
                     }
-                )
-            }
+                },
+                onCancel: {
+                    conversationToBurn = nil
+                }
+            )
+        }
+        .sheet(item: $conversationForInfo) { conversation in
+            ConversationInfoScreen(
+                conversation: conversation,
+                onColorChange: { color in
+                    Task { await viewModel.updateConversationColor(conversation, color: color) }
+                },
+                onBurn: {
+                    conversationForInfo = nil
+                    // Small delay to allow sheet dismissal
+                    Task {
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                        conversationToBurn = conversation
+                    }
+                }
+            )
         }
     }
 
     // MARK: - Empty State
 
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Conversations", systemImage: "bubble.left.and.bubble.right")
-        } description: {
-            Text("Start a secure conversation by performing a ceremony with another device.")
-        } actions: {
+        VStack(spacing: 24) {
+            Spacer()
+
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(Color.ashAccent.opacity(0.1))
+                    .frame(width: 100, height: 100)
+
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 44, weight: .light))
+                    .foregroundStyle(Color.ashAccent)
+            }
+
+            VStack(spacing: 8) {
+                Text("No Conversations")
+                    .font(.title2.bold())
+
+                Text("Start a secure conversation by performing\na ceremony with another device")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
             Button {
                 viewModel.startNewConversation()
             } label: {
-                Text("New Conversation")
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                    Text("New Conversation")
+                }
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(Color.ashAccent, in: Capsule())
             }
-            .buttonStyle(.glassProminent)
+            .padding(.top, 8)
+
+            Spacer()
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - List
 
     private var conversationsList: some View {
-        List {
-            ForEach(viewModel.conversations) { conversation in
-                ConversationRow(conversation: conversation)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        viewModel.selectConversation(conversation)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            conversationToBurn = conversation
-                        } label: {
-                            Label("Burn", systemImage: "flame.fill")
-                        }
-                        .tint(Color.ashDanger)
-                    }
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(viewModel.conversations) { conversation in
+                    ConversationCard(
+                        conversation: conversation,
+                        onTap: { viewModel.selectConversation(conversation) },
+                        onShowInfo: { conversationForInfo = conversation },
+                        onBurn: { conversationToBurn = conversation }
+                    )
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-        .listStyle(.insetGrouped)
         .refreshable {
             await viewModel.loadConversations()
         }
     }
 }
 
-// MARK: - Conversation Row
+// MARK: - Conversation Card
 
-private struct ConversationRow: View {
+private struct ConversationCard: View {
     let conversation: Conversation
+    let onTap: () -> Void
+    let onShowInfo: () -> Void
+    let onBurn: () -> Void
 
     private var timeAgo: String {
         let formatter = RelativeDateTimeFormatter()
@@ -121,80 +161,165 @@ private struct ConversationRow: View {
         return formatter.localizedString(for: conversation.lastActivity, relativeTo: Date())
     }
 
-    private var statusColor: Color {
+    private var padStatusColor: Color {
         if conversation.isExhausted { return .red }
-        if conversation.usagePercentage > 0.9 { return .orange }
-        return .secondary
+        let remaining = 1 - conversation.usagePercentage
+        if remaining < 0.1 { return .red }
+        if remaining < 0.3 { return .orange }
+        return conversation.accentColor.color
+    }
+
+    private var remainingPercentage: Int {
+        Int((1 - conversation.usagePercentage) * 100)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // Title row
-            HStack {
-                Text(conversation.displayName)
-                    .font(.body)
-                    .fontWeight(.medium)
+        Button(action: onTap) {
+            VStack(spacing: 12) {
+                // Top row: name and time
+                HStack {
+                    // Color indicator
+                    Circle()
+                        .fill(conversation.accentColor.color)
+                        .frame(width: 10, height: 10)
 
-                if conversation.isExhausted || conversation.usagePercentage > 0.9 {
-                    Image(systemName: "exclamationmark.circle.fill")
+                    Text(conversation.displayName)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    if conversation.isExhausted {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+
+                    Spacer()
+
+                    Text(timeAgo)
                         .font(.caption)
-                        .foregroundStyle(statusColor)
+                        .foregroundStyle(.secondary)
+
+                    // Burn button
+                    Button {
+                        onBurn()
+                    } label: {
+                        Image(systemName: "flame")
+                            .font(.body)
+                            .foregroundStyle(Color.ashDanger.opacity(0.7))
+                            .padding(6)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
 
-                Spacer()
+                // Middle row: mnemonic words
+                HStack {
+                    Text(conversation.mnemonicChecksum.prefix(3).joined(separator: " "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
 
-                Text(timeAgo)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                // Pad usage section
+                VStack(spacing: 6) {
+                    // Usage bar with labels
+                    HStack(spacing: 8) {
+                        // Visual bar
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                // Background
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(Color(.systemFill))
 
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.tertiary)
-            }
+                                // My usage (from left)
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(conversation.accentColor.color)
+                                    .frame(width: geo.size.width * min(1, conversation.myUsagePercentage))
 
-            // Subtitle row
-            HStack {
-                // Mnemonic
-                Text(conversation.mnemonicChecksum.prefix(3).joined(separator: " "))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                                // Peer usage (from right)
+                                HStack {
+                                    Spacer()
+                                    RoundedRectangle(cornerRadius: 3)
+                                        .fill(Color.secondary.opacity(0.5))
+                                        .frame(width: geo.size.width * min(1, conversation.peerUsagePercentage))
+                                }
+                            }
+                        }
+                        .frame(height: 6)
 
-                Spacer()
+                        // Remaining indicator
+                        HStack(spacing: 4) {
+                            Image(systemName: "lock.shield")
+                                .font(.system(size: 10))
+                            Text("\(remainingPercentage)%")
+                                .font(.caption.weight(.medium).monospacedDigit())
+                        }
+                        .foregroundStyle(padStatusColor)
+                        .frame(width: 50, alignment: .trailing)
+                    }
 
-                // Remaining
-                Text(conversation.formattedRemaining)
-                    .font(.subheadline)
-                    .foregroundStyle(statusColor)
-                    .monospacedDigit()
-            }
-
-            // Usage bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    // Background
-                    Capsule()
-                        .fill(Color(uiColor: .systemFill))
-
-                    // My usage (from left)
-                    Capsule()
-                        .fill(Color.accentColor)
-                        .frame(width: geo.size.width * min(1, conversation.myUsagePercentage))
-
-                    // Peer usage (from right)
+                    // Labels row
                     HStack {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(conversation.accentColor.color)
+                                .frame(width: 6, height: 6)
+                            Text("You \(Int(conversation.myUsagePercentage * 100))%")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+
                         Spacer()
-                        Capsule()
-                            .fill(Color.secondary.opacity(0.5))
-                            .frame(width: geo.size.width * min(1, conversation.peerUsagePercentage))
+
+                        Text(conversation.formattedRemaining)
+                            .font(.system(size: 10, weight: .medium).monospacedDigit())
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        HStack(spacing: 4) {
+                            Text("Them \(Int(conversation.peerUsagePercentage * 100))%")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                            Circle()
+                                .fill(Color.secondary.opacity(0.5))
+                                .frame(width: 6, height: 6)
+                        }
                     }
                 }
             }
-            .frame(height: 4)
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
         }
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(conversation.displayName), \(conversation.formattedRemaining) remaining")
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button {
+                onShowInfo()
+            } label: {
+                Label("Conversation Info", systemImage: "info.circle")
+            }
+
+            Divider()
+
+            Button(role: .destructive) {
+                onBurn()
+            } label: {
+                Label("Burn Conversation", systemImage: "flame.fill")
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                onBurn()
+            } label: {
+                Label("Burn", systemImage: "flame.fill")
+            }
+            .tint(Color.ashDanger)
+        }
     }
 }
 

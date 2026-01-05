@@ -110,12 +110,26 @@ pub async fn register_conversation(
 
     match result {
         RegisterResult::Ok => {
+            // Store notification preferences for new conversations
+            state.store.store_prefs(
+                req.conversation_id.clone(),
+                req.notification_flags,
+                req.ttl_seconds,
+            );
             info!(
                 conv_id_prefix = &req.conversation_id[..8],
+                notification_flags = req.notification_flags,
+                ttl_seconds = req.ttl_seconds,
                 "Conversation registered"
             );
         }
         RegisterResult::AlreadyExists => {
+            // Update preferences on re-registration (e.g., second party registering)
+            state.store.store_prefs(
+                req.conversation_id.clone(),
+                req.notification_flags,
+                req.ttl_seconds,
+            );
             debug!(
                 conv_id_prefix = &req.conversation_id[..8],
                 "Conversation re-registered"
@@ -267,12 +281,18 @@ pub async fn submit_message(
     });
 
     // Send push notifications to registered devices (best-effort, async)
-    let devices = state.store.get_device_tokens(&conversation_id);
-    if !devices.is_empty() {
-        let apns = state.apns.clone();
-        tokio::spawn(async move {
-            apns.send_to_devices(&devices).await;
-        });
+    // Only send if NOTIFY_NEW_MESSAGE flag is set
+    let prefs = state.store.get_prefs(&conversation_id);
+    let should_notify = prefs.as_ref().map(|p| p.notify_new_message()).unwrap_or(true);
+
+    if should_notify {
+        let devices = state.store.get_device_tokens(&conversation_id);
+        if !devices.is_empty() {
+            let apns = state.apns.clone();
+            tokio::spawn(async move {
+                apns.send_to_devices(&devices).await;
+            });
+        }
     }
 
     Ok(Json(SubmitMessageResponse {

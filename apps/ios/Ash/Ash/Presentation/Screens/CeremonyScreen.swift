@@ -13,6 +13,16 @@ struct CeremonyScreen: View {
     let onComplete: (Conversation) -> Void
     let onCancel: () -> Void
 
+    /// Get the current accent color from the active view model
+    private var currentAccentColor: Color {
+        if let initiator = viewModel.initiatorViewModel {
+            return initiator.selectedColor.color
+        } else if let receiver = viewModel.receiverViewModel {
+            return receiver.selectedColor.color
+        }
+        return Color.ashAccent
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -32,19 +42,19 @@ struct CeremonyScreen: View {
 
                 case .confirmingConsent:
                     if let initiator = viewModel.initiatorViewModel {
-                        ConsentView(viewModel: initiator)
+                        ConsentView(viewModel: initiator, accentColor: initiator.selectedColor.color)
                     }
 
                 case .collectingEntropy:
                     if let initiator = viewModel.initiatorViewModel {
-                        EntropyView(viewModel: initiator)
+                        EntropyView(viewModel: initiator, accentColor: initiator.selectedColor.color)
                     }
 
                 case .generatingPad:
-                    GeneratingView(title: "Generating Pad", subtitle: "Creating secure encryption key...", current: 0, total: 0)
+                    GeneratingView(title: "Generating Pad", subtitle: "Creating secure encryption key...", current: 0, total: 0, accentColor: currentAccentColor)
 
                 case .generatingQRCodes(let progress, let total):
-                    GeneratingView(title: "Generating QR Codes", subtitle: "Preparing \(total) frames for transfer...", current: Int(progress * Double(total)), total: total)
+                    GeneratingView(title: "Generating QR Codes", subtitle: "Preparing \(total) frames for transfer...", current: Int(progress * Double(total)), total: total, accentColor: currentAccentColor)
 
                 case .configuringReceiver:
                     if let receiver = viewModel.receiverViewModel {
@@ -53,15 +63,16 @@ struct CeremonyScreen: View {
 
                 case .transferring(let current, let total):
                     if let initiator = viewModel.initiatorViewModel {
-                        QRDisplayView(viewModel: initiator, currentFrame: current, totalFrames: total)
+                        QRDisplayView(viewModel: initiator, currentFrame: current, totalFrames: total, accentColor: initiator.selectedColor.color)
                     } else if let receiver = viewModel.receiverViewModel {
-                        QRScanView(viewModel: receiver)
+                        QRScanView(viewModel: receiver, accentColor: receiver.selectedColor.color)
                     }
 
                 case .verifying(let mnemonic):
                     if let initiator = viewModel.initiatorViewModel {
                         VerificationView(
                             mnemonic: mnemonic,
+                            accentColor: initiator.selectedColor.color,
                             conversationName: Binding(get: { initiator.conversationName }, set: { initiator.conversationName = $0 }),
                             onConfirm: { Task { if let c = await initiator.confirmVerification() { onComplete(c) } } },
                             onReject: { initiator.rejectVerification() }
@@ -69,17 +80,22 @@ struct CeremonyScreen: View {
                     } else if let receiver = viewModel.receiverViewModel {
                         VerificationView(
                             mnemonic: mnemonic,
+                            accentColor: receiver.selectedColor.color,
                             conversationName: Binding(get: { receiver.conversationName }, set: { receiver.conversationName = $0 }),
                             onConfirm: { Task { if let c = await receiver.confirmVerification() { onComplete(c) } } },
-                            onReject: { receiver.rejectVerification() }
+                            onReject: { receiver.rejectVerification() },
+                            receivedTTL: receiver.receivedTTLDescription,
+                            receivedDisappearing: receiver.receivedDisappearingDescription,
+                            receivedRelay: receiver.receivedRelayURL,
+                            receivedNotifications: receiver.receivedNotificationDescriptions
                         )
                     }
 
                 case .completed(let conversation):
-                    CompletedView(conversation: conversation, onContinue: { onComplete(conversation) })
+                    CompletedView(conversation: conversation, onContinue: { onComplete(conversation) }, accentColor: currentAccentColor)
 
                 case .failed(let error):
-                    FailedView(error: error, onRetry: { viewModel.reset(); viewModel.start() }, onCancel: onCancel)
+                    FailedView(error: error, onRetry: { viewModel.reset(); viewModel.start() }, onCancel: onCancel, accentColor: currentAccentColor)
                 }
             }
             .background(Color(.systemBackground))
@@ -92,6 +108,7 @@ struct CeremonyScreen: View {
             }
             .interactiveDismissDisabled(viewModel.isInProgress)
         }
+        .tint(currentAccentColor)
         .onAppear { viewModel.start() }
     }
 }
@@ -102,64 +119,98 @@ private struct RoleSelectionView: View {
     @Bindable var viewModel: CeremonyViewModel
 
     var body: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 0) {
             Spacer()
 
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 56, weight: .light))
-                .foregroundStyle(.tint)
+            // Header
+            VStack(spacing: 16) {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(.tint)
+                    .padding(24)
+                    .background(Color.accentColor.opacity(0.1), in: Circle())
 
-            VStack(spacing: 8) {
-                Text("Choose Role")
+                Text("Choose Your Role")
                     .font(.title2.bold())
-                Text("One device creates, the other joins")
+
+                Text("One device creates the conversation,\nthe other joins by scanning")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .padding(.horizontal, 20)
 
             Spacer()
 
-            VStack(spacing: 12) {
-                Button { viewModel.selectRole(.sender) } label: {
-                    HStack(spacing: 16) {
-                        Image(systemName: "qrcode")
-                            .font(.title2)
-                            .foregroundStyle(.tint)
-                            .frame(width: 32)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Create").font(.headline)
-                            Text("Generate and display QR codes").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.tertiary)
-                    }
-                    .padding(16)
-                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            // Role Cards
+            VStack(spacing: 14) {
+                RoleCard(
+                    icon: "qrcode",
+                    title: "Create",
+                    subtitle: "Generate pad and display QR codes",
+                    badge: "Initiator"
+                ) {
+                    viewModel.selectRole(.sender)
                 }
-                .buttonStyle(.plain)
 
-                Button { viewModel.selectRole(.receiver) } label: {
-                    HStack(spacing: 16) {
-                        Image(systemName: "camera.viewfinder")
-                            .font(.title2)
-                            .foregroundStyle(.tint)
-                            .frame(width: 32)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Join").font(.headline)
-                            Text("Scan QR codes from other device").font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").foregroundStyle(.tertiary)
-                    }
-                    .padding(16)
-                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                RoleCard(
+                    icon: "camera.viewfinder",
+                    title: "Join",
+                    subtitle: "Scan QR codes from other device",
+                    badge: "Receiver"
+                ) {
+                    viewModel.selectRole(.receiver)
                 }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 32)
+            .padding(.bottom, 40)
         }
         .background(Color(.systemBackground))
+    }
+}
+
+private struct RoleCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let badge: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .light))
+                    .foregroundStyle(.tint)
+                    .frame(width: 48, height: 48)
+                    .background(Color.accentColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.headline)
+                        Text(badge)
+                            .font(.caption2.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.accentColor, in: Capsule())
+                    }
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -168,25 +219,20 @@ private struct RoleSelectionView: View {
 private struct PadSizeView: View {
     @Bindable var viewModel: InitiatorCeremonyViewModel
 
+    private var canProceed: Bool {
+        !viewModel.isPassphraseEnabled || viewModel.isPassphraseValid
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                // Header with layers icon
+                // Header with slider icon
                 VStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.accentColor.opacity(0.3))
-                            .frame(width: 56, height: 36)
-                            .offset(y: 16)
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.accentColor.opacity(0.6))
-                            .frame(width: 56, height: 36)
-                            .offset(y: 8)
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.accentColor)
-                            .frame(width: 56, height: 36)
-                    }
-                    .frame(height: 60)
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(.tint)
+                        .padding(20)
+                        .background(Color.accentColor.opacity(0.1), in: Circle())
 
                     Text("Pad Size")
                         .font(.title2.bold())
@@ -201,11 +247,12 @@ private struct PadSizeView: View {
                 .padding(.horizontal, 20)
 
                 // Pad Size Cards
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     ForEach(PadSize.allCases) { size in
                         PadSizeCard(
                             name: size.displayName,
-                            description: "~\(size.estimatedMessages) messages, ~\(size.approximateFrames) QR frames",
+                            messages: "~\(size.estimatedMessages) messages",
+                            frames: "\(size.approximateFrames) frames",
                             isSelected: viewModel.selectedPadSize == size
                         ) {
                             viewModel.selectPadSize(size)
@@ -213,6 +260,38 @@ private struct PadSizeView: View {
                     }
                 }
                 .padding(.horizontal, 20)
+
+                // Passphrase Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "lock.shield")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Passphrase Protection")
+                                .font(.subheadline.weight(.medium))
+                            Text("Encrypt QR codes with shared secret")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Toggle("", isOn: $viewModel.isPassphraseEnabled)
+                            .labelsHidden()
+                    }
+                    .padding(16)
+
+                    if viewModel.isPassphraseEnabled {
+                        Divider().padding(.leading, 56)
+                        SecureField("Enter passphrase", text: $viewModel.passphrase)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                    }
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
 
                 // Continue Button
                 Button {
@@ -223,8 +302,10 @@ private struct PadSizeView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16))
+                        .background(Color.accentColor, in: Capsule())
                 }
+                .disabled(!canProceed)
+                .opacity(canProceed ? 1 : 0.5)
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
                 .padding(.bottom, 40)
@@ -236,74 +317,93 @@ private struct PadSizeView: View {
 
 private struct PadSizeCard: View {
     let name: String
-    let description: String
+    let messages: String
+    let frames: String
     let isSelected: Bool
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name)
                         .font(.headline)
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        Label(messages, systemImage: "message")
+                        Label(frames, systemImage: "qrcode")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 Spacer()
-                ZStack {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.tint)
+                } else {
                     Circle()
-                        .stroke(isSelected ? Color.accentColor : Color(.systemGray3), lineWidth: 2)
+                        .stroke(Color(.systemGray3), lineWidth: 2)
                         .frame(width: 24, height: 24)
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.tint)
-                    }
                 }
             }
             .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(isSelected ? Color.accentColor.opacity(0.15) : Color(.secondarySystemGroupedBackground))
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(.secondarySystemGroupedBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1.5)
             )
         }
         .buttonStyle(.plain)
     }
 }
 
-// MARK: - Options
+// MARK: - Options (Settings)
 
 private struct OptionsView: View {
     @Bindable var viewModel: InitiatorCeremonyViewModel
 
-    private var canProceed: Bool {
-        let passphraseOK = !viewModel.isPassphraseEnabled || viewModel.isPassphraseValid
-        return passphraseOK && viewModel.isRelayURLValid
-    }
-
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                // Header
                 VStack(spacing: 16) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 48))
+                    Image(systemName: "gearshape.2")
+                        .font(.system(size: 48, weight: .light))
                         .foregroundStyle(.tint)
+                        .padding(20)
+                        .background(Color.accentColor.opacity(0.1), in: Circle())
 
                     Text("Settings")
                         .font(.title2.bold())
 
-                    Text("Configure message handling")
+                    Text("Configure message handling and delivery")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 24)
                 .padding(.bottom, 24)
 
+                // Message Settings Section
                 VStack(spacing: 0) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Unread Timeout")
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Message Timing")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Server Retention")
                                 .font(.subheadline)
                             Text("How long unread messages wait")
                                 .font(.caption)
@@ -315,15 +415,16 @@ private struct OptionsView: View {
                         }
                         .labelsHidden()
                     }
-                    .padding(16)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
 
                     Divider().padding(.leading, 16)
 
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Text("Disappearing Messages")
                                 .font(.subheadline)
-                            Text("Messages disappear after viewing")
+                            Text("Auto-delete after viewing")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -333,48 +434,42 @@ private struct OptionsView: View {
                         }
                         .labelsHidden()
                     }
-                    .padding(16)
-
-                    Divider().padding(.leading, 16)
-
-                    VStack(spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Passphrase Protection")
-                                    .font(.subheadline)
-                                Text("Encrypt QR codes with shared secret")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Toggle("", isOn: $viewModel.isPassphraseEnabled)
-                                .labelsHidden()
-                        }
-
-                        if viewModel.isPassphraseEnabled {
-                            SecureField("Enter passphrase", text: $viewModel.passphrase)
-                                .textFieldStyle(.roundedBorder)
-                        }
-                    }
-                    .padding(16)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
 
                 // Relay Server Section
                 VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Relay Server")
-                                    .font(.subheadline)
-                                Text("Server for message delivery")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                        }
+                    HStack {
+                        Image(systemName: "server.rack")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Relay Server")
+                            .font(.subheadline.bold())
+                        Spacer()
 
+                        // Connection status indicator
+                        if let result = viewModel.connectionTestResult {
+                            switch result {
+                            case .success:
+                                Circle()
+                                    .fill(.green)
+                                    .frame(width: 8, height: 8)
+                            case .failure:
+                                Circle()
+                                    .fill(.red)
+                                    .frame(width: 8, height: 8)
+                            }
+                        }
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    VStack(alignment: .leading, spacing: 12) {
                         TextField("Relay URL", text: $viewModel.selectedRelayURL)
                             .textContentType(.URL)
                             .keyboardType(.URL)
@@ -386,38 +481,167 @@ private struct OptionsView: View {
                                 viewModel.clearConnectionTest()
                             }
 
-                        // Test Connection Button
-                        Button {
-                            Task { await viewModel.testRelayConnection() }
-                        } label: {
-                            HStack {
-                                Text("Test Connection")
-                                    .font(.subheadline)
-                                Spacer()
-                                if viewModel.isTestingConnection {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                } else if let result = viewModel.connectionTestResult {
-                                    switch result {
-                                    case .success(let version):
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "checkmark.circle.fill")
-                                            Text(version)
-                                        }
-                                        .foregroundStyle(.green)
-                                        .font(.caption)
-                                    case .failure:
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundStyle(.red)
+                        HStack(spacing: 12) {
+                            Button {
+                                Task { await viewModel.testRelayConnection() }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    if viewModel.isTestingConnection {
+                                        ProgressView()
+                                            .scaleEffect(0.7)
+                                    } else {
+                                        Image(systemName: "antenna.radiowaves.left.and.right")
                                     }
-                                } else {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .foregroundStyle(.secondary)
+                                    Text("Test")
+                                }
+                                .font(.subheadline)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color(.tertiarySystemGroupedBackground), in: Capsule())
+                            }
+                            .disabled(viewModel.isTestingConnection || !viewModel.isRelayURLValid)
+                            .buttonStyle(.plain)
+
+                            if let result = viewModel.connectionTestResult {
+                                switch result {
+                                case .success(let version):
+                                    Text("v\(version)")
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(.green)
+                                case .failure:
+                                    Text("Connection failed")
+                                        .font(.caption)
+                                        .foregroundStyle(.red)
                                 }
                             }
+
+                            Spacer()
                         }
-                        .disabled(viewModel.isTestingConnection || !viewModel.isRelayURLValid)
-                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                // Notification Settings Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "bell.badge")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Notifications")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    Toggle(isOn: $viewModel.notifyNewMessage) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("New Messages")
+                                .font(.subheadline)
+                            Text("Alert when message arrives")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+
+                    Divider().padding(.leading, 16)
+
+                    Toggle(isOn: $viewModel.notifyMessageExpiring) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Expiry Warnings")
+                                .font(.subheadline)
+                            Text("5min and 1min before expiry")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+
+                    Divider().padding(.leading, 16)
+
+                    Toggle(isOn: $viewModel.notifyMessageExpired) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Expired Messages")
+                                .font(.subheadline)
+                            Text("Alert when message expires")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+
+                    Divider().padding(.leading, 16)
+
+                    Toggle(isOn: $viewModel.notifyDeliveryFailed) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Delivery Failed")
+                                .font(.subheadline)
+                            Text("Alert if recipient misses message")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                // Conversation Color Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "paintpalette")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Conversation Color")
+                            .font(.subheadline.bold())
+                        Spacer()
+
+                        // Preview circle
+                        Circle()
+                            .fill(viewModel.selectedColor.color)
+                            .frame(width: 20, height: 20)
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    // Color grid
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
+                        ForEach(ConversationColor.allCases) { color in
+                            Button {
+                                viewModel.selectedColor = color
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(color.color)
+                                        .frame(width: 44, height: 44)
+
+                                    if viewModel.selectedColor == color {
+                                        Circle()
+                                            .strokeBorder(.white, lineWidth: 3)
+                                            .frame(width: 44, height: 44)
+
+                                        Image(systemName: "checkmark")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                     .padding(16)
                 }
@@ -433,10 +657,10 @@ private struct OptionsView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16))
+                        .background(Color.accentColor, in: Capsule())
                 }
-                .disabled(!canProceed)
-                .opacity(canProceed ? 1 : 0.5)
+                .disabled(!viewModel.isRelayURLValid)
+                .opacity(viewModel.isRelayURLValid ? 1 : 0.5)
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
                 .padding(.bottom, 40)
@@ -450,68 +674,150 @@ private struct OptionsView: View {
 
 private struct ConsentView: View {
     @Bindable var viewModel: InitiatorCeremonyViewModel
+    let accentColor: Color
     @State private var showEthicsGuidelines = false
 
     private var completedCount: Int {
         [viewModel.consent.environmentConfirmed, viewModel.consent.notUnderSurveillance,
          viewModel.consent.ethicsUnderstood, viewModel.consent.keyLossUnderstood,
-         viewModel.consent.relayWarningUnderstood].filter { $0 }.count
+         viewModel.consent.relayWarningUnderstood, viewModel.consent.dataLossUnderstood,
+         viewModel.consent.burnUnderstood].filter { $0 }.count
     }
+
+    private let totalItems = 7
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                VStack(spacing: 8) {
+                // Header
+                VStack(spacing: 16) {
+                    Image(systemName: "shield.checkered")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(accentColor)
+                        .padding(20)
+                        .background(accentColor.opacity(0.1), in: Circle())
+
                     Text("Security Verification")
                         .font(.title2.bold())
-                    Text("Confirm before proceeding")
+
+                    Text("Confirm you understand before proceeding")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                .padding(.top, 20)
+                .padding(.top, 24)
                 .padding(.bottom, 16)
 
-                HStack(spacing: 8) {
-                    ForEach(0..<5, id: \.self) { i in
+                // Progress bar
+                HStack(spacing: 6) {
+                    ForEach(0..<totalItems, id: \.self) { i in
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(i < completedCount ? Color.accentColor : Color(.systemGray5))
-                            .frame(height: 6)
+                            .fill(i < completedCount ? accentColor : Color(.systemGray5))
+                            .frame(height: 5)
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
 
+                // Environment Section
                 VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "eye.slash")
+                            .font(.title3)
+                            .foregroundStyle(accentColor)
+                            .frame(width: 32)
+                        Text("Environment")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
                     ConsentRow(isChecked: $viewModel.consent.environmentConfirmed,
-                        title: "I confirm no one is watching my screen",
-                        subtitle: "Ensure you have visual privacy - no cameras, mirrors, or people who can see your display")
+                        title: "No one is watching my screen",
+                        subtitle: "No cameras, mirrors, or people can see your display",
+                        accentColor: accentColor)
 
                     Divider().padding(.leading, 56)
 
                     ConsentRow(isChecked: $viewModel.consent.notUnderSurveillance,
                         title: "I am not under surveillance or coercion",
-                        subtitle: "Do not proceed if you are being forced or monitored by others")
+                        subtitle: "Do not proceed if being forced or monitored",
+                        accentColor: accentColor)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+
+                // Responsibilities Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "hand.raised")
+                            .font(.title3)
+                            .foregroundStyle(accentColor)
+                            .frame(width: 32)
+                        Text("Responsibilities")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
 
                     Divider().padding(.leading, 56)
 
                     ConsentRow(isChecked: $viewModel.consent.ethicsUnderstood,
                         title: "I understand the ethical responsibilities",
-                        subtitle: "This tool is for legitimate private communication only")
+                        subtitle: "This tool is for legitimate private communication",
+                        accentColor: accentColor)
 
                     Divider().padding(.leading, 56)
 
                     ConsentRow(isChecked: $viewModel.consent.keyLossUnderstood,
-                        title: "I understand this creates unrecoverable keys",
-                        subtitle: "If you lose access, messages cannot be recovered - there is no backup")
+                        title: "Keys cannot be recovered",
+                        subtitle: "If you lose access, messages are gone forever",
+                        accentColor: accentColor)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                // Technical Limitations Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.title3)
+                            .foregroundStyle(.orange)
+                            .frame(width: 32)
+                        Text("Limitations")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
 
                     Divider().padding(.leading, 56)
 
                     ConsentRow(isChecked: $viewModel.consent.relayWarningUnderstood,
-                        title: "I understand relay limitations",
-                        subtitle: "If the relay server is unavailable, you may not receive messages or notifications until connectivity is restored")
+                        title: "Relay server may be unavailable",
+                        subtitle: "Messages won't deliver without connectivity",
+                        accentColor: accentColor)
+
+                    Divider().padding(.leading, 56)
+
+                    ConsentRow(isChecked: $viewModel.consent.dataLossUnderstood,
+                        title: "Relay data is not persisted",
+                        subtitle: "Server restarts may cause unread message loss",
+                        accentColor: accentColor)
+
+                    Divider().padding(.leading, 56)
+
+                    ConsentRow(isChecked: $viewModel.consent.burnUnderstood,
+                        title: "Burn destroys all key material",
+                        subtitle: "Either party can burn, it cannot be undone",
+                        icon: "flame.fill",
+                        iconColor: .red,
+                        accentColor: accentColor)
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
+                .padding(.top, 12)
 
                 Button { showEthicsGuidelines = true } label: {
                     Label("Read Ethics Guidelines", systemImage: "doc.text")
@@ -532,10 +838,7 @@ private struct ConsentView: View {
                     .foregroundStyle(viewModel.isConsentComplete ? .white : .secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(viewModel.isConsentComplete ? Color.accentColor : Color(.secondarySystemGroupedBackground))
-                    )
+                    .background(viewModel.isConsentComplete ? accentColor : Color(.secondarySystemGroupedBackground), in: Capsule())
                 }
                 .disabled(!viewModel.isConsentComplete)
                 .padding(.horizontal, 20)
@@ -547,6 +850,7 @@ private struct ConsentView: View {
         .sheet(isPresented: $showEthicsGuidelines) {
             EthicsGuidelinesSheet()
         }
+        .tint(accentColor)
     }
 }
 
@@ -554,29 +858,38 @@ private struct ConsentRow: View {
     @Binding var isChecked: Bool
     let title: String
     let subtitle: String
+    var icon: String? = nil
+    var iconColor: Color? = nil
+    var accentColor: Color = Color.ashAccent
 
     var body: some View {
         Button { isChecked.toggle() } label: {
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .top, spacing: 14) {
                 ZStack {
                     Circle()
-                        .stroke(Color.accentColor, lineWidth: 2)
-                        .frame(width: 28, height: 28)
+                        .stroke(isChecked ? accentColor : Color(.systemGray3), lineWidth: 2)
+                        .frame(width: 26, height: 26)
                     if isChecked {
                         Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 28, height: 28)
+                            .fill(accentColor)
+                            .frame(width: 26, height: 26)
                         Image(systemName: "checkmark")
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        if let icon = icon {
+                            Image(systemName: icon)
+                                .font(.caption)
+                                .foregroundStyle(iconColor ?? .primary)
+                        }
+                        Text(title)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                    }
                     Text(subtitle)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -584,7 +897,8 @@ private struct ConsentRow: View {
                 }
                 Spacer()
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
         .buttonStyle(.plain)
     }
@@ -667,6 +981,7 @@ private struct GuidelineRow: View {
 
 private struct EntropyView: View {
     @Bindable var viewModel: InitiatorCeremonyViewModel
+    let accentColor: Color
     @State private var points: [CGPoint] = []
     @State private var segments: [[CGPoint]] = []
 
@@ -674,67 +989,142 @@ private struct EntropyView: View {
         Int(viewModel.entropyProgress * 100)
     }
 
+    private var isComplete: Bool {
+        viewModel.entropyProgress >= 1.0
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 8) {
-                Text("Generate Entropy")
+            // Header
+            VStack(spacing: 16) {
+                ZStack {
+                    // Outer ring (progress)
+                    Circle()
+                        .stroke(Color(.systemGray5), lineWidth: 4)
+                        .frame(width: 88, height: 88)
+
+                    Circle()
+                        .trim(from: 0, to: viewModel.entropyProgress)
+                        .stroke(
+                            isComplete ? Color.green : accentColor,
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        )
+                        .frame(width: 88, height: 88)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.entropyProgress)
+
+                    // Inner icon
+                    Image(systemName: isComplete ? "checkmark" : "hand.draw")
+                        .font(.system(size: 32, weight: .light))
+                        .foregroundStyle(isComplete ? Color.green : accentColor)
+                }
+
+                Text(isComplete ? "Entropy Complete!" : "Generate Entropy")
                     .font(.title2.bold())
-                Text("Draw random patterns anywhere on screen")
+
+                Text("Draw random patterns to generate secure randomness")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+            .padding(.top, 24)
+            .padding(.bottom, 20)
+            .padding(.horizontal, 20)
 
-            GeometryReader { _ in
+            // Drawing Canvas
+            GeometryReader { geo in
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.accentColor, lineWidth: 2)
-                        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+                    // Canvas background with gradient border
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(.secondarySystemGroupedBackground))
 
-                    Canvas { ctx, _ in
-                        for seg in segments { drawPath(ctx: ctx, pts: seg) }
-                        drawPath(ctx: ctx, pts: points)
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    accentColor.opacity(0.6),
+                                    accentColor.opacity(0.2),
+                                    accentColor.opacity(0.6)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+
+                    // Drawing canvas
+                    Canvas { ctx, size in
+                        // Draw all completed segments
+                        for seg in segments {
+                            drawPath(ctx: ctx, pts: seg, opacity: 0.4)
+                        }
+                        // Draw current path
+                        drawPath(ctx: ctx, pts: points, opacity: 1.0)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+
+                    // Hint text when empty
+                    if segments.isEmpty && points.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "scribble.variable")
+                                .font(.system(size: 40))
+                                .foregroundStyle(.tertiary)
+                            Text("Draw here")
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+
+                    // Progress ring overlay around canvas
+                    RoundedRectangle(cornerRadius: 20)
+                        .trim(from: 0, to: viewModel.entropyProgress)
+                        .stroke(accentColor.opacity(0.3), lineWidth: 3)
+                        .animation(.easeInOut(duration: 0.3), value: viewModel.entropyProgress)
                 }
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { v in
-                            points.append(v.location)
-                            if points.count > 300 { points.removeFirst(50) }
+                            // Clamp to canvas bounds
+                            let clampedPoint = CGPoint(
+                                x: max(0, min(v.location.x, geo.size.width)),
+                                y: max(0, min(v.location.y, geo.size.height))
+                            )
+                            points.append(clampedPoint)
+                            if points.count > 400 { points.removeFirst(80) }
                             viewModel.addEntropy(from: v.location)
                         }
                         .onEnded { _ in
-                            if points.count > 1 { segments.append(points); if segments.count > 10 { segments.removeFirst() } }
+                            if points.count > 1 {
+                                segments.append(points)
+                                if segments.count > 15 { segments.removeFirst() }
+                            }
                             points = []
                         }
                 )
             }
             .padding(.horizontal, 20)
 
+            // Progress indicator
             HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .stroke(Color(.systemGray4), lineWidth: 4)
-                        .frame(width: 48, height: 48)
-                    Circle()
-                        .trim(from: 0, to: viewModel.entropyProgress)
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                        .frame(width: 48, height: 48)
-                        .rotationEffect(.degrees(-90))
-                    Text("\(progressPercent)")
-                        .font(.subheadline.bold().monospacedDigit())
-                }
+                // Percentage
+                Text("\(progressPercent)%")
+                    .font(.system(size: 28, weight: .bold).monospacedDigit())
+                    .foregroundStyle(isComplete ? .green : .primary)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.entropyProgress >= 1.0 ? "Complete!" : "Keep drawing...")
+                    Text(isComplete ? "Ready to proceed" : "Keep drawing...")
                         .font(.subheadline.weight(.medium))
-                    Text("Random patterns increase security")
+                    Text("Random patterns strengthen encryption")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+
+                if isComplete {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.green)
+                }
             }
             .padding(16)
             .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
@@ -745,15 +1135,20 @@ private struct EntropyView: View {
         .background(Color(.systemBackground))
     }
 
-    private func drawPath(ctx: GraphicsContext, pts: [CGPoint]) {
+    private func drawPath(ctx: GraphicsContext, pts: [CGPoint], opacity: Double) {
         guard pts.count > 1 else { return }
-        var path = Path(); path.move(to: pts[0])
+        var path = Path()
+        path.move(to: pts[0])
         for i in 1..<pts.count {
             let mid = CGPoint(x: (pts[i-1].x + pts[i].x) / 2, y: (pts[i-1].y + pts[i].y) / 2)
             path.addQuadCurve(to: mid, control: pts[i-1])
         }
         if let last = pts.last { path.addLine(to: last) }
-        ctx.stroke(path, with: .color(.accentColor), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+        ctx.stroke(
+            path,
+            with: .color(accentColor.opacity(opacity)),
+            style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+        )
     }
 }
 
@@ -764,45 +1159,76 @@ private struct GeneratingView: View {
     let subtitle: String
     let current: Int
     let total: Int
+    var accentColor: Color = Color.ashAccent
+
+    private var progressPercent: Int {
+        guard total > 0 else { return 0 }
+        return Int((Double(current) / Double(total)) * 100)
+    }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 0) {
             Spacer()
 
+            // Progress ring
             ZStack {
+                // Background ring
                 Circle()
-                    .stroke(Color(.systemGray4), lineWidth: 8)
-                    .frame(width: 140, height: 140)
+                    .stroke(Color(.systemGray5), lineWidth: 10)
+                    .frame(width: 160, height: 160)
 
                 if total > 0 {
+                    // Progress ring
                     Circle()
                         .trim(from: 0, to: Double(current) / Double(total))
-                        .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                        .frame(width: 140, height: 140)
+                        .stroke(
+                            accentColor,
+                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                        )
+                        .frame(width: 160, height: 160)
                         .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.3), value: current)
 
-                    VStack(spacing: 2) {
-                        Text("\(current)")
-                            .font(.system(size: 36, weight: .bold).monospacedDigit())
-                        Text("of \(total)")
-                            .font(.subheadline)
+                    // Center content
+                    VStack(spacing: 4) {
+                        Text("\(progressPercent)%")
+                            .font(.system(size: 40, weight: .bold).monospacedDigit())
+
+                        Text("\(current) of \(total)")
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 } else {
+                    // Indeterminate state
                     ProgressView()
-                        .scaleEffect(1.5)
+                        .scaleEffect(2)
                 }
             }
 
-            VStack(spacing: 4) {
+            // Title and subtitle
+            VStack(spacing: 8) {
                 Text(title)
-                    .font(.title3.bold())
+                    .font(.title2.bold())
+
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .padding(.top, 32)
+            .padding(.horizontal, 40)
 
             Spacer()
+
+            // Tip at bottom
+            HStack(spacing: 12) {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+                Text("Keep the app open during this process")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.bottom, 40)
         }
         .background(Color(.systemBackground))
     }
@@ -813,28 +1239,70 @@ private struct GeneratingView: View {
 private struct ReceiverSetupView: View {
     @Bindable var viewModel: ReceiverCeremonyViewModel
 
+    private var canProceed: Bool {
+        !viewModel.isPassphraseEnabled || viewModel.isPassphraseValid
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                // Header
                 VStack(spacing: 16) {
                     Image(systemName: "camera.viewfinder")
-                        .font(.system(size: 48))
+                        .font(.system(size: 48, weight: .light))
                         .foregroundStyle(.tint)
+                        .padding(20)
+                        .background(Color.accentColor.opacity(0.1), in: Circle())
+
                     Text("Ready to Scan")
                         .font(.title2.bold())
-                    Text("Configure settings before scanning")
+
+                    Text("Point your camera at the sender's QR codes")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
                 .padding(.top, 24)
                 .padding(.bottom, 24)
+                .padding(.horizontal, 20)
 
+                // Instructions
                 VStack(spacing: 0) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("How it works")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        InstructionRow(number: 1, text: "Hold steady and point at the QR codes")
+                        InstructionRow(number: 2, text: "Frames are captured automatically")
+                        InstructionRow(number: 3, text: "Progress shows when complete")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+
+                // Passphrase Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "lock.shield")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        VStack(alignment: .leading, spacing: 2) {
                             Text("Passphrase Protected")
                                 .font(.subheadline.weight(.medium))
-                            Text("Enable if sender used passphrase")
+                            Text("Enable if sender used a passphrase")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -845,25 +1313,83 @@ private struct ReceiverSetupView: View {
                     .padding(16)
 
                     if viewModel.isPassphraseEnabled {
-                        Divider()
+                        Divider().padding(.leading, 56)
                         SecureField("Enter passphrase", text: $viewModel.passphrase)
                             .textContentType(.password)
-                            .padding(16)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                     }
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
+                .padding(.top, 12)
 
-                Button { viewModel.startScanning() } label: {
-                    Label("Start Scanning", systemImage: "camera.fill")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16))
+                // Conversation Color Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "paintpalette")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Conversation Color")
+                            .font(.subheadline.bold())
+                        Spacer()
+
+                        // Preview circle
+                        Circle()
+                            .fill(viewModel.selectedColor.color)
+                            .frame(width: 20, height: 20)
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    // Color grid
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
+                        ForEach(ConversationColor.allCases) { color in
+                            Button {
+                                viewModel.selectedColor = color
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(color.color)
+                                        .frame(width: 44, height: 44)
+
+                                    if viewModel.selectedColor == color {
+                                        Circle()
+                                            .strokeBorder(.white, lineWidth: 3)
+                                            .frame(width: 44, height: 44)
+
+                                        Image(systemName: "checkmark")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(16)
                 }
-                .disabled(viewModel.isPassphraseEnabled && !viewModel.isPassphraseValid)
-                .opacity(viewModel.isPassphraseEnabled && !viewModel.isPassphraseValid ? 0.5 : 1)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                // Start button
+                Button { viewModel.startScanning() } label: {
+                    HStack {
+                        Image(systemName: "camera.fill")
+                        Text("Start Scanning")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.accentColor, in: Capsule())
+                }
+                .disabled(!canProceed)
+                .opacity(canProceed ? 1 : 0.5)
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
                 .padding(.bottom, 40)
@@ -873,12 +1399,31 @@ private struct ReceiverSetupView: View {
     }
 }
 
+private struct InstructionRow: View {
+    let number: Int
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("\(number)")
+                .font(.caption.bold())
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(Color.accentColor, in: Circle())
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
 // MARK: - QR Display (Streaming)
 
 private struct QRDisplayView: View {
     @Bindable var viewModel: InitiatorCeremonyViewModel
     let currentFrame: Int
     let totalFrames: Int
+    var accentColor: Color = Color.ashAccent
     @State private var frame: Int = 0
     @State private var playing = true
     @State private var fps: Double = 4
@@ -886,6 +1431,7 @@ private struct QRDisplayView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Header
             VStack(spacing: 8) {
                 Text("Streaming QR Codes")
                     .font(.title2.bold())
@@ -896,83 +1442,142 @@ private struct QRDisplayView: View {
             .padding(.top, 16)
             .padding(.bottom, 16)
 
+            // QR Code Display
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(.white)
-                    .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+                    .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
                 if frame < viewModel.preGeneratedQRImages.count {
                     Image(uiImage: viewModel.preGeneratedQRImages[frame])
                         .interpolation(.none)
                         .resizable()
                         .scaledToFit()
-                        .padding(12)
+                        .padding(16)
                 }
             }
-            .frame(width: 380, height: 380)
-            .padding(.bottom, 16)
+            .frame(maxWidth: 340, maxHeight: 340)
+            .padding(.horizontal, 20)
 
+            // Frame indicator
             HStack(spacing: 8) {
-                Image(systemName: "dot.radiowaves.left.and.right")
-                    .foregroundStyle(.tint)
+                Circle()
+                    .fill(playing ? Color.green : Color.orange)
+                    .frame(width: 8, height: 8)
                 Text("Frame \(frame + 1) of \(totalFrames)")
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
+            .padding(.top, 16)
 
+            // Progress bar
             ProgressView(value: Double(frame + 1), total: Double(totalFrames))
+                .tint(.accentColor)
                 .padding(.horizontal, 40)
                 .padding(.top, 8)
 
             Spacer()
 
-            HStack(spacing: 16) {
-                Menu {
-                    ForEach([2, 4, 6, 8], id: \.self) { r in
-                        Button("\(r) fps") { fps = Double(r); if playing { restart() } }
+            // Playback Controls
+            VStack(spacing: 16) {
+                // Main controls row
+                HStack(spacing: 12) {
+                    // First frame
+                    Button { frame = 0 } label: {
+                        Image(systemName: "backward.end.fill")
+                            .font(.subheadline)
+                            .frame(width: 40, height: 40)
+                            .background(Color(.secondarySystemGroupedBackground), in: Circle())
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "speedometer")
-                        Text("\(Int(fps)) fps")
-                    }
-                    .font(.subheadline)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.secondarySystemGroupedBackground), in: Capsule())
-                }
-                .foregroundStyle(.primary)
+                    .disabled(frame == 0)
 
-                Button { playing.toggle(); playing ? start() : stop() } label: {
-                    Image(systemName: playing ? "pause.fill" : "play.fill")
-                        .font(.title3)
-                        .frame(width: 56, height: 56)
-                        .background(Color.accentColor, in: Circle())
-                        .foregroundStyle(.white)
-                }
-
-                HStack(spacing: 8) {
+                    // Previous frame
                     Button { if frame > 0 { frame -= 1 } } label: {
-                        Image(systemName: "chevron.left")
-                            .frame(width: 36, height: 36)
+                        Image(systemName: "backward.fill")
+                            .font(.subheadline)
+                            .frame(width: 40, height: 40)
                             .background(Color(.secondarySystemGroupedBackground), in: Circle())
                     }
+                    .disabled(frame == 0)
+
+                    // Play/Pause
+                    Button { playing.toggle(); playing ? start() : stop() } label: {
+                        Image(systemName: playing ? "pause.fill" : "play.fill")
+                            .font(.title2)
+                            .frame(width: 60, height: 60)
+                            .background(Color.accentColor, in: Circle())
+                            .foregroundStyle(.white)
+                    }
+
+                    // Next frame
                     Button { if frame < totalFrames - 1 { frame += 1 } } label: {
-                        Image(systemName: "chevron.right")
-                            .frame(width: 36, height: 36)
+                        Image(systemName: "forward.fill")
+                            .font(.subheadline)
+                            .frame(width: 40, height: 40)
                             .background(Color(.secondarySystemGroupedBackground), in: Circle())
                     }
+                    .disabled(frame >= totalFrames - 1)
+
+                    // Last frame
+                    Button { frame = totalFrames - 1 } label: {
+                        Image(systemName: "forward.end.fill")
+                            .font(.subheadline)
+                            .frame(width: 40, height: 40)
+                            .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                    }
+                    .disabled(frame >= totalFrames - 1)
                 }
                 .foregroundStyle(.primary)
-            }
-            .padding(.bottom, 16)
 
+                // Speed and reset row
+                HStack(spacing: 16) {
+                    // Reset button
+                    Button {
+                        frame = 0
+                        if !playing { start() }
+                        playing = true
+                    } label: {
+                        Label("Reset", systemImage: "arrow.counterclockwise")
+                            .font(.subheadline)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                    }
+                    .foregroundStyle(.primary)
+
+                    // Speed selector
+                    Menu {
+                        ForEach([2, 4, 6, 8, 10], id: \.self) { r in
+                            Button("\(r) fps\(r == 4 ? " (default)" : "")") {
+                                fps = Double(r)
+                                if playing { restart() }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "speedometer")
+                            Text("\(Int(fps)) fps")
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
+            .padding(.bottom, 20)
+
+            // Receiver Ready button
             Button { viewModel.finishSending() } label: {
-                Text("Receiver Ready")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 12)
-                    .background(Color.accentColor, in: Capsule())
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Receiver Ready")
+                }
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 14)
+                .background(Color.green, in: Capsule())
             }
             .padding(.bottom, 24)
         }
@@ -995,62 +1600,124 @@ private struct QRDisplayView: View {
 
 private struct QRScanView: View {
     @Bindable var viewModel: ReceiverCeremonyViewModel
+    var accentColor: Color = Color.ashAccent
 
     private var progressPercent: Int {
         Int(viewModel.progress * 100)
     }
 
+    private var isComplete: Bool {
+        viewModel.progress >= 1.0
+    }
+
+    private var decodedBlocks: Int {
+        Int(viewModel.progress * Double(viewModel.sourceBlockCount))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 8) {
-                Text("Scanning")
-                    .font(.title2.bold())
-                Text("Point camera at the streaming QR codes")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+            // Header
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(isComplete ? Color.green : accentColor)
+                    .frame(width: 10, height: 10)
+                    .animation(.easeInOut, value: isComplete)
+                Text(isComplete ? "Transfer Complete" : "Scanning...")
+                    .font(.headline)
             }
             .padding(.top, 16)
-            .padding(.bottom, 16)
+            .padding(.bottom, 12)
 
+            // Camera view
             ZStack {
                 QRScannerView(onFrameScanned: { viewModel.processScannedFrame($0) }, onError: { _ in })
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.accentColor, lineWidth: 3)
-                    .frame(width: 240, height: 240)
+                // Scanning frame
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isComplete ? Color.green : accentColor,
+                        lineWidth: 3
+                    )
+                    .frame(width: 220, height: 220)
+                    .animation(.easeInOut, value: isComplete)
+
+                // Corner markers
+                ForEach(0..<4, id: \.self) { corner in
+                    CornerMarker(isComplete: isComplete, accentColor: accentColor)
+                        .rotationEffect(.degrees(Double(corner) * 90))
+                        .offset(
+                            x: (corner == 0 || corner == 3) ? -95 : 95,
+                            y: (corner == 0 || corner == 1) ? -95 : 95
+                        )
+                }
             }
+            .frame(height: 300)
             .padding(.horizontal, 20)
 
-            Spacer()
-
-            VStack(spacing: 12) {
+            // Progress section
+            VStack(spacing: 16) {
                 if viewModel.sourceBlockCount > 0 {
+                    // Progress ring
                     ZStack {
                         Circle()
-                            .stroke(Color(.systemGray4), lineWidth: 8)
-                            .frame(width: 100, height: 100)
+                            .stroke(Color(.systemGray5), lineWidth: 8)
+                            .frame(width: 120, height: 120)
 
                         Circle()
                             .trim(from: 0, to: viewModel.progress)
-                            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                            .frame(width: 100, height: 100)
+                            .stroke(
+                                isComplete ? Color.green : accentColor,
+                                style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                            )
+                            .frame(width: 120, height: 120)
                             .rotationEffect(.degrees(-90))
                             .animation(.easeInOut(duration: 0.2), value: viewModel.progress)
 
-                        Text("\(progressPercent)%")
-                            .font(.system(size: 24, weight: .bold).monospacedDigit())
+                        VStack(spacing: 2) {
+                            Text("\(progressPercent)%")
+                                .font(.system(size: 32, weight: .bold).monospacedDigit())
+
+                            if isComplete {
+                                Image(systemName: "checkmark")
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.green)
+                            }
+                        }
                     }
-                } else {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text("Waiting for first frame...")
-                        .font(.subheadline)
+
+                    // Blocks received
+                    Text("\(decodedBlocks) of \(viewModel.sourceBlockCount) blocks")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .padding(.top, 8)
+                } else {
+                    // Waiting state
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+
+                        Text("Looking for QR codes...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(height: 140)
                 }
             }
-            .padding(.bottom, 32)
+            .padding(.top, 20)
+
+            Spacer()
+
+            // Tip
+            if !isComplete {
+                HStack(spacing: 8) {
+                    Image(systemName: "hand.raised")
+                        .foregroundStyle(.secondary)
+                    Text("Hold steady for best results")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, 24)
+            }
         }
         .background(Color(.systemBackground))
         .onAppear {
@@ -1062,76 +1729,226 @@ private struct QRScanView: View {
     }
 }
 
+private struct CornerMarker: View {
+    let isComplete: Bool
+    var accentColor: Color = Color.ashAccent
+
+    var body: some View {
+        Path { path in
+            path.move(to: CGPoint(x: 0, y: 20))
+            path.addLine(to: CGPoint(x: 0, y: 0))
+            path.addLine(to: CGPoint(x: 20, y: 0))
+        }
+        .stroke(
+            isComplete ? Color.green : accentColor,
+            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+        )
+        .frame(width: 20, height: 20)
+    }
+}
+
 // MARK: - Verification
 
 private struct VerificationView: View {
     let mnemonic: [String]
+    var accentColor: Color = Color.ashAccent
     @Binding var conversationName: String
     let onConfirm: () -> Void
     let onReject: () -> Void
 
+    // Optional metadata display for receiver
+    var receivedTTL: String?
+    var receivedDisappearing: String?
+    var receivedRelay: String?
+    var receivedNotifications: [String]?
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                VStack(spacing: 8) {
+                // Header with icon
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.seal")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(accentColor)
+                        .padding(20)
+                        .background(accentColor.opacity(0.1), in: Circle())
+
                     Text("Verify Checksum")
                         .font(.title2.bold())
+
                     Text("Both devices must show the same words")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
-                .padding(.top, 20)
-                .padding(.bottom, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 24)
+                .padding(.horizontal, 20)
 
+                // Mnemonic words card
                 VStack(spacing: 0) {
-                    ForEach(Array(mnemonic.enumerated()), id: \.offset) { i, word in
-                        if i > 0 { Divider().padding(.leading, 48) }
-                        HStack {
-                            Text("\(i + 1).")
-                                .font(.subheadline.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                                .frame(width: 28, alignment: .trailing)
-                            Text(word)
-                                .font(.title3.weight(.medium))
-                            Spacer()
+                    HStack {
+                        Image(systemName: "key.horizontal")
+                            .font(.title3)
+                            .foregroundStyle(accentColor)
+                            .frame(width: 32)
+                        Text("Security Words")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    // Words in a 2-column grid
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 0) {
+                        ForEach(Array(mnemonic.enumerated()), id: \.offset) { i, word in
+                            HStack(spacing: 8) {
+                                Text("\(i + 1)")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(.white)
+                                    .frame(width: 20, height: 20)
+                                    .background(accentColor, in: Circle())
+                                Text(word)
+                                    .font(.body.weight(.medium))
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
                     }
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Conversation Name (Optional)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("Enter a name", text: $conversationName)
-                        .textFieldStyle(.roundedBorder)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
+                // Received metadata (for receiver)
+                if let ttl = receivedTTL {
+                    VStack(spacing: 0) {
+                        HStack {
+                            Image(systemName: "info.circle")
+                                .font(.title3)
+                                .foregroundStyle(accentColor)
+                                .frame(width: 32)
+                            Text("Received Settings")
+                                .font(.subheadline.bold())
+                            Spacer()
+                        }
+                        .padding(16)
 
+                        Divider().padding(.leading, 56)
+
+                        SettingsRow(label: "Message Timeout", value: ttl)
+
+                        if let disappearing = receivedDisappearing {
+                            Divider().padding(.leading, 56)
+                            SettingsRow(label: "Disappearing", value: disappearing)
+                        }
+
+                        if let notifications = receivedNotifications, !notifications.isEmpty {
+                            Divider().padding(.leading, 56)
+                            HStack(alignment: .top) {
+                                Text("Notifications")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text(notifications.joined(separator: ", "))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                        }
+
+                        if let relay = receivedRelay {
+                            Divider().padding(.leading, 56)
+                            HStack {
+                                Text("Relay")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text(relay)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                        }
+                    }
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                }
+
+                // Conversation name
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "person.2")
+                            .font(.title3)
+                            .foregroundStyle(accentColor)
+                            .frame(width: 32)
+                        Text("Name (Optional)")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    TextField("Enter a name for this conversation", text: $conversationName)
+                        .textFieldStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                // Action buttons
                 VStack(spacing: 12) {
                     Button { onConfirm() } label: {
-                        Text("Words Match")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Color.green, in: RoundedRectangle(cornerRadius: 16))
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Words Match")
+                        }
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.green, in: Capsule())
                     }
+
                     Button(role: .destructive) { onReject() } label: {
-                        Text("Words Don't Match")
-                            .font(.subheadline)
+                        HStack {
+                            Image(systemName: "xmark.circle")
+                            Text("Words Don't Match")
+                        }
+                        .font(.subheadline)
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
+                .padding(.top, 24)
                 .padding(.bottom, 40)
             }
         }
         .background(Color(.systemBackground))
+    }
+}
+
+private struct SettingsRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+            Spacer()
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
@@ -1140,60 +1957,144 @@ private struct VerificationView: View {
 private struct CompletedView: View {
     let conversation: Conversation
     let onContinue: () -> Void
+    var accentColor: Color = Color.ashAccent
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 40)
+            VStack(spacing: 0) {
+                // Success header
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.1))
+                            .frame(width: 100, height: 100)
 
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(.green)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 48, weight: .medium))
+                            .foregroundStyle(.green)
+                    }
 
-                VStack(spacing: 8) {
-                    Text("Conversation Created")
+                    Text("Conversation Created!")
                         .font(.title2.bold())
+
                     Text(conversation.displayName)
                         .font(.headline)
                         .foregroundStyle(.secondary)
                 }
+                .padding(.top, 40)
+                .padding(.bottom, 32)
 
+                // Conversation details card
                 VStack(spacing: 0) {
                     HStack {
-                        Text("Pad Size").foregroundStyle(.secondary)
+                        Image(systemName: "info.circle")
+                            .font(.title3)
+                            .foregroundStyle(accentColor)
+                            .frame(width: 32)
+                        Text("Details")
+                            .font(.subheadline.bold())
                         Spacer()
-                        Text(ByteCountFormatter.string(fromByteCount: Int64(conversation.totalBytes), countStyle: .binary)).fontWeight(.medium)
                     }
                     .padding(16)
-                    Divider().padding(.leading, 16)
+
+                    Divider().padding(.leading, 56)
+
+                    // Pad size with visual indicator
                     HStack {
-                        Text("Role").foregroundStyle(.secondary)
-                        Spacer()
-                        Text(conversation.role == .initiator ? "Creator" : "Joiner").fontWeight(.medium)
-                    }
-                    .padding(16)
-                    if conversation.disappearingMessages.isEnabled {
-                        Divider().padding(.leading, 16)
-                        HStack {
-                            Text("Disappearing").foregroundStyle(.secondary)
-                            Spacer()
-                            Text(conversation.disappearingMessages.displayName).fontWeight(.medium)
+                        HStack(spacing: 8) {
+                            Image(systemName: "externaldrive")
+                                .foregroundStyle(.secondary)
+                            Text("Pad Size")
                         }
-                        .padding(16)
+                        Spacer()
+                        Text(ByteCountFormatter.string(fromByteCount: Int64(conversation.totalBytes), countStyle: .binary))
+                            .fontWeight(.medium)
+                    }
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+
+                    Divider().padding(.leading, 56)
+
+                    // Role
+                    HStack {
+                        HStack(spacing: 8) {
+                            Image(systemName: conversation.role == .initiator ? "star" : "person")
+                                .foregroundStyle(.secondary)
+                            Text("Your Role")
+                        }
+                        Spacer()
+                        Text(conversation.role == .initiator ? "Creator" : "Joiner")
+                            .fontWeight(.medium)
+                    }
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+
+                    // Disappearing messages (if enabled)
+                    if conversation.disappearingMessages.isEnabled {
+                        Divider().padding(.leading, 56)
+                        HStack {
+                            HStack(spacing: 8) {
+                                Image(systemName: "timer")
+                                    .foregroundStyle(.secondary)
+                                Text("Disappearing")
+                            }
+                            Spacer()
+                            Text(conversation.disappearingMessages.displayName)
+                                .fontWeight(.medium)
+                        }
+                        .font(.subheadline)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
 
+                // Security reminder
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "lock.shield")
+                            .font(.title3)
+                            .foregroundStyle(.green)
+                            .frame(width: 32)
+                        Text("Security Active")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("End-to-end encrypted", systemImage: "checkmark")
+                        Label("One-time pad encryption", systemImage: "checkmark")
+                        Label("No message recovery possible", systemImage: "checkmark")
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                // Start button
                 Button { onContinue() } label: {
-                    Text("Start Messaging")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16))
+                    HStack {
+                        Image(systemName: "message.fill")
+                        Text("Start Messaging")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(accentColor, in: Capsule())
                 }
                 .padding(.horizontal, 20)
+                .padding(.top, 24)
                 .padding(.bottom, 40)
             }
         }
@@ -1207,36 +2108,119 @@ private struct FailedView: View {
     let error: CeremonyError
     let onRetry: () -> Void
     let onCancel: () -> Void
+    var accentColor: Color = Color.ashAccent
+
+    private var errorIcon: String {
+        switch error {
+        case .checksumMismatch:
+            return "exclamationmark.triangle"
+        case .cancelled:
+            return "xmark.circle"
+        case .insufficientEntropy:
+            return "hand.draw"
+        case .qrScanFailed, .frameDecodingFailed:
+            return "qrcode"
+        default:
+            return "xmark.circle"
+        }
+    }
 
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 0) {
             Spacer()
-            Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 72))
-                .foregroundStyle(.red)
-            VStack(spacing: 8) {
+
+            // Error icon
+            VStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 100, height: 100)
+
+                    Image(systemName: errorIcon)
+                        .font(.system(size: 44, weight: .medium))
+                        .foregroundStyle(.red)
+                }
+
                 Text("Setup Failed")
                     .font(.title2.bold())
+
                 Text(error.localizedDescription)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
             }
+
             Spacer()
+
+            // Help section
+            VStack(spacing: 0) {
+                HStack {
+                    Image(systemName: "lightbulb")
+                        .font(.title3)
+                        .foregroundStyle(.orange)
+                        .frame(width: 32)
+                    Text("Troubleshooting")
+                        .font(.subheadline.bold())
+                    Spacer()
+                }
+                .padding(16)
+
+                Divider().padding(.leading, 56)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(troubleshootingTip)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 20)
+
+            // Action buttons
             VStack(spacing: 12) {
                 Button { onRetry() } label: {
-                    Text("Try Again")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 16))
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Try Again")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(accentColor, in: Capsule())
                 }
-                Button("Cancel") { onCancel() }
+
+                Button { onCancel() } label: {
+                    Text("Cancel")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.horizontal, 20)
+            .padding(.top, 24)
             .padding(.bottom, 40)
         }
         .background(Color(.systemBackground))
+    }
+
+    private var troubleshootingTip: String {
+        switch error {
+        case .checksumMismatch:
+            return "The security words didn't match. Both devices must complete the ceremony at the same time. Start fresh and try again."
+        case .insufficientEntropy:
+            return "Draw more random patterns on the screen to generate enough randomness. Move your finger in varied, unpredictable ways."
+        case .qrScanFailed, .frameDecodingFailed:
+            return "Make sure the camera can clearly see the QR code. Good lighting and holding steady helps. Try moving closer or further."
+        case .qrGenerationFailed:
+            return "There was an issue generating QR codes. This is rare - try restarting the ceremony."
+        case .padReconstructionFailed:
+            return "Some QR frames may have been missed. Try again and ensure all frames are captured."
+        case .cancelled:
+            return "The ceremony was cancelled. You can start again when ready."
+        }
     }
 }

@@ -15,6 +15,7 @@
 mod apns;
 mod auth;
 mod config;
+mod expiry;
 mod handlers;
 mod models;
 mod store;
@@ -73,7 +74,11 @@ async fn main() {
     let apns = apns::create_client(&config).await;
 
     // Create app state with broadcast channel for SSE
-    let state = AppState::new(store, apns);
+    let state = AppState::new(store, apns.clone());
+
+    // Start expiry notification worker
+    let expiry_worker = Arc::new(expiry::ExpiryWorker::new(state.clone(), apns));
+    expiry_worker.start();
 
     // Build router
     let app = Router::new()

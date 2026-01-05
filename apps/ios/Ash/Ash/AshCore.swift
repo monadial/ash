@@ -415,6 +415,22 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -1454,6 +1470,16 @@ public struct CeremonyMetadata {
      */
     public let disappearingMessagesSeconds: UInt32
     /**
+     * Push notification preferences (16-bit bitfield)
+     * Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
+     * Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires (5min, 1min)
+     * Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
+     * Bit 8: NOTIFY_DELIVERY_FAILED (0x0100) - notify sender if message TTL expires unread
+     * Bit 9: NOTIFY_MESSAGE_READ (0x0200) - reserved for future read receipts
+     * Default: 0x0103 (new message + expiring + delivery failed)
+     */
+    public let notificationFlags: UInt16
+    /**
      * Relay server URL
      */
     public let relayUrl: String
@@ -1471,11 +1497,21 @@ public struct CeremonyMetadata {
          * Disappearing messages timeout in seconds (0 = off)
          */disappearingMessagesSeconds: UInt32, 
         /**
+         * Push notification preferences (16-bit bitfield)
+         * Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
+         * Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires (5min, 1min)
+         * Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
+         * Bit 8: NOTIFY_DELIVERY_FAILED (0x0100) - notify sender if message TTL expires unread
+         * Bit 9: NOTIFY_MESSAGE_READ (0x0200) - reserved for future read receipts
+         * Default: 0x0103 (new message + expiring + delivery failed)
+         */notificationFlags: UInt16, 
+        /**
          * Relay server URL
          */relayUrl: String) {
         self.version = version
         self.ttlSeconds = ttlSeconds
         self.disappearingMessagesSeconds = disappearingMessagesSeconds
+        self.notificationFlags = notificationFlags
         self.relayUrl = relayUrl
     }
 }
@@ -1493,6 +1529,9 @@ extension CeremonyMetadata: Equatable, Hashable {
         if lhs.disappearingMessagesSeconds != rhs.disappearingMessagesSeconds {
             return false
         }
+        if lhs.notificationFlags != rhs.notificationFlags {
+            return false
+        }
         if lhs.relayUrl != rhs.relayUrl {
             return false
         }
@@ -1503,6 +1542,7 @@ extension CeremonyMetadata: Equatable, Hashable {
         hasher.combine(version)
         hasher.combine(ttlSeconds)
         hasher.combine(disappearingMessagesSeconds)
+        hasher.combine(notificationFlags)
         hasher.combine(relayUrl)
     }
 }
@@ -1518,6 +1558,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
                 version: FfiConverterUInt8.read(from: &buf), 
                 ttlSeconds: FfiConverterUInt64.read(from: &buf), 
                 disappearingMessagesSeconds: FfiConverterUInt32.read(from: &buf), 
+                notificationFlags: FfiConverterUInt16.read(from: &buf), 
                 relayUrl: FfiConverterString.read(from: &buf)
         )
     }
@@ -1526,6 +1567,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
         FfiConverterUInt8.write(value.version, into: &buf)
         FfiConverterUInt64.write(value.ttlSeconds, into: &buf)
         FfiConverterUInt32.write(value.disappearingMessagesSeconds, into: &buf)
+        FfiConverterUInt16.write(value.notificationFlags, into: &buf)
         FfiConverterString.write(value.relayUrl, into: &buf)
     }
 }

@@ -33,6 +33,9 @@ final class InitiatorCeremonyViewModel {
 
     var conversationName: String = ""
 
+    /// Selected accent color for the conversation
+    var selectedColor: ConversationColor = .orange
+
     /// Relay server URL for this conversation
     var selectedRelayURL: String = ""
 
@@ -50,6 +53,27 @@ final class InitiatorCeremonyViewModel {
 
     /// Disappearing messages setting (client-side display TTL)
     var disappearingMessages: DisappearingMessages = .off
+
+    // MARK: - Notification Preferences
+
+    /// Notify when new message arrives (receiver)
+    var notifyNewMessage: Bool = true
+    /// Notify before message expires - 5min and 1min warnings (receiver)
+    var notifyMessageExpiring: Bool = true
+    /// Notify when message expires (receiver)
+    var notifyMessageExpired: Bool = false
+    /// Notify if message TTL expires unread (sender)
+    var notifyDeliveryFailed: Bool = true
+
+    /// Computed notification flags for metadata
+    var notificationFlags: UInt16 {
+        var flags: UInt16 = 0
+        if notifyNewMessage { flags |= NotificationFlagsConstants.notifyNewMessage }
+        if notifyMessageExpiring { flags |= NotificationFlagsConstants.notifyMessageExpiring }
+        if notifyMessageExpired { flags |= NotificationFlagsConstants.notifyMessageExpired }
+        if notifyDeliveryFailed { flags |= NotificationFlagsConstants.notifyDeliveryFailed }
+        return flags
+    }
 
     var consent: ConsentState = ConsentState()
 
@@ -203,13 +227,16 @@ final class InitiatorCeremonyViewModel {
             generatedPadBytes = padBytes
 
             let disappearingSeconds = UInt32(disappearingMessages.seconds ?? 0)
+            // Encode color into notification flags (uses bits 12-15)
+            let flagsWithColor = NotificationFlagsConstants.encodeColor(selectedColor, into: notificationFlags)
             let metadata = CeremonyMetadataSwift(
                 ttlSeconds: serverRetention.seconds,
                 disappearingMessagesSeconds: disappearingSeconds,
+                notificationFlags: flagsWithColor,
                 relayURL: selectedRelayURL
             )
 
-            Log.debug(.ceremony, "Creating fountain generator: serverTTL=\(serverRetention.displayName), disappearing=\(disappearingMessages.displayName), passphrase=\(isPassphraseEnabled)")
+            Log.debug(.ceremony, "Creating fountain generator: serverTTL=\(serverRetention.displayName), disappearing=\(disappearingMessages.displayName), notifications=0x\(String(flagsWithColor, radix: 16)), color=\(selectedColor.rawValue), passphrase=\(isPassphraseEnabled)")
 
             let passphraseToUse = isPassphraseEnabled ? passphrase : nil
             let generator = try await dependencies.performCeremonyUseCase.createFountainGenerator(
@@ -347,7 +374,8 @@ final class InitiatorCeremonyViewModel {
                 role: .initiator,
                 relayURL: selectedRelayURL,
                 customName: finalName,
-                disappearingMessages: disappearingMessages
+                disappearingMessages: disappearingMessages,
+                accentColor: selectedColor
             )
 
             Log.info(.ceremony, "Ceremony completed: conversation \(conversation.id.prefix(8)), role=initiator, pad=\(padBytes.count) bytes")
@@ -382,6 +410,12 @@ final class InitiatorCeremonyViewModel {
         currentDisplayIndex = 0
         selectedRelayURL = dependencies.settingsService.relayServerURL
         connectionTestResult = nil
+        selectedColor = .orange
+        // Reset notification preferences to defaults
+        notifyNewMessage = true
+        notifyMessageExpiring = true
+        notifyMessageExpired = false
+        notifyDeliveryFailed = true
     }
 
     func cancel() {

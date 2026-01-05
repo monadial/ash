@@ -197,6 +197,7 @@ pub struct CeremonyMetadata {
     pub version: u8,
     pub ttl_seconds: u64,
     pub disappearing_messages_seconds: u32,
+    pub notification_flags: u16,
     pub relay_url: String,
 }
 
@@ -206,6 +207,7 @@ impl From<ash_core::CeremonyMetadata> for CeremonyMetadata {
             version: m.version,
             ttl_seconds: m.ttl_seconds,
             disappearing_messages_seconds: m.disappearing_messages_seconds,
+            notification_flags: m.notification_flags.bits(),
             relay_url: m.relay_url,
         }
     }
@@ -213,9 +215,10 @@ impl From<ash_core::CeremonyMetadata> for CeremonyMetadata {
 
 impl From<CeremonyMetadata> for ash_core::CeremonyMetadata {
     fn from(m: CeremonyMetadata) -> Self {
-        ash_core::CeremonyMetadata::new(
+        ash_core::CeremonyMetadata::with_flags(
             m.ttl_seconds,
             m.disappearing_messages_seconds,
+            ash_core::NotificationFlags::from_bits(m.notification_flags),
             m.relay_url,
         )
         .unwrap_or_default()
@@ -449,6 +452,7 @@ mod tests {
             version: 1,
             ttl_seconds: 300,
             disappearing_messages_seconds: 0,
+            notification_flags: 0x0103, // Default: new message + expiring + delivery failed
             relay_url: "https://relay.test".to_string(),
         };
         let pad = vec![0x42; 2000];

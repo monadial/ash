@@ -24,6 +24,9 @@ pub struct Store {
     /// Device registrations per conversation
     devices: Arc<DashMap<ConversationId, Vec<DeviceRegistration>>>,
 
+    /// Conversation notification preferences
+    prefs: Arc<DashMap<ConversationId, ConversationPrefs>>,
+
     /// Configuration
     config: Arc<Config>,
 
@@ -47,6 +50,7 @@ impl Store {
             blobs: Arc::new(DashMap::new()),
             burns: Arc::new(DashMap::new()),
             devices: Arc::new(DashMap::new()),
+            prefs: Arc::new(DashMap::new()),
             config: Arc::new(config),
             metrics: Arc::new(RwLock::new(StoreMetrics::default())),
         }
@@ -242,6 +246,12 @@ impl Store {
         // Remove all blobs immediately
         self.blobs.remove(&conversation_id);
 
+        // Remove device registrations
+        self.devices.remove(&conversation_id);
+
+        // Remove notification preferences
+        self.prefs.remove(&conversation_id);
+
         // Set burn flag with TTL
         let now = Utc::now();
         let burn_flag = BurnFlag {
@@ -275,6 +285,28 @@ impl Store {
             .get(conversation_id)
             .filter(|entry| entry.expires_at > now)
             .map(|entry| entry.value().clone())
+    }
+
+    /// Store notification preferences for a conversation
+    pub fn store_prefs(&self, conversation_id: ConversationId, notification_flags: u16, ttl_seconds: u64) {
+        let prefs = ConversationPrefs::new(notification_flags, ttl_seconds);
+        self.prefs.insert(conversation_id, prefs);
+        debug!("Stored conversation preferences");
+    }
+
+    /// Get notification preferences for a conversation
+    pub fn get_prefs(&self, conversation_id: &ConversationId) -> Option<ConversationPrefs> {
+        self.prefs.get(conversation_id).map(|entry| entry.value().clone())
+    }
+
+    /// Get all conversations with expiring message notifications enabled
+    /// Returns conversation IDs that have NOTIFY_MESSAGE_EXPIRING flag set
+    pub fn get_conversations_with_expiry_notifications(&self) -> Vec<ConversationId> {
+        self.prefs
+            .iter()
+            .filter(|entry| entry.value().notify_message_expiring())
+            .map(|entry| entry.key().clone())
+            .collect()
     }
 
     /// Clean up expired data

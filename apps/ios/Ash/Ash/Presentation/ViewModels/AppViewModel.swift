@@ -112,6 +112,23 @@ final class AppViewModel {
         }
     }
 
+    func updateConversationColor(_ conversation: Conversation, color: ConversationColor) async {
+        dependencies.hapticService.selection()
+
+        do {
+            let updated = conversation.withAccentColor(color)
+            try await dependencies.conversationRepository.save(updated)
+            await loadConversations()
+
+            // Update selected conversation if it was modified
+            if selectedConversation?.id == conversation.id {
+                selectedConversation = updated
+            }
+        } catch {
+            // Handle error
+        }
+    }
+
     func burnAllConversations() async {
         dependencies.hapticService.heavy()
 

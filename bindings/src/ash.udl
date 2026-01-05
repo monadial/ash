@@ -130,6 +130,14 @@ dictionary CeremonyMetadata {
     u64 ttl_seconds;
     /// Disappearing messages timeout in seconds (0 = off)
     u32 disappearing_messages_seconds;
+    /// Push notification preferences (16-bit bitfield)
+    /// Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
+    /// Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires (5min, 1min)
+    /// Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
+    /// Bit 8: NOTIFY_DELIVERY_FAILED (0x0100) - notify sender if message TTL expires unread
+    /// Bit 9: NOTIFY_MESSAGE_READ (0x0200) - reserved for future read receipts
+    /// Default: 0x0103 (new message + expiring + delivery failed)
+    u16 notification_flags;
     /// Relay server URL
     string relay_url;
 };

@@ -40,7 +40,7 @@ enum NotificationFlagsConstants {
     static func decodeColor(from flags: UInt16) -> ConversationColor {
         let colorIndex = Int((flags & colorMask) >> colorShift)
         let allColors = ConversationColor.allCases
-        guard colorIndex < allColors.count else { return .orange }
+        guard colorIndex < allColors.count else { return .indigo }
         return allColors[colorIndex]
     }
 }

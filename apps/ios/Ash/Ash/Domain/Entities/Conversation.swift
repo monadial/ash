@@ -214,7 +214,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         peerConsumed = try container.decodeIfPresent(UInt64.self, forKey: .peerConsumed) ?? 0
         relayURL = try container.decode(String.self, forKey: .relayURL)
         disappearingMessages = try container.decodeIfPresent(DisappearingMessages.self, forKey: .disappearingMessages) ?? .off
-        accentColor = try container.decodeIfPresent(ConversationColor.self, forKey: .accentColor) ?? .orange
+        accentColor = try container.decodeIfPresent(ConversationColor.self, forKey: .accentColor) ?? .indigo
         relayCursor = try container.decodeIfPresent(String.self, forKey: .relayCursor)
         activitySequence = try container.decodeIfPresent(UInt64.self, forKey: .activitySequence) ?? 0
         peerBurnedAt = try container.decodeIfPresent(Date.self, forKey: .peerBurnedAt)
@@ -261,7 +261,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         peerConsumed: UInt64,
         relayURL: String,
         disappearingMessages: DisappearingMessages = .off,
-        accentColor: ConversationColor = .orange,
+        accentColor: ConversationColor = .indigo,
         relayCursor: String? = nil,
         activitySequence: UInt64 = 0,
         peerBurnedAt: Date? = nil,
@@ -415,7 +415,7 @@ extension Conversation {
         relayURL: String,
         customName: String? = nil,
         disappearingMessages: DisappearingMessages = .off,
-        accentColor: ConversationColor = .orange,
+        accentColor: ConversationColor = .indigo,
         authToken: String,
         burnToken: String
     ) -> Conversation {

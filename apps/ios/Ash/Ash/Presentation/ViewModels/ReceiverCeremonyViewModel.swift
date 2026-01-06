@@ -35,7 +35,7 @@ final class ReceiverCeremonyViewModel {
     var conversationName: String = ""
 
     /// Selected accent color for the conversation
-    var selectedColor: ConversationColor = .orange
+    var selectedColor: ConversationColor = .indigo
 
     // MARK: - Initialization
 
@@ -244,7 +244,7 @@ final class ReceiverCeremonyViewModel {
         sourceBlockCount = 0
         receivedFrameCount = 0
         progress = 0.0
-        selectedColor = .orange
+        selectedColor = .indigo
     }
 
     func cancel() {

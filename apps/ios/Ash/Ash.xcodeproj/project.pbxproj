@@ -215,7 +215,7 @@
 				};
 			};
 			buildConfigurationList = C3B2DD7C2F0281DF00D5DF37 /* Build configuration list for PBXProject "Ash" */;
-			developmentRegion = en;
+			developmentRegion = sk;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,

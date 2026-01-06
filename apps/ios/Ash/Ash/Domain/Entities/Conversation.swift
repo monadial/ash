@@ -11,7 +11,6 @@
 //
 
 import Foundation
-import CryptoKit
 
 /// Role in the conversation - determines pad consumption direction
 /// This ensures both parties never use the same pad bytes
@@ -132,7 +131,7 @@ enum DisappearingMessages: String, Codable, CaseIterable, Sendable {
 /// Represents a secure conversation with another party
 /// Simplified ephemeral model - immediate burn only, fixed TTL
 struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
-    /// Conversation ID derived from shared pad bytes (base64-encoded hash)
+    /// Conversation ID derived from shared pad bytes (64-char hex string)
     /// Both parties derive the same ID from their identical pads
     let id: String
     let createdAt: Date
@@ -419,7 +418,8 @@ extension Conversation {
         authToken: String,
         burnToken: String
     ) -> Conversation {
-        let conversationId = deriveConversationId(from: padBytes)
+        // Use FFI to derive conversation ID (64-char hex string matching backend expectations)
+        let conversationId = try! Ash.deriveConversationId(padBytes: padBytes)
 
         return Conversation(
             id: conversationId,
@@ -439,17 +439,6 @@ extension Conversation {
             authToken: authToken,
             burnToken: burnToken
         )
-    }
-
-    /// Derive a deterministic conversation ID from pad bytes
-    private static func deriveConversationId(from padBytes: [UInt8]) -> String {
-        let bytesToHash = Array(padBytes.prefix(64))
-        let hash = SHA256.hash(data: Data(bytesToHash))
-        let hashBytes = Array(hash.prefix(16))
-        return Data(hashBytes).base64EncodedString()
-            .replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: "=", with: "")
     }
 
     /// Create a copy with a new custom name

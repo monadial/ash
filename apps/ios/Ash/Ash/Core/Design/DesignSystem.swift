@@ -48,8 +48,8 @@ enum CornerRadius {
 // Using system colors that automatically adapt to light/dark mode and accessibility settings
 
 extension Color {
-    /// Primary app accent color - muted orange (softer than system orange)
-    static let ashAccent = Color(red: 0.90, green: 0.55, blue: 0.30)
+    /// Primary app accent color - indigo for professional, secure appearance
+    static let ashAccent = Color(uiColor: .systemIndigo)
 
     /// Destructive actions - uses system red for proper dark mode support
     static let ashDanger = Color(uiColor: .systemRed)
@@ -61,52 +61,52 @@ extension Color {
     static let ashWarning = Color(red: 0.95, green: 0.65, blue: 0.25)
 
     /// Secure/encrypted indicator - uses accent color for consistency
-    static let ashSecure = Color(red: 0.90, green: 0.55, blue: 0.30)
+    static let ashSecure = Color(uiColor: .systemIndigo)
 }
 
 // MARK: - Conversation Colors
 
 /// Preset colors for conversations (user selectable)
 enum ConversationColor: String, Codable, CaseIterable, Sendable, Identifiable {
-    case orange     // Default - muted orange matching app accent
+    case indigo     // Default - professional, secure appearance
     case blue
     case purple
-    case pink
+    case teal
     case green
-    case teal       // Available for conversations only
-    case indigo
-    case mint
     case cyan
+    case mint
+    case orange
+    case pink
     case brown
 
     var id: String { rawValue }
 
     var color: Color {
         switch self {
-        case .orange: return Color(red: 0.90, green: 0.55, blue: 0.30)  // Muted orange
+        case .indigo: return Color(uiColor: .systemIndigo)
         case .blue: return Color(uiColor: .systemBlue)
         case .purple: return Color(uiColor: .systemPurple)
-        case .pink: return Color(uiColor: .systemPink)
-        case .green: return Color(uiColor: .systemGreen)
         case .teal: return Color(uiColor: .systemTeal)
-        case .indigo: return Color(uiColor: .systemIndigo)
-        case .mint: return Color(uiColor: .systemMint)
+        case .green: return Color(uiColor: .systemGreen)
         case .cyan: return Color(uiColor: .systemCyan)
+        case .mint: return Color(uiColor: .systemMint)
+        case .orange: return Color(red: 0.90, green: 0.55, blue: 0.30)
+        case .pink: return Color(uiColor: .systemPink)
         case .brown: return Color(uiColor: .systemBrown)
         }
     }
 
     var name: String {
         switch self {
-        case .orange: return "Orange"
+        case .indigo: return "Indigo"
         case .blue: return "Blue"
         case .purple: return "Purple"
-        case .pink: return "Pink"
-        case .green: return "Green"
         case .teal: return "Teal"
-        case .indigo: return "Indigo"
-        case .mint: return "Mint"
+        case .green: return "Green"
         case .cyan: return "Cyan"
+        case .mint: return "Mint"
+        case .orange: return "Orange"
+        case .pink: return "Pink"
         case .brown: return "Brown"
         }
     }

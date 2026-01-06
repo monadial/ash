@@ -34,7 +34,7 @@ final class InitiatorCeremonyViewModel {
     var conversationName: String = ""
 
     /// Selected accent color for the conversation
-    var selectedColor: ConversationColor = .orange
+    var selectedColor: ConversationColor = .indigo
 
     /// Relay server URL for this conversation
     var selectedRelayURL: String = ""
@@ -410,7 +410,7 @@ final class InitiatorCeremonyViewModel {
         currentDisplayIndex = 0
         selectedRelayURL = dependencies.settingsService.relayServerURL
         connectionTestResult = nil
-        selectedColor = .orange
+        selectedColor = .indigo
         // Reset notification preferences to defaults
         notifyNewMessage = true
         notifyMessageExpiring = true

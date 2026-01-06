@@ -24,12 +24,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // Set up notification center delegate
         UNUserNotificationCenter.current().delegate = self
 
-        // Check if launched from push notification
-        if let notificationPayload = launchOptions?[.remoteNotification] as? [AnyHashable: Any] {
-            Log.info(.push, "App launched from push notification")
-            handlePushNotification(notificationPayload)
-        }
-
         return true
     }
 

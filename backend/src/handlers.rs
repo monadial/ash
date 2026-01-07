@@ -546,7 +546,7 @@ pub enum ApiError {
     Auth(AuthError),
 }
 
-/// Implement From<AuthError> to enable ? operator in handlers
+/// Implement `From<AuthError>` to enable ? operator in handlers.
 impl From<AuthError> for ApiError {
     fn from(err: AuthError) -> Self {
         ApiError::Auth(err)

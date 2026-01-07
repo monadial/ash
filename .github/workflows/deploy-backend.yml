@@ -13,9 +13,12 @@ env:
   IMAGE_NAME: ash-backend
 
 jobs:
-  deploy:
-    name: Build & Push to Scaleway
+  build:
+    name: Build & Push Image
     runs-on: ubuntu-latest
+
+    outputs:
+      image-tags: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout
@@ -51,6 +54,13 @@ jobs:
           cache-to: type=gha,mode=max
           platforms: linux/amd64
 
+  deploy:
+    name: Deploy to Scaleway
+    needs: build
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
       - name: Deploy to Serverless Container
         env:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
@@ -67,6 +77,10 @@ jobs:
             --wait
 
       - name: Health Check
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
         run: |
           echo "Waiting for deployment..."
           sleep 30
@@ -81,5 +95,5 @@ jobs:
         run: |
           echo "### Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** \`${{ steps.meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Registry:** \`${{ env.REGISTRY }}/${{ secrets.SCW_PROJECT_ID }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ needs.build.outputs.image-tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** \`${{ env.REGISTRY }}\`" >> $GITHUB_STEP_SUMMARY

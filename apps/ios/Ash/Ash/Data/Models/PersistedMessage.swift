@@ -40,6 +40,9 @@ final class PersistedMessage {
     /// Pad sequence (offset) used for this message - used for deduplication
     var sequence: UInt64?
 
+    /// Whether the message content has been securely wiped (pad bytes zeroed)
+    var isContentWiped: Bool
+
     init(
         id: UUID,
         conversationId: String,
@@ -49,7 +52,8 @@ final class PersistedMessage {
         expiresAt: Date? = nil,
         deliveryStatusRaw: Int = 0,
         failureReason: String? = nil,
-        sequence: UInt64? = nil
+        sequence: UInt64? = nil,
+        isContentWiped: Bool = false
     ) {
         self.id = id
         self.conversationId = conversationId
@@ -60,6 +64,7 @@ final class PersistedMessage {
         self.deliveryStatusRaw = deliveryStatusRaw
         self.failureReason = failureReason
         self.sequence = sequence
+        self.isContentWiped = isContentWiped
     }
 }
 
@@ -80,7 +85,8 @@ extension PersistedMessage {
             expiresAt: message.expiresAt,
             deliveryStatusRaw: statusRaw,
             failureReason: reason,
-            sequence: message.sequence
+            sequence: message.sequence,
+            isContentWiped: message.isContentWiped
         )
     }
 
@@ -89,7 +95,7 @@ extension PersistedMessage {
         let content = try JSONDecoder().decode(MessageContent.self, from: contentData)
         let deliveryStatus = DeliveryStatus.decoded(raw: deliveryStatusRaw, reason: failureReason)
 
-        return Message(
+        var message = Message(
             id: id,
             content: content,
             timestamp: timestamp,
@@ -98,6 +104,8 @@ extension PersistedMessage {
             deliveryStatus: deliveryStatus,
             sequence: sequence
         )
+        message.isContentWiped = isContentWiped
+        return message
     }
 }
 
@@ -111,6 +119,7 @@ extension DeliveryStatus {
         case .sending: return (1, nil)
         case .sent: return (2, nil)
         case .failed(let reason): return (3, reason)
+        case .delivered: return (4, nil)
         }
     }
 
@@ -121,6 +130,7 @@ extension DeliveryStatus {
         case 1: return .sending
         case 2: return .sent
         case 3: return .failed(reason: reason)
+        case 4: return .delivered
         default: return .none
         }
     }

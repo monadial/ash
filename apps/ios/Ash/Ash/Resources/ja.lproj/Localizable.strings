@@ -1,0 +1,451 @@
+/*
+  Localizable.strings
+  Ash
+
+  Japanese localization
+*/
+
+// MARK: - Common
+
+"common.cancel" = "キャンセル";
+"common.save" = "保存";
+"common.done" = "完了";
+"common.continue" = "続ける";
+"common.back" = "戻る";
+"common.delete" = "削除";
+"common.settings" = "設定";
+"common.rename" = "名前を変更";
+"common.error" = "エラー";
+"common.ok" = "OK";
+"common.test" = "テスト";
+"common.reset" = "リセット";
+"common.copy" = "コピー";
+"common.retry" = "再試行";
+"common.info" = "情報";
+"common.dismiss" = "閉じる";
+
+// MARK: - Conversations Screen
+
+"conversations.title" = "会話";
+"conversations.empty.title" = "会話がありません";
+"conversations.empty.message" = "別のデバイスとセレモニーを行い、安全な会話を開始します。";
+"conversations.empty.action" = "新しい会話";
+"conversations.new" = "新規";
+"conversations.burn" = "焼却";
+"conversations.burn.title" = "会話を焼却しますか？";
+"conversations.burn.message" = "すべてのメッセージと暗号化パッドが永久に破棄されます。この操作は取り消せません。";
+"conversations.remaining" = "残り%@";
+"conversations.info" = "会話情報";
+"conversations.you" = "あなた %d%%";
+"conversations.them" = "相手 %d%%";
+
+// MARK: - Messaging Screen
+
+"messaging.empty.title" = "メッセージがありません";
+"messaging.empty.message" = "メッセージは一時的で、閲覧後に消えます";
+"messaging.input.placeholder" = "メッセージ";
+"messaging.send" = "メッセージを送信";
+"messaging.peer.burned" = "この会話は焼却されました";
+"messaging.location" = "位置情報";
+"messaging.expired" = "メッセージ期限切れ";
+"messaging.open_maps" = "マップで開く";
+"messaging.size_indicator" = "%@ / %d KB";
+
+// MARK: - Message Status
+
+"status.sending" = "送信中...";
+"status.sent" = "サーバーに送信済み";
+"status.delivered" = "配信済み";
+"status.failed" = "失敗";
+"status.relay_error" = "リレーエラー";
+"status.expired" = "期限切れ";
+
+// MARK: - Time Formats
+
+"time.seconds" = "%d秒";
+"time.minutes" = "%d分";
+"time.hours" = "%d時間";
+"time.days" = "%d日";
+"time.minutes_seconds" = "%d分%d秒";
+"time.hours_minutes" = "%d時間%d分";
+"time.days_hours" = "%d日%d時間";
+
+// MARK: - Conversation Settings
+
+"settings.conversation.title" = "設定";
+"settings.privacy" = "プライバシー";
+"settings.privacy.secret_mode" = "シークレットモード";
+"settings.privacy.secret_mode.description" = "長押しで表示";
+"settings.privacy.secret_mode.footer" = "有効にすると、受信メッセージはバブルを長押しするまで暗号化されたままになります。";
+"settings.relay" = "リレーサーバー";
+"settings.relay.url" = "サーバーURL";
+"settings.relay.url.placeholder" = "https://relay.example.com";
+"settings.relay.test" = "接続テスト";
+"settings.relay.connected" = "接続済み - %@";
+"settings.relay.connected.latency" = "接続済み - %@（%dms）";
+"settings.relay.footer" = "メッセージは%@の間サーバーRAMに保存され、配信または期限切れ後に削除されます。";
+"settings.persistence" = "メッセージ保存";
+"settings.persistence.delayed" = "遅延読み取り";
+"settings.persistence.delayed.description" = "メッセージは48時間保持";
+"settings.persistence.delayed.footer.on" = "メッセージは最大48時間利用可能で、遅延読み取りができます。";
+"settings.persistence.delayed.footer.off" = "メッセージは30秒後に期限切れになります（リアルタイムモード）。";
+
+// MARK: - Rename Dialog
+
+"rename.title" = "会話名を変更";
+"rename.placeholder" = "名前";
+"rename.message" = "カスタム名を入力するか、空のままでニーモニックワードを使用";
+
+// MARK: - Ceremony - General
+
+"ceremony.title" = "新しい会話";
+
+// MARK: - Ceremony - Role Selection
+
+"ceremony.role.title" = "役割を選択";
+"ceremony.role.subtitle" = "一方のデバイスが会話を作成し、もう一方がスキャンして参加";
+"ceremony.role.initiate" = "作成";
+"ceremony.role.initiate.description" = "パッドを生成してQRコードを表示";
+"ceremony.role.initiate.badge" = "イニシエーター";
+"ceremony.role.receive" = "参加";
+"ceremony.role.receive.description" = "相手のQRコードをスキャン";
+"ceremony.role.receive.badge" = "レシーバー";
+
+// MARK: - Ceremony - Pad Size Selection
+
+"ceremony.padsize.title" = "パッドサイズ";
+"ceremony.padsize.subtitle" = "大きなパッドはより多くのメッセージを許可しますが、転送に時間がかかります";
+"ceremony.padsize.small" = "64 KB";
+"ceremony.padsize.small.description" = "約100メッセージ";
+"ceremony.padsize.medium" = "256 KB";
+"ceremony.padsize.medium.description" = "約400メッセージ";
+"ceremony.padsize.large" = "1 MB";
+"ceremony.padsize.large.description" = "約1,600メッセージ";
+
+// MARK: - Ceremony - Options
+
+"ceremony.options.title" = "設定";
+"ceremony.options.subtitle" = "メッセージの処理と配信を設定";
+"ceremony.options.timing" = "メッセージタイミング";
+"ceremony.options.retention" = "サーバー保持";
+"ceremony.options.retention.description" = "未読メッセージの待機時間";
+"ceremony.options.disappearing" = "消えるメッセージ";
+"ceremony.options.disappearing.description" = "閲覧後に自動削除";
+"ceremony.options.storage" = "ローカルメッセージ保存";
+"ceremony.options.storage.faceid_enabled" = "Face ID有効";
+"ceremony.options.storage.enabled_description" = "メッセージはデバイスにローカル保存され、Face IDで保護されます。タイマー期限切れ時に安全に消去されます。";
+"ceremony.options.storage.enable_toggle" = "ローカル保存を有効化";
+"ceremony.options.storage.enabled_footer" = "メッセージは期限切れまでアプリセッション間で保持されます。";
+"ceremony.options.storage.faceid_disabled" = "Face ID無効";
+"ceremony.options.storage.disabled_description" = "ローカルメッセージ保存を有効にするには、まず設定でFace IDを有効にする必要があります。有効にしないと、メッセージはメモリにのみ保存され、会話を離れると失われます。";
+"ceremony.options.notifications" = "通知";
+"ceremony.options.notifications.new" = "新着メッセージ";
+"ceremony.options.notifications.new.description" = "メッセージ到着時に通知";
+"ceremony.options.notifications.expiring" = "期限切れ警告";
+"ceremony.options.notifications.expiring.description" = "期限切れ5分前と1分前";
+"ceremony.options.notifications.expired" = "期限切れメッセージ";
+"ceremony.options.notifications.expired.description" = "メッセージ期限切れ時に通知";
+"ceremony.options.notifications.failed" = "配信失敗";
+"ceremony.options.notifications.failed.description" = "受信者がメッセージを逃した時に通知";
+"ceremony.options.color" = "会話の色";
+
+// MARK: - Ceremony - Passphrase
+
+"ceremony.passphrase.title" = "パスフレーズ保護";
+"ceremony.passphrase.toggle" = "共有シークレットでQRコードを暗号化";
+"ceremony.passphrase.toggle.description" = "両者が同じパスフレーズに合意する必要があります";
+"ceremony.passphrase.placeholder" = "パスフレーズを入力";
+"ceremony.passphrase.valid" = "パスフレーズ有効";
+"ceremony.passphrase.invalid" = "4〜64文字の印刷可能文字が必要";
+"ceremony.passphrase.hint" = "このパスフレーズをパートナーに口頭で伝えてください";
+"ceremony.passphrase.receiver.toggle" = "パスフレーズ保護";
+"ceremony.passphrase.receiver.toggle.description" = "送信者がパスフレーズを使用した場合は有効化";
+"ceremony.passphrase.receiver.hint" = "送信者が伝えた同じパスフレーズを入力";
+
+// MARK: - Ceremony - Consent
+
+"ceremony.consent.title" = "セキュリティ確認";
+"ceremony.consent.subtitle" = "続行前に理解を確認してください";
+"ceremony.consent.section.environment" = "環境";
+"ceremony.consent.environment" = "誰も私の画面を見ていません";
+"ceremony.consent.environment.detail" = "カメラ、鏡、人がディスプレイを見ることはできません";
+"ceremony.consent.surveillance" = "監視や強制を受けていません";
+"ceremony.consent.surveillance.detail" = "強制または監視されている場合は続行しないでください";
+"ceremony.consent.section.responsibilities" = "責任";
+"ceremony.consent.ethics" = "倫理的責任を理解しています";
+"ceremony.consent.ethics.detail" = "このツールは正当なプライベート通信用です";
+"ceremony.consent.understand" = "鍵は復元できません";
+"ceremony.consent.understand.detail" = "アクセスを失うと、メッセージは永久に失われます";
+"ceremony.consent.section.limitations" = "制限事項";
+"ceremony.consent.relay_warning" = "リレーサーバーが利用できない場合があります";
+"ceremony.consent.relay_warning.detail" = "接続なしではメッセージは配信されません";
+"ceremony.consent.persistence_warning" = "リレーデータは永続化されません";
+"ceremony.consent.persistence_warning.detail" = "サーバー再起動で未読メッセージが失われる可能性があります";
+"ceremony.consent.burn_warning" = "焼却はすべての鍵素材を破棄します";
+"ceremony.consent.burn_warning.detail" = "どちらも焼却でき、取り消しはできません";
+"ceremony.consent.proceed" = "理解して続行";
+"ceremony.consent.ethics.link" = "倫理ガイドラインを読む";
+
+// MARK: - Ceremony - Entropy
+
+"ceremony.entropy.title" = "エントロピー生成";
+"ceremony.entropy.subtitle" = "ランダムなパターンを描いて安全な乱数を生成";
+"ceremony.entropy.complete" = "エントロピー完了！";
+"ceremony.entropy.hint" = "ここに描く";
+"ceremony.entropy.progress.hint" = "ランダムなパターンが暗号化を強化";
+"ceremony.entropy.progress" = "%d%%";
+
+// MARK: - Ceremony - Generating
+
+"ceremony.generating.pad" = "パッド生成中";
+"ceremony.generating.pad.subtitle" = "安全な暗号化鍵を作成中...";
+"ceremony.generating.qr" = "QRコード生成中";
+"ceremony.generating.qr.subtitle" = "転送用に%dフレームを準備中...";
+
+// MARK: - Ceremony - Transfer (Sender)
+
+"ceremony.transfer.sender.title" = "QRコードをストリーミング";
+"ceremony.transfer.sender.subtitle" = "相手のデバイスに継続的にスキャンさせてください";
+"ceremony.transfer.sender.frame" = "フレーム %d / %d";
+"ceremony.transfer.sender.fps" = "%d fps";
+"ceremony.transfer.sender.fps.default" = "%d fps（デフォルト）";
+"ceremony.transfer.sender.ready" = "レシーバー準備完了";
+
+// MARK: - Ceremony - Transfer (Receiver)
+
+"ceremony.transfer.receiver.title" = "スキャン準備完了";
+"ceremony.transfer.receiver.subtitle" = "送信者のQRコードにカメラを向けてください";
+"ceremony.transfer.receiver.how_it_works" = "仕組み";
+"ceremony.transfer.receiver.scanning" = "スキャン中...";
+"ceremony.transfer.receiver.scanning.subtitle" = "このプロセス中はアプリを開いたままにしてください";
+"ceremony.transfer.receiver.looking" = "QRコードを探しています...";
+"ceremony.transfer.receiver.hold_steady" = "最良の結果を得るために静止してください";
+"ceremony.transfer.receiver.progress" = "%d%%";
+"ceremony.transfer.receiver.blocks" = "%d / %d ブロック";
+"ceremony.transfer.receiver.complete" = "すべてのフレームを受信しました！";
+"ceremony.transfer.receiver.start" = "スキャン開始";
+
+// MARK: - Ceremony - Verification
+
+"ceremony.verify.title" = "チェックサム確認";
+"ceremony.verify.subtitle" = "両方のデバイスで同じ単語が表示される必要があります";
+"ceremony.verify.words" = "セキュリティワード";
+"ceremony.verify.settings" = "受信した設定";
+"ceremony.verify.name.title" = "名前（オプション）";
+"ceremony.verify.name.placeholder" = "例：アリス、仕事、家族";
+"ceremony.verify.name.hint" = "オプション - この会話を識別するのに役立ちます";
+"ceremony.verify.faceid_required.title" = "Face IDが必要";
+"ceremony.verify.faceid_required.message" = "この会話はローカルメッセージ保存が有効になっており、Face IDが必要です。続行する前に設定でFace IDを有効にしてください。";
+"ceremony.verify.storage_enabled" = "ローカル保存有効";
+"ceremony.verify.storage_enabled.detail" = "メッセージはデバイスにローカル保存され、Face IDで保護されます。";
+"ceremony.verify.match" = "単語が一致";
+"ceremony.verify.nomatch" = "単語が不一致";
+
+// MARK: - Ceremony - Complete
+
+"ceremony.complete.title" = "会話を作成しました！";
+"ceremony.complete.details" = "詳細";
+"ceremony.complete.padsize" = "パッドサイズ";
+"ceremony.complete.role" = "あなたの役割";
+"ceremony.complete.disappearing" = "消える";
+"ceremony.complete.security" = "セキュリティ有効";
+"ceremony.complete.action" = "メッセージを開始";
+
+// MARK: - Ceremony - Failed
+
+"ceremony.failed.title" = "セットアップ失敗";
+"ceremony.failed.troubleshooting" = "トラブルシューティング";
+"ceremony.failed.retry" = "再試行";
+
+// MARK: - Burn Confirmation
+
+"burn.title" = "\"%@\"を焼却しますか？";
+"burn.subtitle" = "この操作は取り消せません";
+"burn.all.title" = "すべての会話を焼却しますか？";
+"burn.all.subtitle" = "すべてのデータの緊急破棄";
+"burn.destroyed" = "永久に破棄されます";
+"burn.item.pad" = "暗号化パッドと鍵";
+"burn.item.messages" = "すべてのメッセージ履歴";
+"burn.item.connection" = "相手との接続";
+"burn.item.all" = "すべての会話";
+"burn.confirm.prompt" = "確認のため\"BURN\"と入力";
+"burn.confirm.action" = "永久に焼却";
+"burn.confirm.all.action" = "すべて焼却";
+
+// MARK: - Burned Conversation
+
+"burned.title" = "会話が焼却されました";
+"burned.message" = "\"%@\"は相手によって焼却されました。";
+"burned.detail" = "この会話とすべてのメッセージは永久に破棄されました。";
+
+// MARK: - App Settings
+
+"appsettings.title" = "設定";
+"appsettings.section.security" = "セキュリティ";
+"appsettings.security.biometric" = "生体認証でロック解除";
+"appsettings.security.lock_background" = "バックグラウンドでロック";
+"appsettings.security.lock_background.description" = "アプリ復帰時に認証が必要";
+"appsettings.security.unavailable" = "生体認証が利用できません";
+"appsettings.security.unavailable.description" = "設定でFace IDまたはTouch IDを設定してください";
+"appsettings.section.relay" = "リレーサーバー";
+"appsettings.relay.url" = "サーバーURL";
+"appsettings.relay.modified" = "変更済み";
+"appsettings.relay.status" = "接続状態";
+"appsettings.relay.testing" = "テスト中...";
+"appsettings.relay.connected" = "%@に接続済み • %dms";
+"appsettings.relay.not_tested" = "未テスト";
+"appsettings.relay.footer" = "新しい会話のデフォルトサーバー。各会話は異なるリレーを使用できます。";
+"appsettings.section.about" = "情報";
+"appsettings.about.version" = "バージョン";
+"appsettings.about.version.value" = "1.0.0";
+"appsettings.about.encryption" = "暗号化";
+"appsettings.about.encryption.value" = "ワンタイムパッド";
+"appsettings.about.security" = "セキュリティモデル";
+"appsettings.about.security.description" = "ASHがメッセージを保護する方法";
+"appsettings.about.security.link" = "セキュリティ";
+"appsettings.about.privacy" = "プライバシー";
+"appsettings.about.privacy.description" = "収集するデータ（なし）";
+"appsettings.section.danger" = "危険ゾーン";
+"appsettings.danger.burnall" = "緊急：すべて焼却";
+"appsettings.danger.burnall.description" = "すべての会話と鍵を即座に破棄";
+"appsettings.danger.burnall.footer" = "緊急焼却はすべての会話、暗号化パッド、メッセージを永久に破棄します。取り消しはできません。";
+"appsettings.burnall.title" = "すべての会話を焼却しますか？";
+"appsettings.burnall.message" = "すべての会話と暗号化パッドが永久に破棄されます。取り消しはできません。";
+"appsettings.burnall.action" = "すべて焼却";
+
+// MARK: - Lock Screen
+
+"lock.title" = "アプリがロックされています";
+"lock.subtitle" = "タップして認証";
+"lock.authenticating" = "認証中...";
+"lock.unlock" = "%@でロック解除";
+
+// MARK: - Message Detail
+
+"detail.title" = "詳細";
+"detail.section.content" = "内容";
+"detail.latitude" = "緯度";
+"detail.longitude" = "経度";
+"detail.section.status" = "状態";
+"detail.sent" = "送信済み";
+"detail.delivery" = "配信";
+"detail.expires" = "期限";
+"detail.copy" = "クリップボードにコピー";
+
+// MARK: - Conversation Info
+
+"convinfo.title" = "会話情報";
+"convinfo.section.security" = "セキュリティ確認";
+"convinfo.security.description" = "両者が同じコードを持つ必要があります：";
+"convinfo.conversation_id" = "会話ID";
+"convinfo.identity" = "ID";
+"convinfo.section.relay" = "リレーサーバー";
+"convinfo.relay.url" = "URL";
+"convinfo.relay.latency" = "レイテンシ";
+"convinfo.relay.latency.value" = "%dミリ秒";
+"convinfo.relay.latency.unknown" = "—";
+"convinfo.section.settings" = "メッセージ設定";
+"convinfo.settings.persistent" = "メッセージはセッション間でローカル保存されます（Face IDが必要）。消えるタイマー期限切れ時に自動削除されます。";
+"convinfo.settings.ephemeral" = "サーバー保持：未読メッセージがサーバーで待機する時間。消える：閲覧後のメッセージ表示時間。アプリを閉じるとメッセージはクリアされます。";
+"convinfo.section.pad" = "暗号化パッド";
+"convinfo.pad.you" = "%d%% あなた";
+"convinfo.pad.them" = "%d%% 相手";
+"convinfo.pad.exhausted" = "パッド使い切り - これ以上メッセージを送れません";
+"convinfo.section.danger" = "危険ゾーン";
+
+// MARK: - QR Scanner
+
+"scanner.permission.title" = "カメラアクセスが必要";
+"scanner.permission.message" = "QRコードをスキャンするには設定でカメラアクセスを有効にしてください";
+"scanner.permission.action" = "設定を開く";
+
+// MARK: - QR Code
+
+"qr.failed" = "QR生成に失敗しました";
+
+// MARK: - Ethics
+
+"ethics.title" = "倫理ガイドライン";
+"ethics.intro" = "ASHは正当なプライベート通信のために設計されています。このアプリケーションを使用することで、あなたは以下に同意します：";
+"ethics.principle.1.title" = "プライバシーの尊重";
+"ethics.principle.1.detail" = "両者が同意し、プライバシーの正当な必要性がある通信にのみこのツールを使用してください。";
+"ethics.principle.2.title" = "有害な使用の禁止";
+"ethics.principle.2.detail" = "違法行為、嫌がらせ、他者への危害を計画、調整、促進するためにASHを使用しないでください。";
+"ethics.principle.3.title" = "誠実なコミュニケーション";
+"ethics.principle.3.detail" = "会話の性質と目的についてコミュニケーションパートナーに正直に伝えてください。";
+"ethics.principle.4.title" = "責任の受け入れ";
+"ethics.principle.4.detail" = "メッセージの内容とこのツールの使用方法についてはあなたが単独で責任を負います。";
+"ethics.principle.5.title" = "制限の理解";
+"ethics.principle.5.detail" = "ASHは技術的なプライバシーを提供しますが、物理的な監視、侵害されたデバイス、強制的な開示からは保護できません。";
+"ethics.footer" = "ASHは、ジャーナリストと情報源の通信、内部告発、個人のプライバシー、人権活動などの正当なプライバシーニーズを保護するために作成されました。悪用はこれらの重要な目的を損ないます。";
+
+// MARK: - Errors
+
+"error.insufficient_pad" = "パッドの残量が不足しています";
+"error.decryption_failed" = "メッセージの復号化に失敗しました";
+"error.invalid_url" = "無効なURL";
+"error.connection_failed" = "接続に失敗しました";
+"error.server_error" = "サーバーがエラーを返しました";
+"error.no_connection" = "リレーに接続できません";
+"error.relay_error" = "リレーエラー";
+"error.message_too_large" = "メッセージが大きすぎます";
+"error.message_too_large.detail" = "最大%d KB、現在%d KB";
+
+// MARK: - Delivery Status
+
+"delivery.sending" = "送信中...";
+"delivery.sent" = "サーバーに送信済み";
+"delivery.delivered" = "配信済み";
+"delivery.failed" = "失敗";
+"delivery.tap_to_retry" = "タップして再試行";
+
+// MARK: - Retention Options
+
+"retention.5min" = "5分";
+"retention.1hour" = "1時間";
+"retention.1day" = "24時間";
+"retention.7days" = "7日間";
+
+// MARK: - Disappearing Options
+
+"disappearing.off" = "オフ";
+"disappearing.30sec" = "30秒";
+"disappearing.5min" = "5分";
+"disappearing.1hour" = "1時間";
+"disappearing.1day" = "24時間";
+
+// MARK: - Biometric Types
+
+"biometric.faceid" = "Face ID";
+"biometric.touchid" = "Touch ID";
+"biometric.opticid" = "Optic ID";
+"biometric.none" = "パスコード";
+
+// MARK: - Language
+
+"language.section" = "言語";
+"language.app_language" = "アプリの言語";
+"language.select" = "言語を選択";
+"language.footer" = "変更を完全に反映するにはアプリの再起動が必要です。";
+"language.system" = "システムのデフォルト";
+"language.english" = "英語";
+"language.slovak" = "スロバキア語";
+"language.german" = "ドイツ語";
+"language.spanish" = "スペイン語";
+"language.french" = "フランス語";
+"language.japanese" = "日本語";
+"language.portuguese_brazil" = "ポルトガル語（ブラジル）";
+"language.chinese_simplified" = "中国語（簡体字）";
+
+// MARK: - Accessibility
+
+"accessibility.send_message" = "メッセージを送信";
+"accessibility.share_location" = "位置情報を共有";
+"accessibility.conversation" = "%@、残り%@、%@";
+"accessibility.qr_frame" = "QRコードフレーム %d / %d";
+"accessibility.scanned_frames" = "%d / %d フレームをスキャン済み";
+"accessibility.expires_in" = "%@後に期限切れ";
+"accessibility.server_expires_in" = "サーバーは%@後に期限切れ";
+"accessibility.progress" = "進捗：%dパーセント";
+"accessibility.usage" = "使用量：%dパーセント";
+"accessibility.usage.both" = "自分の使用量：%dパーセント、相手：%dパーセント";

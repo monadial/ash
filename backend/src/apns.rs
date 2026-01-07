@@ -74,10 +74,7 @@ impl ApnsClient {
         };
 
         if client.is_some() {
-            debug!(
-                sandbox = config.apns_sandbox,
-                "APNS client initialized"
-            );
+            debug!(sandbox = config.apns_sandbox, "APNS client initialized");
         }
 
         Self { client, bundle_id }

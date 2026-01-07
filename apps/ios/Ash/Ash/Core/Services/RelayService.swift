@@ -22,6 +22,13 @@ protocol RelayServiceProtocol: Sendable {
         cursor: RelayCursor?
     ) async throws -> PollResponse
 
+    /// Acknowledge message delivery (tells sender we received it)
+    func ackMessages(
+        conversationId: String,
+        authToken: String,
+        blobIds: [UUID]
+    ) async throws -> Int
+
     func registerDevice(
         conversationId: String,
         authToken: String,
@@ -65,6 +72,7 @@ enum RelayError: Error, Sendable {
     case serverError(statusCode: Int, message: String?)
     case decodingError(Error)
     case conversationBurned
+    case conversationNotFound
     case payloadTooLarge
     case queueFull
     case noConnection
@@ -78,6 +86,7 @@ extension RelayError: CustomStringConvertible {
         case .serverError(let code, let message): return "Server \(code): \(message ?? "unknown")"
         case .decodingError(let error): return "Decode: \(error)"
         case .conversationBurned: return "Conversation burned"
+        case .conversationNotFound: return "Conversation not registered"
         case .payloadTooLarge: return "Payload too large"
         case .queueFull: return "Queue full"
         case .noConnection: return "No connection"
@@ -230,6 +239,37 @@ final class RelayService: RelayServiceProtocol, Sendable {
         )
     }
 
+    func ackMessages(
+        conversationId: String,
+        authToken: String,
+        blobIds: [UUID]
+    ) async throws -> Int {
+        guard !blobIds.isEmpty else { return 0 }
+
+        let url = baseURL.appendingPathComponent("v1/messages/ack")
+        let id = logId(conversationId)
+
+        Log.debug(.relay, "[\(id)] Acknowledging \(blobIds.count) messages")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+
+        let body = AckMessageRequest(
+            conversationId: conversationId,
+            blobIds: blobIds
+        )
+        request.httpBody = try encoder.encode(body)
+
+        let (data, response) = try await performRequest(request)
+        try validateResponse(response, data: data)
+
+        let result = try decoder.decode(AckMessageResponse.self, from: data)
+        Log.debug(.relay, "[\(id)] Acknowledged \(result.acknowledged) messages")
+        return result.acknowledged
+    }
+
     func registerDevice(
         conversationId: String,
         authToken: String,
@@ -356,6 +396,13 @@ final class RelayService: RelayServiceProtocol, Sendable {
                 throw RelayError.serverError(statusCode: 400, message: errorResponse.error)
             }
             throw RelayError.serverError(statusCode: 400, message: nil)
+        case 404:
+            // Conversation not registered with relay - needs re-registration
+            if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data),
+               errorResponse.error.lowercased().contains("not found") {
+                throw RelayError.conversationNotFound
+            }
+            throw RelayError.conversationNotFound
         default:
             let message = String(data: data, encoding: .utf8)
             Log.error(.relay, "Server error \(httpResponse.statusCode): \(message ?? "unknown")")
@@ -461,4 +508,18 @@ private struct BurnStatusResponse: Decodable {
 
 private struct ErrorResponse: Decodable {
     let error: String
+}
+
+private struct AckMessageRequest: Encodable {
+    let conversationId: String
+    let blobIds: [UUID]
+
+    enum CodingKeys: String, CodingKey {
+        case conversationId = "conversation_id"
+        case blobIds = "blob_ids"
+    }
+}
+
+private struct AckMessageResponse: Decodable {
+    let acknowledged: Int
 }

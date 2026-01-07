@@ -158,6 +158,11 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
     /// The relay server URL for this conversation
     var relayURL: String
 
+    // MARK: - Message Settings
+
+    /// Server TTL - how long unread messages wait on server before expiring
+    var messageRetention: MessageRetention
+
     // MARK: - Display Settings
 
     /// How long messages remain visible on screen after viewing (client-side only)
@@ -180,6 +185,12 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
     /// Sequences of incoming messages we've already processed (for deduplication)
     var processedIncomingSequences: Set<UInt64>
 
+    // MARK: - Persistence Settings
+
+    /// Whether user consented to local message persistence during ceremony
+    /// Messages can only be persisted if: disappearing messages enabled + Face ID on + this is true
+    let persistenceConsent: Bool
+
     // MARK: - Authorization Tokens (derived from pad during ceremony)
 
     /// Auth token for API operations (hex-encoded, 64 chars)
@@ -193,8 +204,8 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, createdAt, lastActivity, remainingBytes, totalBytes
         case unreadCount, mnemonicChecksum, customName, sendOffset, peerConsumed
-        case relayURL, disappearingMessages, accentColor, role, relayCursor, activitySequence
-        case processedIncomingSequences, peerBurnedAt
+        case relayURL, messageRetention, disappearingMessages, accentColor, role, relayCursor, activitySequence
+        case processedIncomingSequences, peerBurnedAt, persistenceConsent
         case authToken, burnToken
     }
 
@@ -212,12 +223,14 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         sendOffset = try container.decodeIfPresent(UInt64.self, forKey: .sendOffset) ?? 0
         peerConsumed = try container.decodeIfPresent(UInt64.self, forKey: .peerConsumed) ?? 0
         relayURL = try container.decode(String.self, forKey: .relayURL)
+        messageRetention = try container.decodeIfPresent(MessageRetention.self, forKey: .messageRetention) ?? .fiveMinutes
         disappearingMessages = try container.decodeIfPresent(DisappearingMessages.self, forKey: .disappearingMessages) ?? .off
         accentColor = try container.decodeIfPresent(ConversationColor.self, forKey: .accentColor) ?? .indigo
         relayCursor = try container.decodeIfPresent(String.self, forKey: .relayCursor)
         activitySequence = try container.decodeIfPresent(UInt64.self, forKey: .activitySequence) ?? 0
         peerBurnedAt = try container.decodeIfPresent(Date.self, forKey: .peerBurnedAt)
         processedIncomingSequences = try container.decodeIfPresent(Set<UInt64>.self, forKey: .processedIncomingSequences) ?? []
+        persistenceConsent = try container.decodeIfPresent(Bool.self, forKey: .persistenceConsent) ?? false
         authToken = try container.decodeIfPresent(String.self, forKey: .authToken) ?? ""
         burnToken = try container.decodeIfPresent(String.self, forKey: .burnToken) ?? ""
     }
@@ -236,12 +249,14 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         try container.encode(sendOffset, forKey: .sendOffset)
         try container.encode(peerConsumed, forKey: .peerConsumed)
         try container.encode(relayURL, forKey: .relayURL)
+        try container.encode(messageRetention, forKey: .messageRetention)
         try container.encode(disappearingMessages, forKey: .disappearingMessages)
         try container.encode(accentColor, forKey: .accentColor)
         try container.encodeIfPresent(relayCursor, forKey: .relayCursor)
         try container.encode(activitySequence, forKey: .activitySequence)
         try container.encodeIfPresent(peerBurnedAt, forKey: .peerBurnedAt)
         try container.encode(processedIncomingSequences, forKey: .processedIncomingSequences)
+        try container.encode(persistenceConsent, forKey: .persistenceConsent)
         try container.encode(authToken, forKey: .authToken)
         try container.encode(burnToken, forKey: .burnToken)
     }
@@ -259,12 +274,14 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         sendOffset: UInt64,
         peerConsumed: UInt64,
         relayURL: String,
+        messageRetention: MessageRetention = .fiveMinutes,
         disappearingMessages: DisappearingMessages = .off,
         accentColor: ConversationColor = .indigo,
         relayCursor: String? = nil,
         activitySequence: UInt64 = 0,
         peerBurnedAt: Date? = nil,
         processedIncomingSequences: Set<UInt64> = [],
+        persistenceConsent: Bool = false,
         authToken: String,
         burnToken: String
     ) {
@@ -280,12 +297,14 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         self.sendOffset = sendOffset
         self.peerConsumed = peerConsumed
         self.relayURL = relayURL
+        self.messageRetention = messageRetention
         self.disappearingMessages = disappearingMessages
         self.accentColor = accentColor
         self.relayCursor = relayCursor
         self.activitySequence = activitySequence
         self.peerBurnedAt = peerBurnedAt
         self.processedIncomingSequences = processedIncomingSequences
+        self.persistenceConsent = persistenceConsent
         self.authToken = authToken
         self.burnToken = burnToken
     }
@@ -327,6 +346,15 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
     /// Whether the peer has burned this conversation (always immediate burn)
     var isBurned: Bool {
         peerBurnedAt != nil
+    }
+
+    /// Whether this conversation allows message persistence
+    /// Messages can only be persisted if:
+    /// 1. Disappearing messages are enabled
+    /// 2. User consented during ceremony
+    /// (biometric lock is checked at runtime via SettingsService)
+    var allowsMessagePersistence: Bool {
+        disappearingMessages.isEnabled && persistenceConsent
     }
 
     var displayName: String {
@@ -413,8 +441,10 @@ extension Conversation {
         role: ConversationRole,
         relayURL: String,
         customName: String? = nil,
+        messageRetention: MessageRetention = .fiveMinutes,
         disappearingMessages: DisappearingMessages = .off,
         accentColor: ConversationColor = .indigo,
+        persistenceConsent: Bool = false,
         authToken: String,
         burnToken: String
     ) -> Conversation {
@@ -434,8 +464,10 @@ extension Conversation {
             sendOffset: 0,
             peerConsumed: 0,
             relayURL: relayURL,
+            messageRetention: messageRetention,
             disappearingMessages: disappearingMessages,
             accentColor: accentColor,
+            persistenceConsent: persistenceConsent,
             authToken: authToken,
             burnToken: burnToken
         )

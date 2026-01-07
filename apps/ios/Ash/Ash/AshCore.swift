@@ -1075,6 +1075,16 @@ public protocol PadProtocol : AnyObject {
      */
     func updatePeerConsumption(peerRole: Role, newConsumed: UInt64) 
     
+    /**
+     * Securely zero bytes at a specific offset (for forward secrecy).
+     *
+     * When a message expires, this zeros the key material used to encrypt it,
+     * preventing future decryption even if the pad is compromised.
+     *
+     * Returns true if bytes were zeroed, false if offset/length is out of bounds.
+     */
+    func zeroBytesAt(offset: UInt64, length: UInt64)  -> Bool
+    
 }
 
 /**
@@ -1300,6 +1310,23 @@ open func updatePeerConsumption(peerRole: Role, newConsumed: UInt64) {try! rustC
         FfiConverterUInt64.lower(newConsumed),$0
     )
 }
+}
+    
+    /**
+     * Securely zero bytes at a specific offset (for forward secrecy).
+     *
+     * When a message expires, this zeros the key material used to encrypt it,
+     * preventing future decryption even if the pad is compromised.
+     *
+     * Returns true if bytes were zeroed, false if offset/length is out of bounds.
+     */
+open func zeroBytesAt(offset: UInt64, length: UInt64) -> Bool {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_pad_zero_bytes_at(self.uniffiClonePointer(),
+        FfiConverterUInt64.lower(offset),
+        FfiConverterUInt64.lower(length),$0
+    )
+})
 }
     
 
@@ -2378,6 +2405,9 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_method_pad_update_peer_consumption() != 28070) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_pad_zero_bytes_at() != 25947) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_constructor_fountainframereceiver_new() != 36123) {

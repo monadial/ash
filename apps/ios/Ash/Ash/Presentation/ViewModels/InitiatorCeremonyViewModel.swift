@@ -72,6 +72,7 @@ final class InitiatorCeremonyViewModel {
         if notifyMessageExpiring { flags |= NotificationFlagsConstants.notifyMessageExpiring }
         if notifyMessageExpired { flags |= NotificationFlagsConstants.notifyMessageExpired }
         if notifyDeliveryFailed { flags |= NotificationFlagsConstants.notifyDeliveryFailed }
+        if willPersistMessages { flags |= NotificationFlagsConstants.persistenceConsent }
         return flags
     }
 
@@ -105,6 +106,28 @@ final class InitiatorCeremonyViewModel {
         guard isPassphraseEnabled else { return true }
         guard !passphrase.isEmpty else { return false }
         return validatePassphrase(passphrase: passphrase)
+    }
+
+    /// Whether Face ID/biometric lock is enabled in settings
+    /// Required for local message persistence
+    var isFaceIDEnabled: Bool {
+        dependencies.settingsService.isBiometricLockEnabled
+    }
+
+    /// Whether all conditions for persistence are met
+    /// Requires: disappearing messages enabled AND Face ID enabled
+    var canEnablePersistence: Bool {
+        disappearingMessages.isEnabled && isFaceIDEnabled
+    }
+
+    /// User's consent to enable local message persistence
+    /// Only shown and settable when canEnablePersistence is true
+    var persistenceConsent: Bool = false
+
+    /// Whether message persistence will be active for this conversation
+    /// Requires: conditions met AND user consent
+    var willPersistMessages: Bool {
+        canEnablePersistence && persistenceConsent
     }
 
     var isRelayURLValid: Bool {
@@ -365,7 +388,7 @@ final class InitiatorCeremonyViewModel {
             let customName = conversationName.trimmingCharacters(in: .whitespacesAndNewlines)
             let finalName = customName.isEmpty ? nil : customName
 
-            Log.info(.ceremony, "Initiator finalizing ceremony with relay: \(selectedRelayURL)")
+            Log.info(.ceremony, "Initiator finalizing ceremony with relay: \(selectedRelayURL), retention: \(serverRetention.displayName)")
 
             let mnemonic = generateMnemonic(padBytes: padBytes)
             let conversation = try await dependencies.performCeremonyUseCase.finalizeCeremony(
@@ -374,8 +397,10 @@ final class InitiatorCeremonyViewModel {
                 role: .initiator,
                 relayURL: selectedRelayURL,
                 customName: finalName,
+                messageRetention: serverRetention,
                 disappearingMessages: disappearingMessages,
-                accentColor: selectedColor
+                accentColor: selectedColor,
+                persistenceConsent: willPersistMessages
             )
 
             Log.info(.ceremony, "Ceremony completed: conversation \(conversation.id.prefix(8)), role=initiator, pad=\(padBytes.count) bytes")
@@ -416,6 +441,7 @@ final class InitiatorCeremonyViewModel {
         notifyMessageExpiring = true
         notifyMessageExpired = false
         notifyDeliveryFailed = true
+        persistenceConsent = false
     }
 
     func cancel() {

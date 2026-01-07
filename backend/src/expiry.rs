@@ -71,13 +71,18 @@ impl ExpiryWorker {
     }
 
     /// Check for messages near expiry and send notifications
-    async fn check_expiring_messages(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn check_expiring_messages(
+        &self,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let now = Utc::now();
         let five_min = Duration::minutes(5);
         let one_min = Duration::minutes(1);
 
         // Get all conversations with expiry notifications enabled
-        let conversations = self.state.store.get_conversations_with_expiry_notifications();
+        let conversations = self
+            .state
+            .store
+            .get_conversations_with_expiry_notifications();
 
         let mut active_blob_ids = HashSet::new();
 
@@ -88,8 +93,10 @@ impl ExpiryWorker {
                 None => continue,
             };
 
-            let notify_expiring = (prefs.notification_flags & notification_flags::NOTIFY_MESSAGE_EXPIRING) != 0;
-            let notify_expired = (prefs.notification_flags & notification_flags::NOTIFY_MESSAGE_EXPIRED) != 0;
+            let notify_expiring =
+                (prefs.notification_flags & notification_flags::NOTIFY_MESSAGE_EXPIRING) != 0;
+            let notify_expired =
+                (prefs.notification_flags & notification_flags::NOTIFY_MESSAGE_EXPIRED) != 0;
 
             if !notify_expiring && !notify_expired {
                 continue;
@@ -116,12 +123,16 @@ impl ExpiryWorker {
                             "Sending 5-minute expiry warning"
                         );
 
-                        self.send_expiry_notification(&conversation_id, "expiring_5min").await;
+                        self.send_expiry_notification(&conversation_id, "expiring_5min")
+                            .await;
                     }
                 }
 
                 // Check 1-minute warning
-                if notify_expiring && time_until_expiry <= one_min && time_until_expiry > Duration::zero() {
+                if notify_expiring
+                    && time_until_expiry <= one_min
+                    && time_until_expiry > Duration::zero()
+                {
                     let mut tracker = self.tracker.write().await;
                     if !tracker.warned_1min.contains(&blob.id) {
                         tracker.warned_1min.insert(blob.id);
@@ -133,7 +144,8 @@ impl ExpiryWorker {
                             "Sending 1-minute expiry warning"
                         );
 
-                        self.send_expiry_notification(&conversation_id, "expiring_1min").await;
+                        self.send_expiry_notification(&conversation_id, "expiring_1min")
+                            .await;
                     }
                 }
 
@@ -149,7 +161,8 @@ impl ExpiryWorker {
                             "Sending message expired notification"
                         );
 
-                        self.send_expiry_notification(&conversation_id, "expired").await;
+                        self.send_expiry_notification(&conversation_id, "expired")
+                            .await;
                     }
                 }
             }
@@ -164,7 +177,10 @@ impl ExpiryWorker {
 
     /// Send an expiry notification to devices registered for a conversation
     async fn send_expiry_notification(&self, conversation_id: &str, notification_type: &str) {
-        let devices = self.state.store.get_device_tokens(&conversation_id.to_string());
+        let devices = self
+            .state
+            .store
+            .get_device_tokens(&conversation_id.to_string());
 
         if devices.is_empty() {
             return;

@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 // MARK: - Dependency Container
 
@@ -16,7 +17,19 @@ final class Dependencies: ObservableObject, @unchecked Sendable {
     // MARK: - Repositories
 
     let conversationRepository: ConversationRepository
-    let messageRepository: MessageRepository
+
+    // MARK: - Message Storage (decoupled via factory pattern)
+
+    /// Factory for creating message repositories
+    let messageRepositoryFactory: MessageRepositoryFactoryProtocol
+
+    /// High-level message storage service (handles repository selection)
+    let messageStorageService: MessageStorageServiceProtocol
+
+    /// In-memory message repository (for backward compatibility and direct access)
+    var inMemoryMessageRepository: MessageRepository {
+        messageRepositoryFactory.inMemoryRepository
+    }
 
     // MARK: - Services
 
@@ -70,7 +83,8 @@ final class Dependencies: ObservableObject, @unchecked Sendable {
     init(
         conversationRepository: ConversationRepository? = nil,
         padManager: PadManagerProtocol? = nil,
-        messageRepository: MessageRepository? = nil,
+        messageRepositoryFactory: MessageRepositoryFactoryProtocol? = nil,
+        modelContainer: ModelContainer? = nil,
         keychainService: KeychainServiceProtocol? = nil,
         cryptoService: CryptoServiceProtocol? = nil,
         hapticService: HapticServiceProtocol? = nil,
@@ -92,15 +106,23 @@ final class Dependencies: ObservableObject, @unchecked Sendable {
         let push = pushNotificationService ?? PushNotificationService(keychainService: keychain)
 
         // Create repositories
-        // Ephemeral-only: all messages in memory, wiped on app close
         let convRepo = conversationRepository ?? KeychainConversationRepository(keychainService: keychain)
         let padMgr = padManager ?? PadManager(keychainService: keychain)
-        let msgRepo = messageRepository ?? InMemoryMessageRepository()
+
+        // Create message storage factory (handles both in-memory and persistent)
+        let factory = messageRepositoryFactory ?? MessageRepositoryFactory(modelContainer: modelContainer)
+
+        // Create message storage service (high-level API with repository selection logic)
+        let storageService = MessageStorageService(
+            factory: factory,
+            settingsProvider: { settings.isBiometricLockEnabled }
+        )
 
         self.keychainService = keychain
         self.conversationRepository = convRepo
         self.padManager = padMgr
-        self.messageRepository = msgRepo
+        self.messageRepositoryFactory = factory
+        self.messageStorageService = storageService
 
         self.cryptoService = crypto
         self.hapticService = haptic
@@ -128,7 +150,7 @@ final class Dependencies: ObservableObject, @unchecked Sendable {
         self.burnConversationUseCase = BurnConversationUseCase(
             conversationRepository: convRepo,
             padManager: padMgr,
-            messageRepository: msgRepo,
+            messageStorageService: storageService,
             relayServiceFactory: { url in
                 try? RelayService(baseURLString: url)
             }
@@ -154,7 +176,21 @@ final class Dependencies: ObservableObject, @unchecked Sendable {
         return try? RelayService(baseURLString: settingsService.relayServerURL)
     }
 
+    /// Get the appropriate message repository for a conversation
+    /// Delegates to MessageStorageService for proper decoupling
+    @MainActor
+    func messageRepository(for conversation: Conversation) -> MessageRepository {
+        messageStorageService.repository(for: conversation)
+    }
+
+    /// Check if message persistence is enabled for a conversation
+    /// Delegates to MessageStorageService for proper decoupling
+    @MainActor
+    func isMessagePersistenceEnabled(for conversation: Conversation) -> Bool {
+        messageStorageService.isPersistenceEnabled(for: conversation)
+    }
 }
+
 
 // MARK: - Environment Key
 

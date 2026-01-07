@@ -62,9 +62,9 @@ protocol BiometricServiceProtocol: Sendable {
 }
 
 final class BiometricService: BiometricServiceProtocol, @unchecked Sendable {
-    private let context = LAContext()
-
     var availableBiometricType: BiometricType {
+        // Always create a fresh context to get current biometric state
+        let context = LAContext()
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
             return .none
@@ -85,6 +85,8 @@ final class BiometricService: BiometricServiceProtocol, @unchecked Sendable {
     }
 
     var canUseBiometrics: Bool {
+        // Always create a fresh context to get current biometric state
+        let context = LAContext()
         var error: NSError?
         return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
     }

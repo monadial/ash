@@ -6,53 +6,37 @@
 //
 
 import SwiftUI
-// Liquid Glass redesign applied
 
 struct LoadingScreen: View {
-    @State private var isAnimating = false
-    @State private var pulseScale: CGFloat = 1.0
+    @State private var showContent = false
 
     var body: some View {
         ZStack {
-            // Background gradient
-            LinearGradient(
-                colors: [
-                    Color(uiColor: .systemBackground),
-                    Color(uiColor: .secondarySystemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .glassEffect(.regular, in: .rect(cornerRadius: 0))
+            // Background
+            Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 Spacer()
-                
-                VStack(spacing: 0) {
-                    // Logo
-                    AppLogo(size: .large, animated: true)
-                    
-                    Spacer()
-                    
-                    // Loading indicator
-                    ProgressView()
-                        .controlSize(.regular)
-                        .tint(.secondary)
-                        .padding(.bottom, 60)
-                }
-                .glassEffect(.regular, in: .rect(cornerRadius: 32))
-                
+
+                // Logo
+                AppLogo(size: .large, animated: true)
+                    .opacity(showContent ? 1 : 0)
+                    .scaleEffect(showContent ? 1 : 0.9)
+
                 Spacer()
+
+                // Loading indicator
+                ProgressView()
+                    .controlSize(.regular)
+                    .tint(.secondary)
+                    .opacity(showContent ? 1 : 0)
+                    .padding(.bottom, Spacing.xxl)
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                isAnimating = true
+            withAnimation(.easeOut(duration: 0.5)) {
+                showContent = true
             }
         }
     }

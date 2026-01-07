@@ -416,6 +416,11 @@ uint64_t uniffi_ash_bindings_fn_method_pad_total_size(void*_Nonnull ptr, RustCal
 void uniffi_ash_bindings_fn_method_pad_update_peer_consumption(void*_Nonnull ptr, RustBuffer peer_role, uint64_t new_consumed, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_METHOD_PAD_ZERO_BYTES_AT
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_METHOD_PAD_ZERO_BYTES_AT
+int8_t uniffi_ash_bindings_fn_method_pad_zero_bytes_at(void*_Nonnull ptr, uint64_t offset, uint64_t length, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_CREATE_FOUNTAIN_GENERATOR
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_CREATE_FOUNTAIN_GENERATOR
 void*_Nonnull uniffi_ash_bindings_fn_func_create_fountain_generator(RustBuffer metadata, RustBuffer pad_bytes, uint32_t block_size, RustBuffer passphrase, RustCallStatus *_Nonnull out_status
@@ -471,6 +476,11 @@ uint32_t uniffi_ash_bindings_fn_func_get_max_passphrase_length(RustCallStatus *_
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_GET_MIN_PASSPHRASE_LENGTH
 uint32_t uniffi_ash_bindings_fn_func_get_min_passphrase_length(RustCallStatus *_Nonnull out_status
     
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_SECURE_ZERO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_SECURE_ZERO_BYTES
+void uniffi_ash_bindings_fn_func_secure_zero_bytes(RustBuffer data, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_VALIDATE_PASSPHRASE
@@ -824,6 +834,12 @@ uint16_t uniffi_ash_bindings_checksum_func_get_min_passphrase_length(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_SECURE_ZERO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_SECURE_ZERO_BYTES
+uint16_t uniffi_ash_bindings_checksum_func_secure_zero_bytes(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_VALIDATE_PASSPHRASE
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_VALIDATE_PASSPHRASE
 uint16_t uniffi_ash_bindings_checksum_func_validate_passphrase(void
@@ -965,6 +981,12 @@ uint16_t uniffi_ash_bindings_checksum_method_pad_total_size(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_PAD_UPDATE_PEER_CONSUMPTION
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_PAD_UPDATE_PEER_CONSUMPTION
 uint16_t uniffi_ash_bindings_checksum_method_pad_update_peer_consumption(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_PAD_ZERO_BYTES_AT
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_PAD_ZERO_BYTES_AT
+uint16_t uniffi_ash_bindings_checksum_method_pad_zero_bytes_at(void
     
 );
 #endif

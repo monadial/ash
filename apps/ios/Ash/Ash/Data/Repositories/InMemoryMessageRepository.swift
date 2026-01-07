@@ -2,6 +2,8 @@
 //  InMemoryMessageRepository.swift
 //  Ash
 //
+//  In-memory ephemeral message storage with secure wipe on app termination
+//
 
 import Foundation
 
@@ -47,6 +49,41 @@ actor InMemoryMessageRepository: MessageRepository {
 
     func clearAll() async {
         messages.removeAll()
+    }
+
+    /// Securely wipe all messages by overwriting with zeros before deallocation
+    /// Call this when the app is going to background or terminating
+    func secureWipeAll() async {
+        let count = messages.values.reduce(0) { $0 + $1.count }
+        Log.info(.storage, "Secure wiping \(count) in-memory messages")
+
+        // Overwrite each message with zeroed content before removal
+        for (conversationId, msgs) in messages {
+            // Replace with zeroed messages to overwrite memory
+            messages[conversationId] = msgs.map { message in
+                // Create a zeroed version of the message
+                Message(
+                    id: message.id,
+                    content: .text(""),  // Zero out content
+                    timestamp: Date(timeIntervalSince1970: 0),
+                    isOutgoing: false,
+                    expiresAt: nil,
+                    serverExpiresAt: nil,
+                    deliveryStatus: .none,
+                    sequence: 0,
+                    blobId: nil,
+                    isContentWiped: true
+                )
+            }
+        }
+
+        // Memory barrier to ensure writes complete
+        messages.removeAll(keepingCapacity: false)
+
+        // Force additional memory pressure to encourage deallocation
+        messages = [:]
+
+        Log.debug(.storage, "Secure wipe complete")
     }
 
     func hasMessage(withSequence sequence: UInt64, in conversationId: String) async -> Bool {

@@ -147,7 +147,8 @@ impl AuthStore {
     /// Evict conversations inactive for longer than INACTIVE_TTL.
     fn evict_inactive(&self) {
         let cutoff = Instant::now() - INACTIVE_TTL;
-        self.conversations.retain(|_, auth| auth.last_activity > cutoff);
+        self.conversations
+            .retain(|_, auth| auth.last_activity > cutoff);
     }
 
     /// Update last activity timestamp (call on successful auth).

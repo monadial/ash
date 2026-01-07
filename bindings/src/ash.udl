@@ -66,6 +66,13 @@ namespace ash {
     /// Derive all tokens at once (conversation_id, auth_token, burn_token)
     [Throws=AshError]
     AuthTokens derive_all_tokens(sequence<u8> pad_bytes);
+
+    // === Secure Memory Operations ===
+
+    /// Securely zero a byte array using volatile writes.
+    /// This prevents the compiler from optimizing away the zeroing.
+    /// Use this for wiping sensitive data from memory.
+    void secure_zero_bytes(sequence<u8> data);
 };
 
 /// Pad size options
@@ -221,6 +228,14 @@ interface Pad {
 
     /// Get the offset for the next message we send
     u64 next_send_offset(Role role);
+
+    /// Securely zero bytes at a specific offset (for forward secrecy).
+    ///
+    /// When a message expires, this zeros the key material used to encrypt it,
+    /// preventing future decryption even if the pad is compromised.
+    ///
+    /// Returns true if bytes were zeroed, false if offset/length is out of bounds.
+    boolean zero_bytes_at(u64 offset, u64 length);
 };
 
 /// Fountain frame generator for QR display.

@@ -87,7 +87,10 @@ struct CeremonyScreen: View {
                             receivedTTL: receiver.receivedTTLDescription,
                             receivedDisappearing: receiver.receivedDisappearingDescription,
                             receivedRelay: receiver.receivedRelayURL,
-                            receivedNotifications: receiver.receivedNotificationDescriptions
+                            receivedNotifications: receiver.receivedNotificationDescriptions,
+                            receivedPersistenceEnabled: receiver.receivedPersistenceConsent,
+                            requiresFaceIDForPersistence: receiver.requiresFaceIDForPersistence,
+                            canProceed: receiver.canProceedWithVerification
                         )
                     }
 
@@ -436,6 +439,68 @@ private struct OptionsView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
+
+                    // Persistence information - only shown when disappearing messages are enabled
+                    if viewModel.disappearingMessages.isEnabled {
+                        Divider().padding(.leading, 16)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: viewModel.canEnablePersistence ? "lock.iphone" : "exclamationmark.triangle")
+                                    .font(.title3)
+                                    .foregroundStyle(viewModel.canEnablePersistence ? .blue : .orange)
+                                    .frame(width: 24)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Local Message Storage")
+                                        .font(.subheadline.bold())
+
+                                    if viewModel.canEnablePersistence {
+                                        // Face ID is enabled - show consent checkbox
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundStyle(.green)
+                                            Text("Face ID enabled")
+                                                .foregroundStyle(.green)
+                                        }
+                                        .font(.caption.bold())
+
+                                        Text("Messages can be stored locally on your device, protected by Face ID. They will be securely erased when the disappearing timer expires.")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+
+                                        // Persistence consent toggle
+                                        Toggle(isOn: $viewModel.persistenceConsent) {
+                                            Text("Enable local storage")
+                                                .font(.subheadline)
+                                        }
+                                        .tint(.blue)
+                                        .padding(.top, 4)
+
+                                        if viewModel.persistenceConsent {
+                                            Text("Messages will persist between app sessions until they expire.")
+                                                .font(.caption)
+                                                .foregroundStyle(.blue)
+                                                .padding(.top, 2)
+                                        }
+                                    } else {
+                                        // Face ID not enabled - show warning
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundStyle(.orange)
+                                            Text("Face ID not enabled")
+                                                .foregroundStyle(.orange)
+                                        }
+                                        .font(.caption.bold())
+
+                                        Text("To enable local message storage, you must first enable Face ID in Settings. Without it, messages are only stored in memory and will be lost when you leave the conversation.")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
@@ -1428,162 +1493,178 @@ private struct QRDisplayView: View {
     @State private var playing = true
     @State private var fps: Double = 4
     @State private var timer: Timer?
+    @State private var previousBrightness: CGFloat = 0.5
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            VStack(spacing: 8) {
-                Text("Streaming QR Codes")
-                    .font(.title2.bold())
-                Text("Let the other device scan continuously")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+        GeometryReader { geometry in
+            let qrSize = min(geometry.size.width - 32, geometry.size.height * 0.55)
 
-            // QR Code Display
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.white)
-                    .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
-                if frame < viewModel.preGeneratedQRImages.count {
-                    Image(uiImage: viewModel.preGeneratedQRImages[frame])
-                        .interpolation(.none)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(16)
-                }
-            }
-            .frame(maxWidth: 340, maxHeight: 340)
-            .padding(.horizontal, 20)
-
-            // Frame indicator
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(playing ? Color.green : Color.orange)
-                    .frame(width: 8, height: 8)
-                Text("Frame \(frame + 1) of \(totalFrames)")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 16)
-
-            // Progress bar
-            ProgressView(value: Double(frame + 1), total: Double(totalFrames))
-                .tint(.accentColor)
-                .padding(.horizontal, 40)
-                .padding(.top, 8)
-
-            Spacer()
-
-            // Playback Controls
-            VStack(spacing: 16) {
-                // Main controls row
-                HStack(spacing: 12) {
-                    // First frame
-                    Button { frame = 0 } label: {
-                        Image(systemName: "backward.end.fill")
-                            .font(.subheadline)
-                            .frame(width: 40, height: 40)
-                            .background(Color(.secondarySystemGroupedBackground), in: Circle())
-                    }
-                    .disabled(frame == 0)
-
-                    // Previous frame
-                    Button { if frame > 0 { frame -= 1 } } label: {
-                        Image(systemName: "backward.fill")
-                            .font(.subheadline)
-                            .frame(width: 40, height: 40)
-                            .background(Color(.secondarySystemGroupedBackground), in: Circle())
-                    }
-                    .disabled(frame == 0)
-
-                    // Play/Pause
-                    Button { playing.toggle(); playing ? start() : stop() } label: {
-                        Image(systemName: playing ? "pause.fill" : "play.fill")
-                            .font(.title2)
-                            .frame(width: 60, height: 60)
-                            .background(Color.accentColor, in: Circle())
-                            .foregroundStyle(.white)
-                    }
-
-                    // Next frame
-                    Button { if frame < totalFrames - 1 { frame += 1 } } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.subheadline)
-                            .frame(width: 40, height: 40)
-                            .background(Color(.secondarySystemGroupedBackground), in: Circle())
-                    }
-                    .disabled(frame >= totalFrames - 1)
-
-                    // Last frame
-                    Button { frame = totalFrames - 1 } label: {
-                        Image(systemName: "forward.end.fill")
-                            .font(.subheadline)
-                            .frame(width: 40, height: 40)
-                            .background(Color(.secondarySystemGroupedBackground), in: Circle())
-                    }
-                    .disabled(frame >= totalFrames - 1)
-                }
-                .foregroundStyle(.primary)
-
-                // Speed and reset row
-                HStack(spacing: 16) {
-                    // Reset button
-                    Button {
-                        frame = 0
-                        if !playing { start() }
-                        playing = true
-                    } label: {
-                        Label("Reset", systemImage: "arrow.counterclockwise")
-                            .font(.subheadline)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
-                    }
-                    .foregroundStyle(.primary)
-
-                    // Speed selector
-                    Menu {
-                        ForEach([2, 4, 6, 8, 10], id: \.self) { r in
-                            Button("\(r) fps\(r == 4 ? " (default)" : "")") {
-                                fps = Double(r)
-                                if playing { restart() }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "speedometer")
-                            Text("\(Int(fps)) fps")
-                        }
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 8) {
+                    Text("Streaming QR Codes")
+                        .font(.title2.bold())
+                    Text("Let the other device scan continuously")
                         .font(.subheadline)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+                // QR Code Display - maximized
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(.white)
+                        .shadow(color: .black.opacity(0.1), radius: 16, y: 8)
+                    if frame < viewModel.preGeneratedQRImages.count {
+                        Image(uiImage: viewModel.preGeneratedQRImages[frame])
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .padding(12)
+                    }
+                }
+                .frame(width: qrSize, height: qrSize)
+                .frame(maxWidth: .infinity)
+
+                // Frame indicator
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(playing ? Color.green : Color.orange)
+                        .frame(width: 8, height: 8)
+                    Text("Frame \(frame + 1) of \(totalFrames)")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 12)
+
+                // Progress bar
+                ProgressView(value: Double(frame + 1), total: Double(totalFrames))
+                    .tint(.accentColor)
+                    .padding(.horizontal, 40)
+                    .padding(.top, 6)
+
+                Spacer()
+
+                // Playback Controls
+                VStack(spacing: 12) {
+                    // Main controls row
+                    HStack(spacing: 12) {
+                        // First frame
+                        Button { frame = 0 } label: {
+                            Image(systemName: "backward.end.fill")
+                                .font(.subheadline)
+                                .frame(width: 36, height: 36)
+                                .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                        }
+                        .disabled(frame == 0)
+
+                        // Previous frame
+                        Button { if frame > 0 { frame -= 1 } } label: {
+                            Image(systemName: "backward.fill")
+                                .font(.subheadline)
+                                .frame(width: 36, height: 36)
+                                .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                        }
+                        .disabled(frame == 0)
+
+                        // Play/Pause
+                        Button { playing.toggle(); playing ? start() : stop() } label: {
+                            Image(systemName: playing ? "pause.fill" : "play.fill")
+                                .font(.title3)
+                                .frame(width: 52, height: 52)
+                                .background(Color.accentColor, in: Circle())
+                                .foregroundStyle(.white)
+                        }
+
+                        // Next frame
+                        Button { if frame < totalFrames - 1 { frame += 1 } } label: {
+                            Image(systemName: "forward.fill")
+                                .font(.subheadline)
+                                .frame(width: 36, height: 36)
+                                .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                        }
+                        .disabled(frame >= totalFrames - 1)
+
+                        // Last frame
+                        Button { frame = totalFrames - 1 } label: {
+                            Image(systemName: "forward.end.fill")
+                                .font(.subheadline)
+                                .frame(width: 36, height: 36)
+                                .background(Color(.secondarySystemGroupedBackground), in: Circle())
+                        }
+                        .disabled(frame >= totalFrames - 1)
                     }
                     .foregroundStyle(.primary)
-                }
-            }
-            .padding(.bottom, 20)
 
-            // Receiver Ready button
-            Button { viewModel.finishSending() } label: {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Receiver Ready")
+                    // Speed and reset row
+                    HStack(spacing: 12) {
+                        // Reset button
+                        Button {
+                            frame = 0
+                            if !playing { start() }
+                            playing = true
+                        } label: {
+                            Label("Reset", systemImage: "arrow.counterclockwise")
+                                .font(.caption)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                        }
+                        .foregroundStyle(.primary)
+
+                        // Speed selector
+                        Menu {
+                            ForEach([2, 4, 6, 8, 10], id: \.self) { r in
+                                Button("\(r) fps\(r == 4 ? " (default)" : "")") {
+                                    fps = Double(r)
+                                    if playing { restart() }
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "speedometer")
+                                Text("\(Int(fps)) fps")
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                        }
+                        .foregroundStyle(.primary)
+                    }
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 14)
-                .background(Color.green, in: Capsule())
+                .padding(.bottom, 12)
+
+                // Receiver Ready button
+                Button { viewModel.finishSending() } label: {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Receiver Ready")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 14)
+                    .background(Color.green, in: Capsule())
+                }
+                .padding(.bottom, 16)
             }
-            .padding(.bottom, 24)
         }
         .background(Color(.systemBackground))
-        .onAppear { start() }
-        .onDisappear { stop() }
+        .background(BrightnessController(
+            onAppear: { screen in
+                previousBrightness = screen.brightness
+                screen.brightness = 1.0
+                UIApplication.shared.isIdleTimerDisabled = true
+                start()
+            },
+            onDisappear: { screen in
+                screen.brightness = previousBrightness
+                UIApplication.shared.isIdleTimerDisabled = false
+                stop()
+            }
+        ))
     }
 
     private func start() {
@@ -1614,109 +1695,126 @@ private struct QRScanView: View {
         Int(viewModel.progress * Double(viewModel.sourceBlockCount))
     }
 
+    private let scanFrameSize: CGFloat = 280
+    private var cornerOffset: CGFloat { scanFrameSize / 2 - 15 }
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack(spacing: 12) {
-                Circle()
-                    .fill(isComplete ? Color.green : accentColor)
-                    .frame(width: 10, height: 10)
-                    .animation(.easeInOut, value: isComplete)
-                Text(isComplete ? "Transfer Complete" : "Scanning...")
-                    .font(.headline)
-            }
-            .padding(.top, 16)
-            .padding(.bottom, 12)
+        GeometryReader { geometry in
+            let cameraHeight = min(geometry.size.height * 0.55, 400)
 
-            // Camera view
-            ZStack {
-                QRScannerView(onFrameScanned: { viewModel.processScannedFrame($0) }, onError: { _ in })
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-
-                // Scanning frame
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        isComplete ? Color.green : accentColor,
-                        lineWidth: 3
-                    )
-                    .frame(width: 220, height: 220)
-                    .animation(.easeInOut, value: isComplete)
-
-                // Corner markers
-                ForEach(0..<4, id: \.self) { corner in
-                    CornerMarker(isComplete: isComplete, accentColor: accentColor)
-                        .rotationEffect(.degrees(Double(corner) * 90))
-                        .offset(
-                            x: (corner == 0 || corner == 3) ? -95 : 95,
-                            y: (corner == 0 || corner == 1) ? -95 : 95
-                        )
+            VStack(spacing: 0) {
+                // Header
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(isComplete ? Color.green : accentColor)
+                        .frame(width: 10, height: 10)
+                        .animation(.easeInOut, value: isComplete)
+                    Text(isComplete ? "Transfer Complete" : "Scanning...")
+                        .font(.headline)
                 }
-            }
-            .frame(height: 300)
-            .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
 
-            // Progress section
-            VStack(spacing: 16) {
-                if viewModel.sourceBlockCount > 0 {
-                    // Progress ring
-                    ZStack {
-                        Circle()
-                            .stroke(Color(.systemGray5), lineWidth: 8)
-                            .frame(width: 120, height: 120)
+                // Camera view - larger
+                ZStack {
+                    QRScannerView(onFrameScanned: { viewModel.processScannedFrame($0) }, onError: { _ in })
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                        Circle()
-                            .trim(from: 0, to: viewModel.progress)
-                            .stroke(
-                                isComplete ? Color.green : accentColor,
-                                style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    // Semi-transparent overlay with cutout
+                    ScannerOverlay(frameSize: scanFrameSize, cornerRadius: 16)
+                        .fill(Color.black.opacity(0.4))
+
+                    // Scanning frame border
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            isComplete ? Color.green : accentColor,
+                            lineWidth: 3
+                        )
+                        .frame(width: scanFrameSize, height: scanFrameSize)
+                        .animation(.easeInOut, value: isComplete)
+
+                    // Corner markers - larger and more visible
+                    ForEach(0..<4, id: \.self) { corner in
+                        CornerMarker(isComplete: isComplete, accentColor: accentColor)
+                            .rotationEffect(.degrees(Double(corner) * 90))
+                            .offset(
+                                x: (corner == 0 || corner == 3) ? -cornerOffset : cornerOffset,
+                                y: (corner == 0 || corner == 1) ? -cornerOffset : cornerOffset
                             )
-                            .frame(width: 120, height: 120)
-                            .rotationEffect(.degrees(-90))
-                            .animation(.easeInOut(duration: 0.2), value: viewModel.progress)
+                    }
 
-                        VStack(spacing: 2) {
-                            Text("\(progressPercent)%")
-                                .font(.system(size: 32, weight: .bold).monospacedDigit())
+                    // Scanning animation line
+                    if !isComplete && viewModel.sourceBlockCount > 0 {
+                        ScanningLine(accentColor: accentColor)
+                            .frame(width: scanFrameSize - 20, height: 2)
+                    }
+                }
+                .frame(height: cameraHeight)
+                .padding(.horizontal, 16)
 
-                            if isComplete {
-                                Image(systemName: "checkmark")
-                                    .font(.caption.bold())
-                                    .foregroundStyle(.green)
+                // Progress section - more compact
+                VStack(spacing: 12) {
+                    if viewModel.sourceBlockCount > 0 {
+                        // Progress ring - smaller
+                        ZStack {
+                            Circle()
+                                .stroke(Color(.systemGray5), lineWidth: 6)
+                                .frame(width: 90, height: 90)
+
+                            Circle()
+                                .trim(from: 0, to: viewModel.progress)
+                                .stroke(
+                                    isComplete ? Color.green : accentColor,
+                                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                                )
+                                .frame(width: 90, height: 90)
+                                .rotationEffect(.degrees(-90))
+                                .animation(.easeInOut(duration: 0.2), value: viewModel.progress)
+
+                            VStack(spacing: 0) {
+                                Text("\(progressPercent)%")
+                                    .font(.system(size: 24, weight: .bold).monospacedDigit())
+
+                                if isComplete {
+                                    Image(systemName: "checkmark")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.green)
+                                }
                             }
                         }
+
+                        // Blocks received
+                        Text("\(decodedBlocks) of \(viewModel.sourceBlockCount) blocks")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        // Waiting state
+                        VStack(spacing: 10) {
+                            ProgressView()
+                                .scaleEffect(1.3)
+
+                            Text("Looking for QR codes...")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(height: 100)
                     }
+                }
+                .padding(.top, 16)
 
-                    // Blocks received
-                    Text("\(decodedBlocks) of \(viewModel.sourceBlockCount) blocks")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    // Waiting state
-                    VStack(spacing: 12) {
-                        ProgressView()
-                            .scaleEffect(1.5)
+                Spacer()
 
-                        Text("Looking for QR codes...")
-                            .font(.subheadline)
+                // Tip
+                if !isComplete {
+                    HStack(spacing: 8) {
+                        Image(systemName: "viewfinder")
+                            .foregroundStyle(.secondary)
+                        Text("Align QR code within the frame")
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    .frame(height: 140)
+                    .padding(.bottom, 20)
                 }
-            }
-            .padding(.top, 20)
-
-            Spacer()
-
-            // Tip
-            if !isComplete {
-                HStack(spacing: 8) {
-                    Image(systemName: "hand.raised")
-                        .foregroundStyle(.secondary)
-                    Text("Hold steady for best results")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.bottom, 24)
             }
         }
         .background(Color(.systemBackground))
@@ -1735,15 +1833,107 @@ private struct CornerMarker: View {
 
     var body: some View {
         Path { path in
-            path.move(to: CGPoint(x: 0, y: 20))
+            path.move(to: CGPoint(x: 0, y: 28))
             path.addLine(to: CGPoint(x: 0, y: 0))
-            path.addLine(to: CGPoint(x: 20, y: 0))
+            path.addLine(to: CGPoint(x: 28, y: 0))
         }
         .stroke(
             isComplete ? Color.green : accentColor,
-            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round)
+            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
         )
-        .frame(width: 20, height: 20)
+        .frame(width: 28, height: 28)
+    }
+}
+
+/// Overlay shape with transparent center cutout for scanner
+private struct ScannerOverlay: Shape {
+    let frameSize: CGFloat
+    let cornerRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        // Full rectangle
+        path.addRect(rect)
+
+        // Center cutout
+        let cutoutRect = CGRect(
+            x: (rect.width - frameSize) / 2,
+            y: (rect.height - frameSize) / 2,
+            width: frameSize,
+            height: frameSize
+        )
+        path.addRoundedRect(in: cutoutRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
+
+        return path
+    }
+
+    var fillStyle: FillStyle {
+        FillStyle(eoFill: true)
+    }
+}
+
+/// Animated scanning line
+private struct ScanningLine: View {
+    let accentColor: Color
+    @State private var offset: CGFloat = -100
+
+    var body: some View {
+        Rectangle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        accentColor.opacity(0),
+                        accentColor.opacity(0.8),
+                        accentColor.opacity(0)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .offset(y: offset)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                    offset = 100
+                }
+            }
+    }
+}
+
+/// Helper to control screen brightness using proper window context (iOS 26+ compatible)
+private struct BrightnessController: UIViewRepresentable {
+    let onAppear: (UIScreen) -> Void
+    let onDisappear: (UIScreen) -> Void
+
+    func makeUIView(context: Context) -> BrightnessControlView {
+        BrightnessControlView(onAppear: onAppear, onDisappear: onDisappear)
+    }
+
+    func updateUIView(_ uiView: BrightnessControlView, context: Context) {}
+}
+
+private class BrightnessControlView: UIView {
+    let onAppearHandler: (UIScreen) -> Void
+    let onDisappearHandler: (UIScreen) -> Void
+
+    init(onAppear: @escaping (UIScreen) -> Void, onDisappear: @escaping (UIScreen) -> Void) {
+        self.onAppearHandler = onAppear
+        self.onDisappearHandler = onDisappear
+        super.init(frame: .zero)
+        isHidden = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard let screen = window?.windowScene?.screen else { return }
+        if window != nil {
+            onAppearHandler(screen)
+        } else {
+            onDisappearHandler(screen)
+        }
     }
 }
 
@@ -1761,6 +1951,11 @@ private struct VerificationView: View {
     var receivedDisappearing: String?
     var receivedRelay: String?
     var receivedNotifications: [String]?
+
+    // Persistence/Face ID requirements (receiver only)
+    var receivedPersistenceEnabled: Bool = false
+    var requiresFaceIDForPersistence: Bool = false
+    var canProceed: Bool = true
 
     var body: some View {
         ScrollView {
@@ -1903,6 +2098,53 @@ private struct VerificationView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
 
+                // Face ID requirement warning (receiver only)
+                if requiresFaceIDForPersistence {
+                    VStack(spacing: 0) {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.title2)
+                                .foregroundStyle(.red)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Face ID Required")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.red)
+                                Text("This conversation has local message storage enabled, which requires Face ID. Please enable Face ID in Settings before proceeding.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(16)
+                    }
+                    .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                } else if receivedPersistenceEnabled {
+                    // Show persistence info when enabled and Face ID is on
+                    VStack(spacing: 0) {
+                        HStack(alignment: .top, spacing: 12) {
+                            Image(systemName: "lock.iphone")
+                                .font(.title2)
+                                .foregroundStyle(.blue)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Local Storage Enabled")
+                                    .font(.subheadline.bold())
+                                Text("Messages will be stored locally on your device, protected by Face ID.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .padding(16)
+                    }
+                    .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                }
+
                 // Action buttons
                 VStack(spacing: 12) {
                     Button { onConfirm() } label: {
@@ -1914,8 +2156,9 @@ private struct VerificationView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(Color.green, in: Capsule())
+                        .background(canProceed ? Color.green : Color.gray, in: Capsule())
                     }
+                    .disabled(!canProceed)
 
                     Button(role: .destructive) { onReject() } label: {
                         HStack {

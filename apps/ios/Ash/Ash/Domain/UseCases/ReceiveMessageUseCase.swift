@@ -9,6 +9,7 @@ protocol ReceiveMessageUseCaseProtocol: Sendable {
     func execute(
         ciphertext: Data,
         sequence: UInt64?,
+        blobId: UUID,
         in conversation: Conversation
     ) async throws -> (message: Message, updatedConversation: Conversation)
 }
@@ -39,6 +40,7 @@ final class ReceiveMessageUseCase: ReceiveMessageUseCaseProtocol, Sendable {
     func execute(
         ciphertext: Data,
         sequence: UInt64?,
+        blobId: UUID,
         in conversation: Conversation
     ) async throws -> (message: Message, updatedConversation: Conversation) {
         let ciphertextBytes = Array(ciphertext)
@@ -111,11 +113,13 @@ final class ReceiveMessageUseCase: ReceiveMessageUseCaseProtocol, Sendable {
         }
 
         // Create the incoming message with the sequence for deduplication
-        // Use the conversation's TTL for local message expiration
+        // Use the conversation's disappearing messages setting for display expiry
+        let disappearingSeconds = conversation.disappearingMessages.seconds
         let message = Message.incoming(
             content: content,
             sequence: offset,
-            expiresIn: TimeInterval(MessageTTL.defaultSeconds)
+            disappearingSeconds: disappearingSeconds,
+            blobId: blobId
         )
 
         return (message, updatedConversation)

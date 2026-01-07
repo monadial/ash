@@ -1,0 +1,451 @@
+/*
+  Localizable.strings
+  Ash
+
+  Spanish localization
+*/
+
+// MARK: - Common
+
+"common.cancel" = "Cancelar";
+"common.save" = "Guardar";
+"common.done" = "Listo";
+"common.continue" = "Continuar";
+"common.back" = "Atrás";
+"common.delete" = "Eliminar";
+"common.settings" = "Ajustes";
+"common.rename" = "Renombrar";
+"common.error" = "Error";
+"common.ok" = "OK";
+"common.test" = "Probar";
+"common.reset" = "Restablecer";
+"common.copy" = "Copiar";
+"common.retry" = "Reintentar";
+"common.info" = "Info";
+"common.dismiss" = "Cerrar";
+
+// MARK: - Conversations Screen
+
+"conversations.title" = "Conversaciones";
+"conversations.empty.title" = "Sin conversaciones";
+"conversations.empty.message" = "Inicia una conversación segura realizando una ceremonia con otro dispositivo.";
+"conversations.empty.action" = "Nueva conversación";
+"conversations.new" = "Nueva";
+"conversations.burn" = "Destruir";
+"conversations.burn.title" = "¿Destruir conversación?";
+"conversations.burn.message" = "Esto destruirá permanentemente todos los mensajes y la clave de cifrado. Esta acción no se puede deshacer.";
+"conversations.remaining" = "%@ restante";
+"conversations.info" = "Info de conversación";
+"conversations.you" = "Tú %d%%";
+"conversations.them" = "Ellos %d%%";
+
+// MARK: - Messaging Screen
+
+"messaging.empty.title" = "Sin mensajes";
+"messaging.empty.message" = "Los mensajes son efímeros y desaparecen después de verlos";
+"messaging.input.placeholder" = "Mensaje";
+"messaging.send" = "Enviar mensaje";
+"messaging.peer.burned" = "Esta conversación ha sido destruida";
+"messaging.location" = "Ubicación";
+"messaging.expired" = "Mensaje expirado";
+"messaging.open_maps" = "Abrir en Mapas";
+"messaging.size_indicator" = "%@ / %d KB";
+
+// MARK: - Message Status
+
+"status.sending" = "Enviando...";
+"status.sent" = "Enviado al servidor";
+"status.delivered" = "Entregado";
+"status.failed" = "Fallido";
+"status.relay_error" = "Error de relay";
+"status.expired" = "expirado";
+
+// MARK: - Time Formats
+
+"time.seconds" = "%ds";
+"time.minutes" = "%dm";
+"time.hours" = "%dh";
+"time.days" = "%dd";
+"time.minutes_seconds" = "%dm %ds";
+"time.hours_minutes" = "%dh %dm";
+"time.days_hours" = "%dd %dh";
+
+// MARK: - Conversation Settings
+
+"settings.conversation.title" = "Ajustes";
+"settings.privacy" = "Privacidad";
+"settings.privacy.secret_mode" = "Modo secreto";
+"settings.privacy.secret_mode.description" = "Mantén presionado para revelar";
+"settings.privacy.secret_mode.footer" = "Cuando está activado, los mensajes entrantes permanecen cifrados hasta que mantengas presionada la burbuja.";
+"settings.relay" = "Servidor relay";
+"settings.relay.url" = "URL del servidor";
+"settings.relay.url.placeholder" = "https://relay.example.com";
+"settings.relay.test" = "Probar conexión";
+"settings.relay.connected" = "Conectado - %@";
+"settings.relay.connected.latency" = "Conectado - %@ (%dms)";
+"settings.relay.footer" = "Los mensajes se almacenan en la RAM del servidor durante %@ y se eliminan al entregar o expirar.";
+"settings.persistence" = "Persistencia de mensajes";
+"settings.persistence.delayed" = "Lectura diferida";
+"settings.persistence.delayed.description" = "Los mensajes persisten 48 horas";
+"settings.persistence.delayed.footer.on" = "Los mensajes estarán disponibles hasta 48 horas.";
+"settings.persistence.delayed.footer.off" = "Los mensajes expiran en 30 segundos (tiempo real).";
+
+// MARK: - Rename Dialog
+
+"rename.title" = "Renombrar conversación";
+"rename.placeholder" = "Nombre";
+"rename.message" = "Ingresa un nombre personalizado o déjalo vacío para usar palabras mnemotécnicas";
+
+// MARK: - Ceremony - General
+
+"ceremony.title" = "Nueva conversación";
+
+// MARK: - Ceremony - Role Selection
+
+"ceremony.role.title" = "Elige tu rol";
+"ceremony.role.subtitle" = "Un dispositivo crea la conversación, el otro se une escaneando";
+"ceremony.role.initiate" = "Crear";
+"ceremony.role.initiate.description" = "Generar clave y mostrar códigos QR";
+"ceremony.role.initiate.badge" = "Iniciador";
+"ceremony.role.receive" = "Unirse";
+"ceremony.role.receive.description" = "Escanear códigos QR del otro dispositivo";
+"ceremony.role.receive.badge" = "Receptor";
+
+// MARK: - Ceremony - Pad Size Selection
+
+"ceremony.padsize.title" = "Tamaño de clave";
+"ceremony.padsize.subtitle" = "Claves más grandes permiten más mensajes pero tardan más en transferir";
+"ceremony.padsize.small" = "64 KB";
+"ceremony.padsize.small.description" = "~100 mensajes";
+"ceremony.padsize.medium" = "256 KB";
+"ceremony.padsize.medium.description" = "~400 mensajes";
+"ceremony.padsize.large" = "1 MB";
+"ceremony.padsize.large.description" = "~1.600 mensajes";
+
+// MARK: - Ceremony - Options
+
+"ceremony.options.title" = "Ajustes";
+"ceremony.options.subtitle" = "Configura el manejo y entrega de mensajes";
+"ceremony.options.timing" = "Temporización";
+"ceremony.options.retention" = "Retención en servidor";
+"ceremony.options.retention.description" = "Cuánto tiempo esperan los mensajes no leídos";
+"ceremony.options.disappearing" = "Mensajes que desaparecen";
+"ceremony.options.disappearing.description" = "Auto-eliminar después de ver";
+"ceremony.options.storage" = "Almacenamiento local";
+"ceremony.options.storage.faceid_enabled" = "Face ID activado";
+"ceremony.options.storage.enabled_description" = "Los mensajes pueden almacenarse localmente en tu dispositivo, protegidos por Face ID. Se borrarán de forma segura cuando expire el temporizador.";
+"ceremony.options.storage.enable_toggle" = "Activar almacenamiento local";
+"ceremony.options.storage.enabled_footer" = "Los mensajes persistirán entre sesiones hasta que expiren.";
+"ceremony.options.storage.faceid_disabled" = "Face ID no activado";
+"ceremony.options.storage.disabled_description" = "Para activar el almacenamiento local, primero debes activar Face ID en Ajustes. Sin él, los mensajes solo se guardan en memoria.";
+"ceremony.options.notifications" = "Notificaciones";
+"ceremony.options.notifications.new" = "Nuevos mensajes";
+"ceremony.options.notifications.new.description" = "Alertar cuando llegue un mensaje";
+"ceremony.options.notifications.expiring" = "Avisos de expiración";
+"ceremony.options.notifications.expiring.description" = "5min y 1min antes de expirar";
+"ceremony.options.notifications.expired" = "Mensajes expirados";
+"ceremony.options.notifications.expired.description" = "Alertar cuando expire un mensaje";
+"ceremony.options.notifications.failed" = "Entrega fallida";
+"ceremony.options.notifications.failed.description" = "Alertar si el destinatario no recibe";
+"ceremony.options.color" = "Color de conversación";
+
+// MARK: - Ceremony - Passphrase
+
+"ceremony.passphrase.title" = "Protección con contraseña";
+"ceremony.passphrase.toggle" = "Cifrar códigos QR con secreto compartido";
+"ceremony.passphrase.toggle.description" = "Ambas partes deben acordar la misma contraseña";
+"ceremony.passphrase.placeholder" = "Ingresa contraseña";
+"ceremony.passphrase.valid" = "Contraseña válida";
+"ceremony.passphrase.invalid" = "Se requieren 4-64 caracteres imprimibles";
+"ceremony.passphrase.hint" = "Di esta contraseña en voz alta a tu compañero";
+"ceremony.passphrase.receiver.toggle" = "Protegido con contraseña";
+"ceremony.passphrase.receiver.toggle.description" = "Activa si el emisor usó contraseña";
+"ceremony.passphrase.receiver.hint" = "Ingresa la misma contraseña dicha por el emisor";
+
+// MARK: - Ceremony - Consent
+
+"ceremony.consent.title" = "Verificación de seguridad";
+"ceremony.consent.subtitle" = "Confirma que entiendes antes de continuar";
+"ceremony.consent.section.environment" = "Entorno";
+"ceremony.consent.environment" = "Nadie está viendo mi pantalla";
+"ceremony.consent.environment.detail" = "Sin cámaras, espejos o personas que puedan ver tu pantalla";
+"ceremony.consent.surveillance" = "No estoy bajo vigilancia ni coacción";
+"ceremony.consent.surveillance.detail" = "No continúes si estás siendo forzado o monitoreado";
+"ceremony.consent.section.responsibilities" = "Responsabilidades";
+"ceremony.consent.ethics" = "Entiendo las responsabilidades éticas";
+"ceremony.consent.ethics.detail" = "Esta herramienta es para comunicación privada legítima";
+"ceremony.consent.understand" = "Las claves no se pueden recuperar";
+"ceremony.consent.understand.detail" = "Si pierdes el acceso, los mensajes se pierden para siempre";
+"ceremony.consent.section.limitations" = "Limitaciones";
+"ceremony.consent.relay_warning" = "El servidor relay puede no estar disponible";
+"ceremony.consent.relay_warning.detail" = "Los mensajes no se entregarán sin conectividad";
+"ceremony.consent.persistence_warning" = "Los datos del relay no persisten";
+"ceremony.consent.persistence_warning.detail" = "Los reinicios del servidor pueden causar pérdida de mensajes no leídos";
+"ceremony.consent.burn_warning" = "Destruir elimina todo el material clave";
+"ceremony.consent.burn_warning.detail" = "Cualquier parte puede destruir, no se puede deshacer";
+"ceremony.consent.proceed" = "Entiendo y continúo";
+"ceremony.consent.ethics.link" = "Leer directrices éticas";
+
+// MARK: - Ceremony - Entropy
+
+"ceremony.entropy.title" = "Generar entropía";
+"ceremony.entropy.subtitle" = "Dibuja patrones aleatorios para generar aleatoriedad segura";
+"ceremony.entropy.complete" = "¡Entropía completa!";
+"ceremony.entropy.hint" = "Dibuja aquí";
+"ceremony.entropy.progress.hint" = "Los patrones aleatorios fortalecen el cifrado";
+"ceremony.entropy.progress" = "%d%%";
+
+// MARK: - Ceremony - Generating
+
+"ceremony.generating.pad" = "Generando clave";
+"ceremony.generating.pad.subtitle" = "Creando clave de cifrado segura...";
+"ceremony.generating.qr" = "Generando códigos QR";
+"ceremony.generating.qr.subtitle" = "Preparando %d fotogramas para transferir...";
+
+// MARK: - Ceremony - Transfer (Sender)
+
+"ceremony.transfer.sender.title" = "Transmitiendo códigos QR";
+"ceremony.transfer.sender.subtitle" = "Deja que el otro dispositivo escanee continuamente";
+"ceremony.transfer.sender.frame" = "Fotograma %d de %d";
+"ceremony.transfer.sender.fps" = "%d fps";
+"ceremony.transfer.sender.fps.default" = "%d fps (predeterminado)";
+"ceremony.transfer.sender.ready" = "Receptor listo";
+
+// MARK: - Ceremony - Transfer (Receiver)
+
+"ceremony.transfer.receiver.title" = "Listo para escanear";
+"ceremony.transfer.receiver.subtitle" = "Apunta tu cámara a los códigos QR del emisor";
+"ceremony.transfer.receiver.how_it_works" = "Cómo funciona";
+"ceremony.transfer.receiver.scanning" = "Escaneando...";
+"ceremony.transfer.receiver.scanning.subtitle" = "Mantén la app abierta durante este proceso";
+"ceremony.transfer.receiver.looking" = "Buscando códigos QR...";
+"ceremony.transfer.receiver.hold_steady" = "Mantén estable para mejores resultados";
+"ceremony.transfer.receiver.progress" = "%d%%";
+"ceremony.transfer.receiver.blocks" = "%d de %d bloques";
+"ceremony.transfer.receiver.complete" = "¡Todos los fotogramas recibidos!";
+"ceremony.transfer.receiver.start" = "Comenzar a escanear";
+
+// MARK: - Ceremony - Verification
+
+"ceremony.verify.title" = "Verificar suma de control";
+"ceremony.verify.subtitle" = "Ambos dispositivos deben mostrar las mismas palabras";
+"ceremony.verify.words" = "Palabras de seguridad";
+"ceremony.verify.settings" = "Ajustes recibidos";
+"ceremony.verify.name.title" = "Nombre (Opcional)";
+"ceremony.verify.name.placeholder" = "ej. Alicia, Trabajo, Familia";
+"ceremony.verify.name.hint" = "Opcional - ayuda a identificar esta conversación";
+"ceremony.verify.faceid_required.title" = "Face ID requerido";
+"ceremony.verify.faceid_required.message" = "Esta conversación tiene almacenamiento local activado, lo cual requiere Face ID. Por favor activa Face ID en Ajustes.";
+"ceremony.verify.storage_enabled" = "Almacenamiento local activado";
+"ceremony.verify.storage_enabled.detail" = "Los mensajes se almacenarán localmente en tu dispositivo, protegidos por Face ID.";
+"ceremony.verify.match" = "Las palabras coinciden";
+"ceremony.verify.nomatch" = "Las palabras no coinciden";
+
+// MARK: - Ceremony - Complete
+
+"ceremony.complete.title" = "¡Conversación creada!";
+"ceremony.complete.details" = "Detalles";
+"ceremony.complete.padsize" = "Tamaño de clave";
+"ceremony.complete.role" = "Tu rol";
+"ceremony.complete.disappearing" = "Desaparición";
+"ceremony.complete.security" = "Seguridad activa";
+"ceremony.complete.action" = "Comenzar a escribir";
+
+// MARK: - Ceremony - Failed
+
+"ceremony.failed.title" = "Configuración fallida";
+"ceremony.failed.troubleshooting" = "Solución de problemas";
+"ceremony.failed.retry" = "Intentar de nuevo";
+
+// MARK: - Burn Confirmation
+
+"burn.title" = "¿Destruir \"%@\"?";
+"burn.subtitle" = "Esta acción no se puede deshacer";
+"burn.all.title" = "¿Destruir todas las conversaciones?";
+"burn.all.subtitle" = "Destrucción de emergencia de todos los datos";
+"burn.destroyed" = "Se destruirá permanentemente";
+"burn.item.pad" = "Clave de cifrado";
+"burn.item.messages" = "Todo el historial de mensajes";
+"burn.item.connection" = "Conexión con el otro";
+"burn.item.all" = "Todas las conversaciones";
+"burn.confirm.prompt" = "Escribe \"BURN\" para confirmar";
+"burn.confirm.action" = "Destruir para siempre";
+"burn.confirm.all.action" = "Destruir todo";
+
+// MARK: - Burned Conversation
+
+"burned.title" = "Conversación destruida";
+"burned.message" = "\"%@\" fue destruida por la otra parte.";
+"burned.detail" = "Esta conversación y todos los mensajes han sido destruidos permanentemente.";
+
+// MARK: - App Settings
+
+"appsettings.title" = "Ajustes";
+"appsettings.section.security" = "Seguridad";
+"appsettings.security.biometric" = "Desbloquear con autenticación biométrica";
+"appsettings.security.lock_background" = "Bloquear en segundo plano";
+"appsettings.security.lock_background.description" = "Requerir autenticación cuando la app regrese";
+"appsettings.security.unavailable" = "Biometría no disponible";
+"appsettings.security.unavailable.description" = "Configura Face ID o Touch ID en Ajustes";
+"appsettings.section.relay" = "Servidor relay";
+"appsettings.relay.url" = "URL del servidor";
+"appsettings.relay.modified" = "Modificado";
+"appsettings.relay.status" = "Estado de conexión";
+"appsettings.relay.testing" = "Probando...";
+"appsettings.relay.connected" = "Conectado a %@ • %dms";
+"appsettings.relay.not_tested" = "No probado";
+"appsettings.relay.footer" = "Servidor predeterminado para nuevas conversaciones. Cada conversación puede usar un relay diferente.";
+"appsettings.section.about" = "Acerca de";
+"appsettings.about.version" = "Versión";
+"appsettings.about.version.value" = "1.0.0";
+"appsettings.about.encryption" = "Cifrado";
+"appsettings.about.encryption.value" = "Libreta de un solo uso";
+"appsettings.about.security" = "Modelo de seguridad";
+"appsettings.about.security.description" = "Cómo ASH protege tus mensajes";
+"appsettings.about.security.link" = "Seguridad";
+"appsettings.about.privacy" = "Privacidad";
+"appsettings.about.privacy.description" = "Qué datos recopilamos (ninguno)";
+"appsettings.section.danger" = "Zona de peligro";
+"appsettings.danger.burnall" = "Destrucción de emergencia";
+"appsettings.danger.burnall.description" = "Destruir instantáneamente todas las conversaciones y claves";
+"appsettings.danger.burnall.footer" = "La destrucción de emergencia elimina permanentemente todas las conversaciones, claves y mensajes. No se puede deshacer.";
+"appsettings.burnall.title" = "¿Destruir todas las conversaciones?";
+"appsettings.burnall.message" = "Esto destruirá permanentemente todas las conversaciones y claves de cifrado. No se puede deshacer.";
+"appsettings.burnall.action" = "Destruir todo";
+
+// MARK: - Lock Screen
+
+"lock.title" = "App bloqueada";
+"lock.subtitle" = "Toca para autenticarte";
+"lock.authenticating" = "Autenticando...";
+"lock.unlock" = "Desbloquear con %@";
+
+// MARK: - Message Detail
+
+"detail.title" = "Detalles";
+"detail.section.content" = "Contenido";
+"detail.latitude" = "Latitud";
+"detail.longitude" = "Longitud";
+"detail.section.status" = "Estado";
+"detail.sent" = "Enviado";
+"detail.delivery" = "Entrega";
+"detail.expires" = "Expira";
+"detail.copy" = "Copiar al portapapeles";
+
+// MARK: - Conversation Info
+
+"convinfo.title" = "Info de conversación";
+"convinfo.section.security" = "Verificación de seguridad";
+"convinfo.security.description" = "Ambas partes deben tener códigos idénticos:";
+"convinfo.conversation_id" = "ID de conversación";
+"convinfo.identity" = "Identidad";
+"convinfo.section.relay" = "Servidor relay";
+"convinfo.relay.url" = "URL";
+"convinfo.relay.latency" = "Latencia";
+"convinfo.relay.latency.value" = "%d ms";
+"convinfo.relay.latency.unknown" = "—";
+"convinfo.section.settings" = "Ajustes de mensajes";
+"convinfo.settings.persistent" = "Los mensajes se almacenan localmente entre sesiones (requiere Face ID). Se auto-eliminan cuando expira el temporizador.";
+"convinfo.settings.ephemeral" = "Retención: cuánto esperan los mensajes no leídos. Desaparición: cuánto permanecen visibles después de leer. Los mensajes se eliminan al cerrar la app.";
+"convinfo.section.pad" = "Clave de cifrado";
+"convinfo.pad.you" = "%d%% Tú";
+"convinfo.pad.them" = "%d%% Ellos";
+"convinfo.pad.exhausted" = "Clave agotada - no es posible más mensajes";
+"convinfo.section.danger" = "Zona de peligro";
+
+// MARK: - QR Scanner
+
+"scanner.permission.title" = "Acceso a cámara requerido";
+"scanner.permission.message" = "Activa el acceso a la cámara en Ajustes para escanear códigos QR";
+"scanner.permission.action" = "Abrir Ajustes";
+
+// MARK: - QR Code
+
+"qr.failed" = "Generación de QR fallida";
+
+// MARK: - Ethics
+
+"ethics.title" = "Directrices éticas";
+"ethics.intro" = "ASH está diseñado para comunicación privada legítima. Al usar esta aplicación, aceptas:";
+"ethics.principle.1.title" = "Respetar la privacidad";
+"ethics.principle.1.detail" = "Usa esta herramienta solo para comunicaciones donde ambas partes consientan y tengan una necesidad legítima de privacidad.";
+"ethics.principle.2.title" = "Sin uso dañino";
+"ethics.principle.2.detail" = "No uses ASH para planificar, coordinar o facilitar actividades ilegales, acoso o daño a otros.";
+"ethics.principle.3.title" = "Comunicación honesta";
+"ethics.principle.3.detail" = "Sé sincero con tus compañeros de comunicación sobre la naturaleza y propósito de tus conversaciones.";
+"ethics.principle.4.title" = "Aceptar responsabilidad";
+"ethics.principle.4.detail" = "Eres el único responsable del contenido de tus mensajes y cómo usas esta herramienta.";
+"ethics.principle.5.title" = "Entender limitaciones";
+"ethics.principle.5.detail" = "ASH proporciona privacidad técnica pero no puede proteger contra vigilancia física, dispositivos comprometidos o divulgación forzada.";
+"ethics.footer" = "ASH fue creado para proteger necesidades legítimas de privacidad como comunicación periodista-fuente, denuncias, privacidad personal y trabajo de derechos humanos. El mal uso socava estos importantes propósitos.";
+
+// MARK: - Errors
+
+"error.insufficient_pad" = "Clave insuficiente restante";
+"error.decryption_failed" = "Error al descifrar mensaje";
+"error.invalid_url" = "URL inválida";
+"error.connection_failed" = "Conexión fallida";
+"error.server_error" = "El servidor devolvió un error";
+"error.no_connection" = "Sin conexión al relay";
+"error.relay_error" = "Error de relay";
+"error.message_too_large" = "Mensaje muy grande";
+"error.message_too_large.detail" = "Máximo %d KB, actual %d KB";
+
+// MARK: - Delivery Status
+
+"delivery.sending" = "Enviando...";
+"delivery.sent" = "Enviado al servidor";
+"delivery.delivered" = "Entregado";
+"delivery.failed" = "Fallido";
+"delivery.tap_to_retry" = "Toca para reintentar";
+
+// MARK: - Retention Options
+
+"retention.5min" = "5 minutos";
+"retention.1hour" = "1 hora";
+"retention.1day" = "24 horas";
+"retention.7days" = "7 días";
+
+// MARK: - Disappearing Options
+
+"disappearing.off" = "Desactivado";
+"disappearing.30sec" = "30 segundos";
+"disappearing.5min" = "5 minutos";
+"disappearing.1hour" = "1 hora";
+"disappearing.1day" = "24 horas";
+
+// MARK: - Biometric Types
+
+"biometric.faceid" = "Face ID";
+"biometric.touchid" = "Touch ID";
+"biometric.opticid" = "Optic ID";
+"biometric.none" = "Código";
+
+// MARK: - Language
+
+"language.section" = "Idioma";
+"language.app_language" = "Idioma de la app";
+"language.select" = "Seleccionar idioma";
+"language.footer" = "El cambio requiere reiniciar la app para tener efecto completo.";
+"language.system" = "Predeterminado del sistema";
+"language.english" = "Inglés";
+"language.slovak" = "Eslovaco";
+"language.german" = "Alemán";
+"language.spanish" = "Español";
+"language.french" = "Francés";
+"language.japanese" = "Japonés";
+"language.portuguese_brazil" = "Portugués (Brasil)";
+"language.chinese_simplified" = "Chino (simplificado)";
+
+// MARK: - Accessibility
+
+"accessibility.send_message" = "Enviar mensaje";
+"accessibility.share_location" = "Compartir ubicación";
+"accessibility.conversation" = "%@, %@ restante, %@";
+"accessibility.qr_frame" = "Código QR fotograma %d de %d";
+"accessibility.scanned_frames" = "Escaneados %d de %d fotogramas";
+"accessibility.expires_in" = "Expira en %@";
+"accessibility.server_expires_in" = "Expira en servidor en %@";
+"accessibility.progress" = "Progreso: %d por ciento";
+"accessibility.usage" = "Uso: %d por ciento";
+"accessibility.usage.both" = "Mi uso: %d por ciento, Otro: %d por ciento";

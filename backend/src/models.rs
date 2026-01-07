@@ -1,50 +1,68 @@
-//! Data models for ASH backend.
+//! Data models for ASH backend API.
 //!
-//! All models are designed for ephemeral storage with TTL.
-//! No user identity or plaintext content is ever stored.
+//! All models are designed for ephemeral storage with automatic TTL cleanup.
+//! No user identity or plaintext content is ever stored or transmitted.
 
+use base64::Engine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Conversation identifier (opaque to backend)
-/// Base64-encoded string derived from shared secret
+// =============================================================================
+// Type Aliases
+// =============================================================================
+
+/// Conversation identifier (64-char hex string derived from shared secret).
 pub type ConversationId = String;
 
-// ============================================================================
-// Notification Flags (matches core/src/ceremony.rs)
-// ============================================================================
+/// Message sequence number for ordering.
+pub type SequenceNumber = u64;
+
+// =============================================================================
+// Notification Flags
+// =============================================================================
 
 /// Notification flag constants for push notification preferences.
-/// These match the Rust core definitions exactly.
+///
+/// These flags are set during ceremony and control which push notifications
+/// are sent to registered devices.
 pub mod notification_flags {
-    /// Notify when new message arrives (receiver)
+    /// Notify when new message arrives (receiver).
     pub const NOTIFY_NEW_MESSAGE: u16 = 1 << 0;
-    /// Notify before message expires - 5min and 1min warnings (receiver)
+
+    /// Notify before message expires - 5min and 1min warnings (receiver).
     pub const NOTIFY_MESSAGE_EXPIRING: u16 = 1 << 1;
-    /// Notify when message expires (receiver)
+
+    /// Notify when message expires (receiver).
     pub const NOTIFY_MESSAGE_EXPIRED: u16 = 1 << 2;
-    /// Notify if message TTL expires unread (sender)
+
+    /// Notify if message TTL expires unread (sender).
     pub const NOTIFY_DELIVERY_FAILED: u16 = 1 << 8;
-    /// Reserved for future read receipts
+
+    /// Reserved for future read receipts.
     pub const NOTIFY_MESSAGE_READ: u16 = 1 << 9;
 
-    /// Default flags: new message + expiring + delivery failed
+    /// Default flags: new message + expiring + delivery failed.
     pub const DEFAULT: u16 = NOTIFY_NEW_MESSAGE | NOTIFY_MESSAGE_EXPIRING | NOTIFY_DELIVERY_FAILED;
 }
 
-/// Conversation notification preferences stored per-conversation
+// =============================================================================
+// Internal Models
+// =============================================================================
+
+/// Conversation notification preferences.
 #[derive(Debug, Clone, Default)]
 pub struct ConversationPrefs {
-    /// 16-bit notification flags
+    /// 16-bit notification flags.
     pub notification_flags: u16,
-    /// Message TTL in seconds (for expiry notifications)
+    /// Message TTL in seconds (for expiry notifications).
     pub ttl_seconds: u64,
-    /// When the preferences were registered
+    /// When the preferences were registered.
     pub created_at: DateTime<Utc>,
 }
 
 impl ConversationPrefs {
+    /// Create new preferences with the given flags and TTL.
     pub fn new(notification_flags: u16, ttl_seconds: u64) -> Self {
         Self {
             notification_flags,
@@ -53,67 +71,66 @@ impl ConversationPrefs {
         }
     }
 
-    /// Check if a specific notification flag is set
-    pub fn has_flag(&self, flag: u16) -> bool {
+    /// Check if a specific notification flag is set.
+    #[inline]
+    pub const fn has_flag(&self, flag: u16) -> bool {
         (self.notification_flags & flag) != 0
     }
 
-    pub fn notify_new_message(&self) -> bool {
+    /// Check if new message notifications are enabled.
+    #[inline]
+    pub const fn notify_new_message(&self) -> bool {
         self.has_flag(notification_flags::NOTIFY_NEW_MESSAGE)
     }
 
-    pub fn notify_message_expiring(&self) -> bool {
+    /// Check if message expiring notifications are enabled.
+    #[inline]
+    pub const fn notify_message_expiring(&self) -> bool {
         self.has_flag(notification_flags::NOTIFY_MESSAGE_EXPIRING)
     }
 
-    pub fn notify_message_expired(&self) -> bool {
+    /// Check if message expired notifications are enabled.
+    #[inline]
+    pub const fn notify_message_expired(&self) -> bool {
         self.has_flag(notification_flags::NOTIFY_MESSAGE_EXPIRED)
     }
 
-    pub fn notify_delivery_failed(&self) -> bool {
+    /// Check if delivery failed notifications are enabled.
+    #[inline]
+    pub const fn notify_delivery_failed(&self) -> bool {
         self.has_flag(notification_flags::NOTIFY_DELIVERY_FAILED)
     }
 }
 
-/// Message sequence number for ordering
-pub type SequenceNumber = u64;
-
-/// Encrypted message blob stored temporarily
+/// Encrypted message blob stored temporarily.
 #[derive(Debug, Clone)]
 pub struct StoredBlob {
-    /// Unique blob ID for deduplication
+    /// Unique blob ID for deduplication and acknowledgment.
     pub id: Uuid,
-
-    /// Client-provided sequence number (optional)
+    /// Client-provided sequence number (optional).
     pub sequence: Option<SequenceNumber>,
-
-    /// Encrypted ciphertext (opaque to backend)
+    /// Encrypted ciphertext (opaque to backend).
     pub ciphertext: Vec<u8>,
-
-    /// When the blob was received
+    /// When the blob was received.
     pub received_at: DateTime<Utc>,
-
-    /// When the blob expires
+    /// When the blob expires (automatic deletion).
     pub expires_at: DateTime<Utc>,
 }
 
-/// Registered device for push notifications
+/// Registered device for push notifications.
 #[derive(Debug, Clone)]
 pub struct DeviceRegistration {
-    /// APNS device token
+    /// APNS device token (hex string).
     pub device_token: String,
-
-    /// Platform (ios, macos)
+    /// Platform (ios, macos).
     pub platform: Platform,
-
-    /// When the registration was created
+    /// When the registration was created.
     pub registered_at: DateTime<Utc>,
-
-    /// When the registration expires
+    /// When the registration expires.
     pub expires_at: DateTime<Utc>,
 }
 
-/// Supported platforms for push notifications
+/// Supported platforms for push notifications.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Platform {
@@ -122,31 +139,29 @@ pub enum Platform {
     Macos,
 }
 
-/// Burn flag for a conversation
+/// Burn flag indicating a conversation has been destroyed.
 #[derive(Debug, Clone)]
 pub struct BurnFlag {
-    /// When the burn was initiated
+    /// When the burn was initiated.
     pub burned_at: DateTime<Utc>,
-
-    /// When the burn flag expires
+    /// When the burn flag expires (cleanup).
     pub expires_at: DateTime<Utc>,
 }
 
-/// Cursor for pagination
+/// Cursor for message pagination.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Cursor {
-    /// Last seen blob ID
+    /// Last seen blob ID.
     pub last_id: Option<Uuid>,
-
-    /// Last seen sequence number
+    /// Last seen sequence number.
     pub last_sequence: Option<SequenceNumber>,
-
-    /// Timestamp for time-based cursors
+    /// Timestamp for time-based cursors.
     pub since: Option<DateTime<Utc>>,
 }
 
 impl Cursor {
-    pub fn empty() -> Self {
+    /// Create an empty cursor (start from beginning).
+    pub const fn empty() -> Self {
         Self {
             last_id: None,
             last_sequence: None,
@@ -154,35 +169,40 @@ impl Cursor {
         }
     }
 
-    /// Encode cursor to base64 string
+    /// Encode cursor to URL-safe base64 string.
     pub fn encode(&self) -> String {
         let json = serde_json::to_string(self).unwrap_or_default();
-        base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, json)
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(json)
     }
 
-    /// Decode cursor from base64 string
+    /// Decode cursor from URL-safe base64 string.
     pub fn decode(s: &str) -> Option<Self> {
-        let bytes = base64::Engine::decode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, s).ok()?;
+        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(s)
+            .ok()?;
         serde_json::from_slice(&bytes).ok()
     }
 }
 
-// === API Request/Response Models ===
+// =============================================================================
+// API Request Models
+// =============================================================================
 
-/// Register conversation request (first step after ceremony)
-/// Both parties call this to register their tokens
+/// Register conversation request.
+///
+/// Both ceremony participants call this after completing the QR exchange.
 #[derive(Debug, Deserialize)]
 pub struct RegisterConversationRequest {
-    /// Conversation ID (derived from pad, hex-encoded)
+    /// Conversation ID (64-char hex string derived from pad).
     pub conversation_id: ConversationId,
-    /// SHA-256 hash of auth token (hex-encoded, 64 chars)
+    /// SHA-256 hash of auth token (64-char hex string).
     pub auth_token_hash: String,
-    /// SHA-256 hash of burn token (hex-encoded, 64 chars)
+    /// SHA-256 hash of burn token (64-char hex string).
     pub burn_token_hash: String,
-    /// Notification preferences (16-bit flags, optional for backwards compat)
+    /// Notification preferences (16-bit flags).
     #[serde(default = "default_notification_flags")]
     pub notification_flags: u16,
-    /// Message TTL in seconds (for expiry notifications)
+    /// Message TTL in seconds.
     #[serde(default = "default_ttl_seconds")]
     pub ttl_seconds: u64,
 }
@@ -192,142 +212,221 @@ fn default_notification_flags() -> u16 {
 }
 
 fn default_ttl_seconds() -> u64 {
-    300 // 5 minutes default
+    300
 }
 
-/// Register conversation response
+/// Register device for push notifications.
+#[derive(Debug, Deserialize)]
+pub struct RegisterDeviceRequest {
+    /// Conversation ID.
+    pub conversation_id: ConversationId,
+    /// APNS device token.
+    pub device_token: String,
+    /// Platform (defaults to iOS).
+    #[serde(default)]
+    pub platform: Platform,
+}
+
+/// Submit encrypted message.
+#[derive(Debug, Deserialize)]
+pub struct SubmitMessageRequest {
+    /// Conversation ID.
+    pub conversation_id: ConversationId,
+    /// Base64-encoded ciphertext.
+    pub ciphertext: String,
+    /// Optional client sequence number.
+    pub sequence: Option<SequenceNumber>,
+}
+
+/// Poll messages query parameters.
+#[derive(Debug, Deserialize)]
+pub struct PollMessagesQuery {
+    /// Conversation ID.
+    pub conversation_id: ConversationId,
+    /// Pagination cursor (base64-encoded).
+    pub cursor: Option<String>,
+}
+
+/// Burn conversation request.
+#[derive(Debug, Deserialize)]
+pub struct BurnConversationRequest {
+    /// Conversation ID.
+    pub conversation_id: ConversationId,
+}
+
+/// Burn status query parameters.
+#[derive(Debug, Deserialize)]
+pub struct BurnStatusQuery {
+    /// Conversation ID.
+    pub conversation_id: ConversationId,
+}
+
+/// Acknowledge message delivery.
+#[derive(Debug, Deserialize)]
+pub struct AckMessageRequest {
+    /// Conversation ID.
+    pub conversation_id: ConversationId,
+    /// Blob IDs to acknowledge.
+    pub blob_ids: Vec<Uuid>,
+}
+
+/// SSE stream query parameters.
+#[derive(Debug, Deserialize)]
+pub struct StreamQuery {
+    /// Conversation ID.
+    pub conversation_id: ConversationId,
+}
+
+// =============================================================================
+// API Response Models
+// =============================================================================
+
+/// Register conversation response.
 #[derive(Debug, Serialize)]
 pub struct RegisterConversationResponse {
     pub success: bool,
 }
 
-/// Register device request
-#[derive(Debug, Deserialize)]
-pub struct RegisterDeviceRequest {
-    pub conversation_id: ConversationId,
-    pub device_token: String,
-    #[serde(default)]
-    pub platform: Platform,
-}
-
-/// Register device response
+/// Register device response.
 #[derive(Debug, Serialize)]
 pub struct RegisterDeviceResponse {
     pub success: bool,
 }
 
-/// Submit message request
-///
-/// Simplified ephemeral design - fixed 5-minute TTL.
-/// Messages are stored in RAM only and deleted on ACK or expiry.
-#[derive(Debug, Deserialize)]
-pub struct SubmitMessageRequest {
-    pub conversation_id: ConversationId,
-    /// Base64-encoded ciphertext
-    pub ciphertext: String,
-    /// Optional client sequence number
-    pub sequence: Option<SequenceNumber>,
-}
-
-/// Submit message response
+/// Submit message response.
 #[derive(Debug, Serialize)]
 pub struct SubmitMessageResponse {
     pub accepted: bool,
     pub blob_id: Uuid,
 }
 
-/// Poll messages request (query params)
-#[derive(Debug, Deserialize)]
-pub struct PollMessagesQuery {
-    pub conversation_id: ConversationId,
-    /// Cursor for pagination (base64 encoded)
-    pub cursor: Option<String>,
-}
-
-/// Poll messages response
+/// Poll messages response.
 #[derive(Debug, Serialize)]
 pub struct PollMessagesResponse {
     pub messages: Vec<MessageBlob>,
-    /// Next cursor for pagination (base64 encoded)
     pub next_cursor: Option<String>,
-    /// Whether the conversation has been burned
     pub burned: bool,
 }
 
-/// Message blob in poll response
+/// Message blob in API responses.
 #[derive(Debug, Clone, Serialize)]
 pub struct MessageBlob {
     pub id: Uuid,
     pub sequence: Option<SequenceNumber>,
-    /// Base64-encoded ciphertext
+    /// Base64-encoded ciphertext.
     pub ciphertext: String,
     pub received_at: DateTime<Utc>,
 }
 
-/// Burn conversation request
-#[derive(Debug, Deserialize)]
-pub struct BurnConversationRequest {
-    pub conversation_id: ConversationId,
-}
-
-/// Burn conversation response
+/// Burn conversation response.
 #[derive(Debug, Serialize)]
 pub struct BurnConversationResponse {
     pub accepted: bool,
 }
 
-/// Burn status query (query params)
-#[derive(Debug, Deserialize)]
-pub struct BurnStatusQuery {
-    pub conversation_id: ConversationId,
-}
-
-/// Burn status response
+/// Burn status response.
 #[derive(Debug, Serialize)]
 pub struct BurnStatusResponse {
     pub burned: bool,
     pub burned_at: Option<DateTime<Utc>>,
 }
 
-/// Health check response
+/// Acknowledge message response.
+#[derive(Debug, Serialize)]
+pub struct AckMessageResponse {
+    pub acknowledged: usize,
+}
+
+/// Health check response.
 #[derive(Debug, Serialize)]
 pub struct HealthResponse {
     pub status: &'static str,
     pub version: &'static str,
 }
 
-/// Error response
+/// Error response.
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub error: String,
     pub code: &'static str,
 }
 
-// === SSE Event Models ===
+// =============================================================================
+// SSE Event Models
+// =============================================================================
 
-/// SSE stream query parameters
-#[derive(Debug, Deserialize)]
-pub struct StreamQuery {
-    pub conversation_id: ConversationId,
-}
-
-/// Event sent over SSE stream
+/// Event sent over SSE stream.
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum StreamEvent {
-    /// New message received
+    /// New message received.
     Message(MessageBlob),
-    /// Conversation has been burned
-    Burned {
-        burned_at: DateTime<Utc>,
+    /// Message(s) acknowledged by receiver.
+    Delivered {
+        blob_ids: Vec<Uuid>,
+        delivered_at: DateTime<Utc>,
     },
-    /// Keep-alive ping
+    /// Conversation has been burned.
+    Burned { burned_at: DateTime<Utc> },
+    /// Keep-alive ping.
     Ping,
 }
 
-/// Internal broadcast event (conversation_id + event)
+/// Internal broadcast event (conversation_id + event).
 #[derive(Debug, Clone)]
 pub struct BroadcastEvent {
     pub conversation_id: ConversationId,
     pub event: StreamEvent,
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cursor_encode_decode_roundtrip() {
+        let cursor = Cursor {
+            last_id: Some(Uuid::new_v4()),
+            last_sequence: Some(42),
+            since: Some(Utc::now()),
+        };
+
+        let encoded = cursor.encode();
+        let decoded = Cursor::decode(&encoded).expect("decode failed");
+
+        assert_eq!(cursor.last_id, decoded.last_id);
+        assert_eq!(cursor.last_sequence, decoded.last_sequence);
+    }
+
+    #[test]
+    fn cursor_decode_invalid_returns_none() {
+        assert!(Cursor::decode("not-valid-base64!!!").is_none());
+        assert!(Cursor::decode("").is_none());
+    }
+
+    #[test]
+    fn notification_flags_work() {
+        let prefs = ConversationPrefs::new(
+            notification_flags::NOTIFY_NEW_MESSAGE | notification_flags::NOTIFY_MESSAGE_EXPIRING,
+            300,
+        );
+
+        assert!(prefs.notify_new_message());
+        assert!(prefs.notify_message_expiring());
+        assert!(!prefs.notify_message_expired());
+        assert!(!prefs.notify_delivery_failed());
+    }
+
+    #[test]
+    fn platform_deserialize() {
+        let ios: Platform = serde_json::from_str(r#""ios""#).unwrap();
+        assert_eq!(ios, Platform::Ios);
+
+        let macos: Platform = serde_json::from_str(r#""macos""#).unwrap();
+        assert_eq!(macos, Platform::Macos);
+    }
 }

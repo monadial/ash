@@ -17,9 +17,16 @@ import CryptoKit
 /// Notification flag constants for push notification preferences
 /// These match the Rust core definitions
 enum NotificationFlagsConstants {
+    // Receiver notifications (bits 0-2)
     static let notifyNewMessage: UInt16 = 1 << 0
     static let notifyMessageExpiring: UInt16 = 1 << 1
     static let notifyMessageExpired: UInt16 = 1 << 2
+
+    // Persistence consent (bit 4)
+    /// User consented to local message persistence (requires Face ID + disappearing messages)
+    static let persistenceConsent: UInt16 = 1 << 4
+
+    // Sender notifications (bits 8-9)
     static let notifyDeliveryFailed: UInt16 = 1 << 8
     static let notifyMessageRead: UInt16 = 1 << 9
 
@@ -42,6 +49,11 @@ enum NotificationFlagsConstants {
         let allColors = ConversationColor.allCases
         guard colorIndex < allColors.count else { return .indigo }
         return allColors[colorIndex]
+    }
+
+    /// Check if persistence consent flag is set
+    static func hasPersistenceConsent(_ flags: UInt16) -> Bool {
+        (flags & persistenceConsent) != 0
     }
 }
 
@@ -106,16 +118,20 @@ protocol PerformCeremonyUseCaseProtocol: Sendable {
     ///   - role: The role in this conversation (initiator = forward, responder = backward)
     ///   - relayURL: The relay server URL
     ///   - customName: Optional custom name for the conversation
+    ///   - messageRetention: Server TTL setting for unread messages
     ///   - disappearingMessages: Display TTL setting for messages (client-side)
     ///   - accentColor: Accent color for the conversation UI
+    ///   - persistenceConsent: User consented to local message persistence
     func finalizeCeremony(
         padBytes: [UInt8],
         mnemonic: [String],
         role: ConversationRole,
         relayURL: String,
         customName: String?,
+        messageRetention: MessageRetention,
         disappearingMessages: DisappearingMessages,
-        accentColor: ConversationColor
+        accentColor: ConversationColor,
+        persistenceConsent: Bool
     ) async throws -> Conversation
 }
 
@@ -205,24 +221,28 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
         role: ConversationRole,
         relayURL: String,
         customName: String?,
+        messageRetention: MessageRetention,
         disappearingMessages: DisappearingMessages,
-        accentColor: ConversationColor
+        accentColor: ConversationColor,
+        persistenceConsent: Bool
     ) async throws -> Conversation {
-        Log.info(.ceremony, "Finalizing ceremony (\(padBytes.count) bytes, disappearing=\(disappearingMessages.displayName), color=\(accentColor.rawValue))")
+        Log.info(.ceremony, "Finalizing ceremony (\(padBytes.count) bytes, retention=\(messageRetention.displayName), disappearing=\(disappearingMessages.displayName), color=\(accentColor.rawValue), persistence=\(persistenceConsent))")
 
         // Derive authorization tokens from pad bytes
         let tokens = try Ash.deriveAllTokens(padBytes: padBytes)
         Log.debug(.ceremony, "Authorization tokens derived")
 
-        // Create conversation with disappearing messages setting and accent color
+        // Create conversation with message retention, disappearing messages setting and accent color
         let conversation = Conversation.fromCeremony(
             padBytes: padBytes,
             mnemonic: mnemonic,
             role: role,
             relayURL: relayURL,
             customName: customName,
+            messageRetention: messageRetention,
             disappearingMessages: disappearingMessages,
             accentColor: accentColor,
+            persistenceConsent: persistenceConsent,
             authToken: tokens.authToken,
             burnToken: tokens.burnToken
         )

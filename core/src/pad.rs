@@ -370,6 +370,35 @@ impl Pad {
         (self.bytes.clone(), self.consumed_front, self.consumed_back)
     }
 
+    /// Securely zero bytes at a specific offset.
+    ///
+    /// This is used for forward secrecy: when a message expires,
+    /// the key material (pad bytes) used to encrypt it are zeroed.
+    /// Even if an attacker later gains access to the pad, they cannot
+    /// decrypt messages whose keys have been zeroed.
+    ///
+    /// # Arguments
+    ///
+    /// * `offset` - Starting offset in the pad
+    /// * `length` - Number of bytes to zero
+    ///
+    /// # Returns
+    ///
+    /// `true` if bytes were zeroed, `false` if offset/length is out of bounds.
+    ///
+    /// # Security Note
+    ///
+    /// This does not affect the consumption counters. It only zeros the
+    /// actual byte values, rendering them useless for encryption/decryption.
+    pub fn zero_bytes_at(&mut self, offset: usize, length: usize) -> bool {
+        let end = offset.saturating_add(length);
+        if end > self.bytes.len() {
+            return false;
+        }
+        secure_zero(&mut self.bytes[offset..end]);
+        true
+    }
+
     /// Get the raw pad bytes (for ceremony transfer).
     ///
     /// # Security
@@ -862,5 +891,43 @@ mod tests {
 
         // Remaining space is 50 bytes (indices 150-199)
         assert_eq!(pad.remaining(), 50);
+    }
+
+    #[test]
+    fn zero_bytes_at_forward_secrecy() {
+        // Test that we can zero specific pad bytes for forward secrecy
+        let entropy: Vec<u8> = (0..100).collect();
+        let mut pad = Pad::from_bytes(entropy);
+
+        // Verify original bytes
+        assert_eq!(pad.as_bytes()[10..20], (10..20).collect::<Vec<u8>>());
+
+        // Zero bytes 10-19
+        assert!(pad.zero_bytes_at(10, 10));
+
+        // Verify they are zeroed
+        assert_eq!(pad.as_bytes()[10..20], [0u8; 10]);
+
+        // Verify surrounding bytes are unchanged
+        assert_eq!(pad.as_bytes()[0..10], (0..10).collect::<Vec<u8>>());
+        assert_eq!(pad.as_bytes()[20..30], (20..30).collect::<Vec<u8>>());
+
+        // Consumption counters should be unaffected
+        assert_eq!(pad.consumed_front(), 0);
+        assert_eq!(pad.consumed_back(), 0);
+        assert_eq!(pad.remaining(), 100);
+    }
+
+    #[test]
+    fn zero_bytes_at_out_of_bounds() {
+        let entropy = vec![0xAB; 100];
+        let mut pad = Pad::from_bytes(entropy);
+
+        // Beyond pad size
+        assert!(!pad.zero_bytes_at(90, 20));
+        assert!(!pad.zero_bytes_at(100, 1));
+
+        // Overflow protection
+        assert!(!pad.zero_bytes_at(usize::MAX, 1));
     }
 }

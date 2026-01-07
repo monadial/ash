@@ -6,74 +6,66 @@
 //
 
 import SwiftUI
-// Liquid Glass redesign applied
 
 struct LockScreen: View {
     @Bindable var viewModel: AppLockViewModel
     @State private var showContent = false
+    @State private var hasAttemptedAutoAuth = false
 
     var body: some View {
         ZStack {
             // Background
-            LinearGradient(
-                colors: [
-                    Color(uiColor: .systemBackground),
-                    Color(uiColor: .secondarySystemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-            
-            Color.clear
-                .glassEffect(.regular)
+            Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer()
 
                 // App logo
-                AppLogo(size: .medium, showTitle: true)
+                AppLogo(size: .large, showTitle: true)
                     .opacity(showContent ? 1 : 0)
-                    .offset(y: showContent ? 0 : 20)
+                    .scaleEffect(showContent ? 1 : 0.9)
 
                 Spacer()
+                    .frame(height: Spacing.xxl)
 
-                // Biometric unlock button
-                unlockButton
-                    .padding(.horizontal, Spacing.xl)
-                    .padding(.bottom, Spacing.xl)
-                    .opacity(showContent ? 1 : 0)
-                    .offset(y: showContent ? 0 : 20)
+                // Lock status
+                VStack(spacing: Spacing.lg) {
+                    // Status text
+                    Text("App Locked")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
 
-                // Error message
-                if let error = viewModel.authenticationError {
-                    ZStack {
-                        Color.clear
-                            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                    // Biometric unlock button
+                    unlockButton
+                        .padding(.horizontal, Spacing.lg)
 
-                        Text(error)
-                            .font(.footnote)
-                            .foregroundStyle(Color.ashDanger)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, Spacing.xl)
-                            .padding(.bottom, Spacing.lg)
+                    // Error message
+                    if let error = viewModel.authenticationError {
+                        errorMessage(error)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
                 }
+                .opacity(showContent ? 1 : 0)
+                .offset(y: showContent ? 0 : 16)
 
                 Spacer()
-                    .frame(height: 60)
             }
+            .padding(.horizontal, Spacing.md)
         }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.authenticationError)
         .onAppear {
             withAnimation(.easeOut(duration: 0.4)) {
                 showContent = true
             }
 
-            // Auto-authenticate after brief delay
-            Task {
-                try? await Task.sleep(for: .milliseconds(400))
-                await viewModel.unlock()
+            // Auto-authenticate on first appear only if biometrics available
+            if !hasAttemptedAutoAuth && viewModel.canUseBiometrics {
+                hasAttemptedAutoAuth = true
+                Task {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    await viewModel.unlock()
+                }
             }
         }
     }
@@ -84,41 +76,62 @@ struct LockScreen: View {
                 await viewModel.unlock()
             }
         } label: {
-            VStack(spacing: Spacing.md) {
+            HStack(spacing: Spacing.md) {
                 // Biometric icon
                 ZStack {
                     Circle()
-                        .fill(Color.ashSecure.opacity(0.1))
-                        .frame(width: 80, height: 80)
+                        .fill(Color.ashSecure.opacity(0.12))
+                        .frame(width: 56, height: 56)
 
                     Image(systemName: viewModel.biometricType.iconName)
-                        .font(.system(size: 36, weight: .light))
+                        .font(.system(size: 26, weight: .medium))
                         .foregroundStyle(Color.ashSecure)
                         .symbolEffect(.pulse, isActive: viewModel.isAuthenticating)
                 }
 
                 // Label
-                VStack(spacing: 4) {
-                    Text(viewModel.isAuthenticating ? "Authenticating..." : "Tap to Unlock")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.isAuthenticating ? "Authenticating..." : "Unlock with \(viewModel.biometricType.displayName)")
                         .font(.headline)
                         .foregroundStyle(Color.primary)
 
-                    Text(viewModel.biometricType.displayName)
+                    Text("Tap to authenticate")
                         .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(.secondary)
                 }
+
+                Spacer()
+
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.xl)
-            .background(
-                ZStack {
-                    Color.clear
-                        .glassEffect(.regular, in: .rect(cornerRadius: 32))
-                }
-            )
+            .padding(Spacing.md)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
         }
-        .buttonStyle(.glassProminent)
+        .buttonStyle(.plain)
         .disabled(viewModel.isAuthenticating)
+    }
+
+    private func errorMessage(_ error: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.subheadline)
+                .foregroundStyle(Color.ashDanger)
+
+            Text(error)
+                .font(.subheadline)
+                .foregroundStyle(Color.ashDanger)
+                .multilineTextAlignment(.leading)
+
+            Spacer()
+        }
+        .padding(Spacing.md)
+        .background(Color.ashDanger.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+        .padding(.horizontal, Spacing.lg)
     }
 }
 

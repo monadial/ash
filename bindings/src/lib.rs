@@ -187,6 +187,15 @@ impl Pad {
         let pad = self.inner.lock().unwrap();
         pad.next_send_offset(role.into()) as u64
     }
+
+    /// Securely zero bytes at a specific offset (for forward secrecy).
+    ///
+    /// When a message expires, this zeros the key material used to encrypt it,
+    /// preventing future decryption even if the pad is compromised.
+    pub fn zero_bytes_at(&self, offset: u64, length: u64) -> bool {
+        let mut pad = self.inner.lock().unwrap();
+        pad.zero_bytes_at(offset as usize, length as usize)
+    }
 }
 
 // === Ceremony Metadata Types ===
@@ -427,6 +436,20 @@ pub fn derive_all_tokens(pad_bytes: Vec<u8>) -> Result<AuthTokens, AshError> {
         auth_token,
         burn_token,
     })
+}
+
+/// Securely zero a byte array using volatile writes.
+/// This prevents the compiler from optimizing away the zeroing.
+pub fn secure_zero_bytes(mut data: Vec<u8>) {
+    // Use volatile writes to prevent optimization (same pattern as pad.rs)
+    for byte in data.iter_mut() {
+        // SAFETY: We're writing to valid, aligned memory that we own
+        unsafe {
+            std::ptr::write_volatile(byte, 0);
+        }
+    }
+    // Compiler fence to prevent reordering
+    std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
 }
 
 #[cfg(test)]

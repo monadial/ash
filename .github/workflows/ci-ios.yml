@@ -1,0 +1,117 @@
+name: CI iOS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/ios/**'
+      - 'bindings/**'
+      - 'core/**'
+      - '.github/workflows/ci-ios.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/ios/**'
+      - 'bindings/**'
+      - 'core/**'
+      - '.github/workflows/ci-ios.yml'
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            core/target/
+            bindings/target/
+          key: ${{ runner.os }}-cargo-ios-${{ hashFiles('core/Cargo.lock', 'bindings/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-ios-
+
+      - name: Install uniffi-bindgen
+        run: cargo install uniffi-bindgen-cli --version 0.28.3 || true
+
+      - name: Build iOS XCFramework
+        run: ./scripts/build-ios.sh
+        env:
+          SKIP_SIMULATOR: "false"
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: ${{ runner.os }}-spm-${{ hashFiles('apps/ios/Ash/Ash.xcodeproj/project.pbxproj') }}
+          restore-keys: ${{ runner.os }}-spm-
+
+      - name: Build iOS App (Debug)
+        working-directory: apps/ios/Ash
+        run: |
+          xcodebuild build \
+            -project Ash.xcodeproj \
+            -scheme Ash \
+            -destination 'platform=iOS Simulator,name=iPhone 15,OS=latest' \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+
+  swiftlint:
+    name: SwiftLint
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Run SwiftLint
+        working-directory: apps/ios/Ash
+        run: swiftlint lint --reporter github-actions-logging || true
+
+  test-bindings:
+    name: Test Bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            bindings/target/
+          key: ${{ runner.os }}-cargo-bindings-${{ hashFiles('bindings/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-bindings-
+
+      - name: Run bindings tests
+        working-directory: bindings
+        run: cargo test --verbose
+
+      - name: Clippy bindings
+        working-directory: bindings
+        run: cargo clippy --lib -- -D warnings

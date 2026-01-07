@@ -24,25 +24,22 @@ protocol BurnConversationUseCaseProtocol: Sendable {
 /// Factory for creating relay services
 typealias RelayServiceFactory = @Sendable (String) -> RelayServiceProtocol?
 
-/// Factory for getting conversation-specific message repository
-typealias MessageRepositoryFactory = @Sendable (Conversation) -> MessageRepository
-
 /// Implementation of burn conversation use case
-final class BurnConversationUseCase: BurnConversationUseCaseProtocol, Sendable {
+final class BurnConversationUseCase: BurnConversationUseCaseProtocol, @unchecked Sendable {
     private let conversationRepository: ConversationRepository
     private let padManager: PadManagerProtocol
-    private let messageRepository: MessageRepository
+    private let messageStorageService: MessageStorageServiceProtocol
     private let relayServiceFactory: RelayServiceFactory
 
     init(
         conversationRepository: ConversationRepository,
         padManager: PadManagerProtocol,
-        messageRepository: MessageRepository,
+        messageStorageService: MessageStorageServiceProtocol,
         relayServiceFactory: @escaping RelayServiceFactory
     ) {
         self.conversationRepository = conversationRepository
         self.padManager = padManager
-        self.messageRepository = messageRepository
+        self.messageStorageService = messageStorageService
         self.relayServiceFactory = relayServiceFactory
     }
 
@@ -55,8 +52,8 @@ final class BurnConversationUseCase: BurnConversationUseCaseProtocol, Sendable {
         // 1. Wipe the pad first (most sensitive)
         try await padManager.wipePad(for: conversation.id)
 
-        // 2. Clear messages
-        await messageRepository.clear(for: conversation.id)
+        // 2. Clear messages from all storages via storage service
+        await messageStorageService.clearAll(for: conversation.id)
 
         // 3. Remove conversation record
         try await conversationRepository.burn(conversation)
@@ -71,7 +68,7 @@ final class BurnConversationUseCase: BurnConversationUseCaseProtocol, Sendable {
 
         // Immediate burn - wipe our data when peer burns
         try await padManager.wipePad(for: conversation.id)
-        await messageRepository.clear(for: conversation.id)
+        await messageStorageService.clearAll(for: conversation.id)
         try await conversationRepository.burn(conversation)
 
         var updated = conversation
@@ -97,14 +94,15 @@ final class BurnConversationUseCase: BurnConversationUseCaseProtocol, Sendable {
         }
     }
 
+    @MainActor
     func executeAll() async throws {
         let conversations = try await conversationRepository.getAll()
 
         // Wipe all pads
         try await padManager.wipeAllPads()
 
-        // Clear all messages
-        await messageRepository.clearAll()
+        // Clear all messages from all storages via storage service
+        await messageStorageService.clearAllStorages()
 
         // Remove all conversation records
         try await conversationRepository.burnAll()

@@ -15,7 +15,6 @@ struct MessagingScreen: View {
     let onBurn: () -> Void
     let onRename: (String) -> Void
     let onUpdateRelayURL: (String) -> Void
-    let onUpdateColor: (ConversationColor) -> Void
     var onDismiss: (() async -> Void)?
 
     @State private var viewModel: MessagingViewModel?
@@ -107,10 +106,7 @@ struct MessagingScreen: View {
         }
         .sheet(isPresented: $isShowingInfo) {
             ConversationInfoScreen(
-                conversation: viewModel?.currentConversation ?? conversation,
-                onColorChange: { color in
-                    onUpdateColor(color)
-                }
+                conversation: viewModel?.currentConversation ?? conversation
             )
             .presentationDetents([.large])
         }
@@ -560,10 +556,13 @@ private struct MessageBubbleView: View {
                             Label("Info", systemImage: "info.circle")
                         }
 
-                        Button {
-                            copyToClipboard(message.content)
-                        } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
+                        // Don't show copy for expired/wiped messages
+                        if !message.isContentWiped {
+                            Button {
+                                copyToClipboard(message.content)
+                            } label: {
+                                Label("Copy", systemImage: "doc.on.doc")
+                            }
                         }
 
                         if case .failed = message.deliveryStatus {
@@ -577,9 +576,15 @@ private struct MessageBubbleView: View {
 
                 // Status row
                 HStack(spacing: 6) {
-                    if let expiresAt = message.expiresAt {
+                    // Show appropriate countdown based on message state
+                    if message.isAwaitingDelivery, let serverExpiresAt = message.serverExpiresAt {
+                        // Sent message waiting for delivery - show server TTL
+                        ServerTTLIndicatorView(expiresAt: serverExpiresAt, accentColor: accentColor)
+                    } else if let expiresAt = message.expiresAt, !message.isOutgoing {
+                        // Received message with disappearing timer
                         ExpiryIndicatorView(expiresAt: expiresAt, accentColor: accentColor)
                     }
+
                     Text(message.formattedTime)
                         .font(.caption2)
                         .foregroundStyle(Color.secondary)
@@ -608,23 +613,43 @@ private struct MessageBubbleView: View {
     @ViewBuilder
     private var bubbleContent: some View {
         Group {
-            switch message.content {
-            case .text(let text):
-                Text(text)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
+            if message.isContentWiped {
+                // Message has expired and content is securely wiped
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "clock.badge.xmark")
+                        .font(.caption)
+                    Text("Message Expired")
+                        .font(.subheadline)
+                        .italic()
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+            } else {
+                switch message.content {
+                case .text(let text):
+                    Text(text)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
 
-            case .location(let lat, let lon):
-                LocationBubbleContent(
-                    latitude: lat,
-                    longitude: lon,
-                    isOutgoing: message.isOutgoing,
-                    accentColor: accentColor
-                )
+                case .location(let lat, let lon):
+                    LocationBubbleContent(
+                        latitude: lat,
+                        longitude: lon,
+                        isOutgoing: message.isOutgoing,
+                        accentColor: accentColor
+                    )
+                }
             }
         }
-        .background(message.isOutgoing ? accentColor : Color(uiColor: .secondarySystemBackground))
-        .foregroundStyle(message.isOutgoing ? Color.white : Color.primary)
+        .background(message.isContentWiped
+            ? Color(uiColor: .tertiarySystemBackground)
+            : (message.isOutgoing ? accentColor : Color(uiColor: .secondarySystemBackground))
+        )
+        .foregroundStyle(message.isContentWiped
+            ? Color.secondary
+            : (message.isOutgoing ? Color.white : Color.primary)
+        )
     }
 }
 
@@ -692,9 +717,20 @@ private struct DeliveryStatusView: View {
                 .frame(width: 12, height: 12)
 
         case .sent:
+            // Single check - sent to server, awaiting delivery
             Image(systemName: "checkmark")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(Color.secondary)
+
+        case .delivered:
+            // Double check - delivered to recipient
+            HStack(spacing: -3) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .semibold))
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .foregroundStyle(Color.ashSuccess)
 
         case .failed(let reason):
             Button {
@@ -720,7 +756,62 @@ private struct DeliveryStatusView: View {
     }
 }
 
-// MARK: - Expiry Indicator
+// MARK: - Server TTL Indicator (for sent messages awaiting delivery)
+
+private struct ServerTTLIndicatorView: View {
+    let expiresAt: Date
+    let accentColor: Color
+    @State private var remainingTime: TimeInterval = 0
+
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    private var indicatorColor: Color {
+        if remainingTime < 60 {
+            return Color.ashDanger
+        } else if remainingTime < 300 {
+            return Color.ashWarning
+        }
+        return Color.secondary
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.up.circle")
+                .font(.system(size: 10))
+                .foregroundStyle(indicatorColor)
+
+            Text(formatHumanReadable(remainingTime))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(indicatorColor)
+        }
+        .onAppear {
+            remainingTime = max(0, expiresAt.timeIntervalSinceNow)
+        }
+        .onReceive(timer) { _ in
+            remainingTime = max(0, expiresAt.timeIntervalSinceNow)
+        }
+        .accessibilityLabel("Server expires in \(formatHumanReadable(remainingTime))")
+    }
+
+    private func formatHumanReadable(_ seconds: TimeInterval) -> String {
+        if seconds <= 0 {
+            return "expired"
+        } else if seconds < 60 {
+            return "\(Int(seconds))s"
+        } else if seconds < 3600 {
+            let mins = Int(seconds) / 60
+            return "\(mins)m"
+        } else if seconds < 86400 {
+            let hours = Int(seconds) / 3600
+            return "\(hours)h"
+        } else {
+            let days = Int(seconds) / 86400
+            return "\(days)d"
+        }
+    }
+}
+
+// MARK: - Expiry Indicator (for received messages with disappearing timer)
 
 private struct ExpiryIndicatorView: View {
     let expiresAt: Date

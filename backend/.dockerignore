@@ -1,0 +1,56 @@
+# =============================================================================
+# Docker build context exclusions
+# =============================================================================
+
+# Build artifacts
+target/
+debug/
+release/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (not needed in image)
+README.md
+CHANGELOG.md
+LICENSE
+docs/
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Development files
+.env
+.env.*
+!.env.example
+*.log
+*.bak
+
+# Test files
+tests/
+benches/
+examples/
+
+# Docker files (prevent recursive copying)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Cargo cache (use builder cache instead)
+.cargo/
+
+# Misc
+*.md
+Makefile
+justfile

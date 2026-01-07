@@ -4,13 +4,20 @@
 //
 
 import SwiftUI
+import CryptoKit
 
 @MainActor
 @Observable
 final class MessagingViewModel {
     private let dependencies: Dependencies
-    private let actualMessageRepository: MessageRepository
     let conversation: Conversation
+
+    /// Get the appropriate message repository for this conversation
+    /// Uses persistent storage if: disappearing messages enabled + biometric lock on + SwiftData available
+    /// Otherwise uses in-memory storage
+    private var messageRepository: MessageRepository {
+        dependencies.messageRepository(for: currentConversation)
+    }
 
     private(set) var messages: [Message] = []
     private(set) var currentConversation: Conversation
@@ -58,15 +65,71 @@ final class MessagingViewModel {
     private var pushNotificationObserver: NSObjectProtocol?
     private var deviceTokenObserver: NSObjectProtocol?
     private var pushRegistrationTask: Task<Void, Never>?
+    private var hasAttemptedReregistration = false
 
     /// Short conversation ID for logging (first 8 chars)
     private var logId: String { String(conversation.id.prefix(8)) }
+
+    /// Hash a token using SHA-256 and return hex-encoded string
+    private func hashToken(_ token: String) -> String {
+        let data = Data(token.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Re-register conversation with relay server (when 404 is received)
+    private func reregisterConversation() async -> Bool {
+        guard let relay = conversationRelay else { return false }
+
+        Log.info(.relay, "[\(logId)] Re-registering conversation with relay")
+
+        let authTokenHash = hashToken(conversation.authToken)
+        let burnTokenHash = hashToken(conversation.burnToken)
+
+        do {
+            try await relay.registerConversation(
+                conversationId: conversation.id,
+                authTokenHash: authTokenHash,
+                burnTokenHash: burnTokenHash
+            )
+            Log.info(.relay, "[\(logId)] Re-registration successful")
+            return true
+        } catch {
+            Log.error(.relay, "[\(logId)] Re-registration failed: \(error)")
+            return false
+        }
+    }
+
+    /// Handle delivery confirmation from SSE - update message statuses
+    private func handleDeliveryConfirmation(blobIds: [UUID]) async {
+        for blobId in blobIds {
+            if let index = messages.firstIndex(where: { $0.blobId == blobId }) {
+                messages[index] = messages[index].withDeliveryStatus(.delivered)
+                Log.debug(.message, "[\(logId)] Message marked as delivered: \(blobId.uuidString.prefix(8))")
+            }
+        }
+        dependencies.hapticService.light()
+    }
+
+    /// ACK received messages (tells sender we got them)
+    private func ackMessages(blobIds: [UUID]) async {
+        guard let relay = conversationRelay, !blobIds.isEmpty else { return }
+
+        do {
+            _ = try await relay.ackMessages(
+                conversationId: conversation.id,
+                authToken: conversation.authToken,
+                blobIds: blobIds
+            )
+        } catch {
+            Log.warning(.relay, "[\(logId)] ACK failed: \(error)")
+        }
+    }
 
     init(conversation: Conversation, dependencies: Dependencies) {
         self.conversation = conversation
         self.currentConversation = conversation
         self.dependencies = dependencies
-        self.actualMessageRepository = dependencies.messageRepository
         self.conversationRelay = dependencies.createRelayService(for: conversation.relayURL)
         self.sseService = SSEService(baseURLString: conversation.relayURL)
 
@@ -83,9 +146,32 @@ final class MessagingViewModel {
             Log.debug(.storage, "[\(logId)] Refreshed conversation from Keychain, processed sequences: \(fresh.processedIncomingSequences.count)")
         }
 
-        // Ephemeral-only: messages exist only in UI while viewing
-        messages = []
-        Log.info(.message, "[\(logId)] Ephemeral mode - fetching from relay")
+        // Load persisted messages from repository (survives navigation away from conversation)
+        // Uses SwiftData if persistence enabled (disappearing messages on + biometric lock), else in-memory
+        let isPersistent = dependencies.isMessagePersistenceEnabled(for: currentConversation)
+        Log.info(.storage, "[\(logId)] Message persistence: \(isPersistent ? "ENABLED (SwiftData)" : "disabled (in-memory)")")
+        let persistedMessages = await messageRepository.getMessages(for: conversation.id)
+
+        // Filter out expired messages
+        let now = Date()
+        messages = persistedMessages.filter { message in
+            guard let expiresAt = message.expiresAt else { return true }
+            return expiresAt > now
+        }
+
+        // Populate processed blob IDs from loaded messages to avoid duplicates
+        for message in messages {
+            if let blobId = message.blobId {
+                processedBlobIds.insert(blobId)
+            }
+            if let sequence = message.sequence {
+                if message.isOutgoing {
+                    sentSequences.insert(sequence)
+                }
+            }
+        }
+
+        Log.info(.message, "[\(logId)] Loaded \(messages.count) persisted messages, fetching from relay")
 
         startExpiryTimer()
         lastCursor = currentConversation.relayCursor
@@ -103,6 +189,14 @@ final class MessagingViewModel {
         } catch {
             Log.error(.storage, "[\(logId)] Failed to save state: \(error)")
         }
+
+        // Persist messages to repository (survives navigation away from conversation)
+        // First clear old messages for this conversation, then save current ones
+        await messageRepository.clear(for: conversation.id)
+        for message in messages {
+            await messageRepository.addMessage(message, to: conversation.id)
+        }
+        Log.debug(.storage, "[\(logId)] Persisted \(messages.count) messages on disappear")
 
         stopExpiryTimer()
         disconnectSSE()
@@ -227,20 +321,40 @@ final class MessagingViewModel {
 
         do {
             // Ephemeral-only mode: all messages stored in RAM on server
+            let ttlSeconds = conversation.messageRetention.seconds
             let blobId = try await Log.measureAsync(.relay, "submit") {
                 try await relay.submitMessage(
                     conversationId: conversation.id,
                     authToken: conversation.authToken,
                     ciphertext: ciphertext,
                     sequence: sequence,
-                    ttlSeconds: MessageTTL.defaultSeconds,
+                    ttlSeconds: ttlSeconds,
                     extendedTTL: false,
                     persistent: false
                 )
             }
             sentBlobIds.insert(blobId)
-            await updateMessageDeliveryStatus(messageId, status: .sent)
-            Log.info(.relay, "[\(logId)] Submitted: \(ciphertext.count) bytes, seq=\(sequence), ttl=\(MessageTTL.defaultSeconds)s")
+            // Update message with blob ID and mark as sent
+            if let index = messages.firstIndex(where: { $0.id == messageId }) {
+                messages[index] = messages[index].withBlobId(blobId).withDeliveryStatus(.sent)
+            }
+            // Reset re-registration flag on successful submit
+            hasAttemptedReregistration = false
+            Log.info(.relay, "[\(logId)] Submitted: \(ciphertext.count) bytes, seq=\(sequence), ttl=\(ttlSeconds)s")
+        } catch let error as RelayError {
+            if case .conversationNotFound = error, !hasAttemptedReregistration {
+                // Conversation not registered - try to re-register and retry once
+                hasAttemptedReregistration = true
+                Log.info(.relay, "[\(logId)] Conversation not found on submit - attempting re-registration")
+                if await reregisterConversation() {
+                    // Retry submit after successful registration
+                    await submitToRelay(messageId: messageId, ciphertext: ciphertext, sequence: sequence)
+                    return
+                }
+            }
+            dependencies.hapticService.error()
+            await updateMessageDeliveryStatus(messageId, status: .failed(reason: L10n.Error.relayError))
+            Log.error(.relay, "[\(logId)] Submit failed: \(error)")
         } catch {
             dependencies.hapticService.error()
             await updateMessageDeliveryStatus(messageId, status: .failed(reason: L10n.Error.relayError))
@@ -252,7 +366,7 @@ final class MessagingViewModel {
         if let index = messages.firstIndex(where: { $0.id == messageId }) {
             let updatedMessage = messages[index].withDeliveryStatus(status)
             messages[index] = updatedMessage
-            await actualMessageRepository.replaceMessage(updatedMessage, in: conversation.id)
+            await messageRepository.replaceMessage(updatedMessage, in: conversation.id)
         }
     }
 
@@ -392,6 +506,11 @@ final class MessagingViewModel {
             await processReceivedMessage(relayMessage)
             processedBlobIds.insert(message.id)
 
+        case .delivered(let event):
+            // Message was delivered to recipient - update status
+            Log.info(.sse, "[\(logId)] Delivery confirmed for \(event.blobIds.count) messages")
+            await handleDeliveryConfirmation(blobIds: event.blobIds)
+
         case .burned:
             Log.warning(.sse, "[\(logId)] Peer burned conversation")
             peerBurned = true
@@ -513,12 +632,26 @@ final class MessagingViewModel {
             }
 
             relayError = nil
+            // Reset re-registration flag on successful poll
+            hasAttemptedReregistration = false
         } catch let error as RelayError {
             switch error {
             case .conversationBurned:
                 Log.warning(.poll, "[\(logId)] Conversation burned")
                 peerBurned = true
                 dependencies.hapticService.warning()
+            case .conversationNotFound:
+                // Conversation not registered - try to re-register once
+                if !hasAttemptedReregistration {
+                    hasAttemptedReregistration = true
+                    Log.info(.poll, "[\(logId)] Conversation not found - attempting re-registration")
+                    if await reregisterConversation() {
+                        // Retry poll after successful registration
+                        await pollForMessages()
+                        return
+                    }
+                }
+                relayError = "Conversation not registered"
             case .noConnection:
                 relayError = "No connection to relay"
             case .networkError(let underlying):
@@ -572,7 +705,7 @@ final class MessagingViewModel {
                 return
             }
             // Also check repository for persistent messages as fallback
-            let alreadyExists = await actualMessageRepository.hasMessage(withSequence: sequence, in: conversation.id)
+            let alreadyExists = await messageRepository.hasMessage(withSequence: sequence, in: conversation.id)
             if alreadyExists {
                 Log.debug(.message, "[\(logId)] Skipping already-processed message seq=\(sequence) (repository)")
                 return
@@ -586,6 +719,7 @@ final class MessagingViewModel {
                 try await dependencies.receiveMessageUseCase.execute(
                     ciphertext: relayMessage.ciphertext,
                     sequence: relayMessage.sequence,
+                    blobId: relayMessage.id,
                     in: currentConversation
                 )
             }
@@ -603,6 +737,9 @@ final class MessagingViewModel {
             currentConversation = result.updatedConversation
 
             try? await dependencies.conversationRepository.save(currentConversation)
+
+            // ACK the message to notify sender of delivery
+            await ackMessages(blobIds: [relayMessage.id])
         } catch {
             Log.error(.message, "[\(logId)] Decrypt failed: \(error)")
         }
@@ -634,16 +771,46 @@ final class MessagingViewModel {
     }
 
     private func pruneExpiredMessages() {
-        // Ephemeral-only: remove expired messages from UI
-        // (We don't store in repository for ephemeral, so nothing to prune there)
         let now = Date()
-        let expiredCount = messages.filter { $0.expiresAt.map { now >= $0 } ?? false }.count
-        if expiredCount > 0 {
-            Log.debug(.message, "[\(logId)] Pruning \(expiredCount) expired ephemeral messages from UI")
-            messages.removeAll { message in
-                guard let expiresAt = message.expiresAt else { return false }
-                return now >= expiresAt
+
+        // Find expired messages that haven't been wiped yet
+        let expiredMessages = messages.filter { message in
+            guard !message.isContentWiped else { return false }  // Already wiped
+            guard let expiresAt = message.expiresAt else { return false }
+            return now >= expiresAt
+        }
+
+        if expiredMessages.isEmpty { return }
+
+        Log.debug(.message, "[\(logId)] Wiping \(expiredMessages.count) expired messages (forward secrecy)")
+
+        // For forward secrecy: zero the pad bytes used by each expired message
+        // This ensures even if the pad is later compromised, expired messages can't be decrypted
+        Task {
+            for message in expiredMessages {
+                guard let sequence = message.sequence else { continue }
+                let byteCount = UInt64(message.content.byteCount)
+
+                do {
+                    try await dependencies.padManager.zeroPadBytes(
+                        offset: sequence,
+                        length: byteCount,
+                        for: conversation.id
+                    )
+                } catch {
+                    // Don't fail the prune if zeroing fails (pad might be gone)
+                    Log.warning(.crypto, "[\(logId)] Failed to zero pad bytes for expired message: \(error)")
+                }
             }
+        }
+
+        // Mark expired messages as wiped (keep in UI but show as "expired")
+        let expiredIds = Set(expiredMessages.map(\.id))
+        messages = messages.map { message in
+            if expiredIds.contains(message.id) {
+                return message.withContentWiped()
+            }
+            return message
         }
     }
 

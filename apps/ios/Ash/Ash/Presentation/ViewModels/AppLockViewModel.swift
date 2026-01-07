@@ -93,7 +93,10 @@ final class AppLockViewModel {
                 authenticationError = "Authentication failed"
             }
         } catch let error as BiometricError {
-            authenticationError = error.localizedDescription
+            // Don't show error for user cancellation - it's intentional
+            if error != .userCancelled && error != .systemCancelled {
+                authenticationError = error.localizedDescription
+            }
         } catch {
             authenticationError = error.localizedDescription
         }
@@ -110,10 +113,11 @@ final class AppLockViewModel {
 
     /// Called when app becomes active
     func appDidBecomeActive() {
+        // Don't auto-trigger authentication - let the LockScreen handle it
+        // This prevents multiple auth prompts when rapidly switching apps
+        // Clear any stale error when returning to app
         if isLocked {
-            Task {
-                await unlock()
-            }
+            authenticationError = nil
         }
     }
 

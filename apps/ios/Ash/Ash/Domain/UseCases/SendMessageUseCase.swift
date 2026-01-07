@@ -96,7 +96,7 @@ final class SendMessageUseCase: SendMessageUseCaseProtocol, Sendable {
         let message = createOutgoingMessage(
             for: content,
             sequence: sequence,
-            ttl: TimeInterval(MessageTTL.defaultSeconds)
+            ttl: TimeInterval(conversation.messageRetention.seconds)
         )
 
         return SendMessageResult(
@@ -120,9 +120,9 @@ final class SendMessageUseCase: SendMessageUseCaseProtocol, Sendable {
     private func createOutgoingMessage(for content: MessageContent, sequence: UInt64, ttl: TimeInterval) -> Message {
         switch content {
         case .text(let text):
-            return Message.outgoing(text: text, sequence: sequence, expiresIn: ttl)
+            return Message.outgoing(text: text, sequence: sequence, serverTTLSeconds: ttl)
         case .location(let lat, let lon):
-            return Message.outgoingLocation(latitude: lat, longitude: lon, sequence: sequence, expiresIn: ttl)
+            return Message.outgoingLocation(latitude: lat, longitude: lon, sequence: sequence, serverTTLSeconds: ttl)
         }
     }
 }

@@ -1,0 +1,451 @@
+/*
+  Localizable.strings
+  Ash
+
+  Chinese Simplified localization
+*/
+
+// MARK: - Common
+
+"common.cancel" = "取消";
+"common.save" = "保存";
+"common.done" = "完成";
+"common.continue" = "继续";
+"common.back" = "返回";
+"common.delete" = "删除";
+"common.settings" = "设置";
+"common.rename" = "重命名";
+"common.error" = "错误";
+"common.ok" = "确定";
+"common.test" = "测试";
+"common.reset" = "重置";
+"common.copy" = "复制";
+"common.retry" = "重试";
+"common.info" = "信息";
+"common.dismiss" = "关闭";
+
+// MARK: - Conversations Screen
+
+"conversations.title" = "对话";
+"conversations.empty.title" = "没有对话";
+"conversations.empty.message" = "通过与另一台设备进行密钥交换仪式来开始安全对话。";
+"conversations.empty.action" = "新建对话";
+"conversations.new" = "新建";
+"conversations.burn" = "销毁";
+"conversations.burn.title" = "销毁对话？";
+"conversations.burn.message" = "这将永久销毁所有消息和加密密钥。此操作无法撤销。";
+"conversations.remaining" = "剩余 %@";
+"conversations.info" = "对话信息";
+"conversations.you" = "您 %d%%";
+"conversations.them" = "对方 %d%%";
+
+// MARK: - Messaging Screen
+
+"messaging.empty.title" = "没有消息";
+"messaging.empty.message" = "消息是临时的，阅读后会消失";
+"messaging.input.placeholder" = "消息";
+"messaging.send" = "发送消息";
+"messaging.peer.burned" = "此对话已被销毁";
+"messaging.location" = "位置";
+"messaging.expired" = "消息已过期";
+"messaging.open_maps" = "在地图中打开";
+"messaging.size_indicator" = "%@ / %d KB";
+
+// MARK: - Message Status
+
+"status.sending" = "发送中...";
+"status.sent" = "已发送至服务器";
+"status.delivered" = "已送达";
+"status.failed" = "发送失败";
+"status.relay_error" = "中继错误";
+"status.expired" = "已过期";
+
+// MARK: - Time Formats
+
+"time.seconds" = "%d秒";
+"time.minutes" = "%d分";
+"time.hours" = "%d时";
+"time.days" = "%d天";
+"time.minutes_seconds" = "%d分%d秒";
+"time.hours_minutes" = "%d时%d分";
+"time.days_hours" = "%d天%d时";
+
+// MARK: - Conversation Settings
+
+"settings.conversation.title" = "设置";
+"settings.privacy" = "隐私";
+"settings.privacy.secret_mode" = "保密模式";
+"settings.privacy.secret_mode.description" = "按住显示消息";
+"settings.privacy.secret_mode.footer" = "启用后，收到的消息将保持加密状态，直到您按住气泡才能显示。";
+"settings.relay" = "中继服务器";
+"settings.relay.url" = "服务器地址";
+"settings.relay.url.placeholder" = "https://relay.example.com";
+"settings.relay.test" = "测试连接";
+"settings.relay.connected" = "已连接 - %@";
+"settings.relay.connected.latency" = "已连接 - %@（%dms）";
+"settings.relay.footer" = "消息在服务器内存中存储%@，在送达或过期后删除。";
+"settings.persistence" = "消息存储";
+"settings.persistence.delayed" = "延迟阅读";
+"settings.persistence.delayed.description" = "消息保留48小时";
+"settings.persistence.delayed.footer.on" = "消息将保留最多48小时，允许延迟阅读。";
+"settings.persistence.delayed.footer.off" = "消息在30秒后过期（实时模式）。";
+
+// MARK: - Rename Dialog
+
+"rename.title" = "重命名对话";
+"rename.placeholder" = "名称";
+"rename.message" = "输入自定义名称或留空使用助记词";
+
+// MARK: - Ceremony - General
+
+"ceremony.title" = "新建对话";
+
+// MARK: - Ceremony - Role Selection
+
+"ceremony.role.title" = "选择角色";
+"ceremony.role.subtitle" = "一台设备创建对话，另一台通过扫描加入";
+"ceremony.role.initiate" = "创建";
+"ceremony.role.initiate.description" = "生成密钥并显示二维码";
+"ceremony.role.initiate.badge" = "发起者";
+"ceremony.role.receive" = "加入";
+"ceremony.role.receive.description" = "扫描另一台设备的二维码";
+"ceremony.role.receive.badge" = "接收者";
+
+// MARK: - Ceremony - Pad Size Selection
+
+"ceremony.padsize.title" = "密钥大小";
+"ceremony.padsize.subtitle" = "更大的密钥允许更多消息，但传输时间更长";
+"ceremony.padsize.small" = "64 KB";
+"ceremony.padsize.small.description" = "约100条消息";
+"ceremony.padsize.medium" = "256 KB";
+"ceremony.padsize.medium.description" = "约400条消息";
+"ceremony.padsize.large" = "1 MB";
+"ceremony.padsize.large.description" = "约1,600条消息";
+
+// MARK: - Ceremony - Options
+
+"ceremony.options.title" = "设置";
+"ceremony.options.subtitle" = "配置消息处理和送达方式";
+"ceremony.options.timing" = "消息计时";
+"ceremony.options.retention" = "服务器保留";
+"ceremony.options.retention.description" = "未读消息等待时长";
+"ceremony.options.disappearing" = "阅后即焚";
+"ceremony.options.disappearing.description" = "阅读后自动删除";
+"ceremony.options.storage" = "本地消息存储";
+"ceremony.options.storage.faceid_enabled" = "面容ID已启用";
+"ceremony.options.storage.enabled_description" = "消息可以本地存储在您的设备上，由面容ID保护。它们会在计时器到期时被安全擦除。";
+"ceremony.options.storage.enable_toggle" = "启用本地存储";
+"ceremony.options.storage.enabled_footer" = "消息将在应用会话之间保留，直到过期。";
+"ceremony.options.storage.faceid_disabled" = "面容ID未启用";
+"ceremony.options.storage.disabled_description" = "要启用本地消息存储，您必须先在设置中启用面容ID。没有它，消息只存储在内存中，离开对话时会丢失。";
+"ceremony.options.notifications" = "通知";
+"ceremony.options.notifications.new" = "新消息";
+"ceremony.options.notifications.new.description" = "消息到达时提醒";
+"ceremony.options.notifications.expiring" = "即将过期警告";
+"ceremony.options.notifications.expiring.description" = "过期前5分钟和1分钟";
+"ceremony.options.notifications.expired" = "已过期消息";
+"ceremony.options.notifications.expired.description" = "消息过期时提醒";
+"ceremony.options.notifications.failed" = "送达失败";
+"ceremony.options.notifications.failed.description" = "收件人错过消息时提醒";
+"ceremony.options.color" = "对话颜色";
+
+// MARK: - Ceremony - Passphrase
+
+"ceremony.passphrase.title" = "密码保护";
+"ceremony.passphrase.toggle" = "使用共享密码加密二维码";
+"ceremony.passphrase.toggle.description" = "双方必须约定相同的密码";
+"ceremony.passphrase.placeholder" = "输入密码";
+"ceremony.passphrase.valid" = "密码有效";
+"ceremony.passphrase.invalid" = "需要4-64个可打印字符";
+"ceremony.passphrase.hint" = "向您的伙伴口头告知此密码";
+"ceremony.passphrase.receiver.toggle" = "密码保护";
+"ceremony.passphrase.receiver.toggle.description" = "如果发送者使用了密码，请启用";
+"ceremony.passphrase.receiver.hint" = "输入发送者告知的相同密码";
+
+// MARK: - Ceremony - Consent
+
+"ceremony.consent.title" = "安全验证";
+"ceremony.consent.subtitle" = "继续前请确认您已理解";
+"ceremony.consent.section.environment" = "环境";
+"ceremony.consent.environment" = "没有人在看我的屏幕";
+"ceremony.consent.environment.detail" = "没有摄像头、镜子或人可以看到您的显示器";
+"ceremony.consent.surveillance" = "我没有受到监视或胁迫";
+"ceremony.consent.surveillance.detail" = "如果您被强迫或监视，请勿继续";
+"ceremony.consent.section.responsibilities" = "责任";
+"ceremony.consent.ethics" = "我理解道德责任";
+"ceremony.consent.ethics.detail" = "此工具用于合法的私人通信";
+"ceremony.consent.understand" = "密钥无法恢复";
+"ceremony.consent.understand.detail" = "如果您失去访问权限，消息将永远丢失";
+"ceremony.consent.section.limitations" = "限制";
+"ceremony.consent.relay_warning" = "中继服务器可能不可用";
+"ceremony.consent.relay_warning.detail" = "没有连接时消息无法送达";
+"ceremony.consent.persistence_warning" = "中继数据不会持久化";
+"ceremony.consent.persistence_warning.detail" = "服务器重启可能导致未读消息丢失";
+"ceremony.consent.burn_warning" = "销毁会摧毁所有密钥材料";
+"ceremony.consent.burn_warning.detail" = "任何一方都可以销毁，无法撤销";
+"ceremony.consent.proceed" = "我理解并继续";
+"ceremony.consent.ethics.link" = "阅读道德准则";
+
+// MARK: - Ceremony - Entropy
+
+"ceremony.entropy.title" = "生成熵";
+"ceremony.entropy.subtitle" = "绘制随机图案以生成安全随机数";
+"ceremony.entropy.complete" = "熵生成完成！";
+"ceremony.entropy.hint" = "在此绘制";
+"ceremony.entropy.progress.hint" = "随机图案增强加密强度";
+"ceremony.entropy.progress" = "%d%%";
+
+// MARK: - Ceremony - Generating
+
+"ceremony.generating.pad" = "生成密钥";
+"ceremony.generating.pad.subtitle" = "正在创建安全加密密钥...";
+"ceremony.generating.qr" = "生成二维码";
+"ceremony.generating.qr.subtitle" = "正在准备%d帧用于传输...";
+
+// MARK: - Ceremony - Transfer (Sender)
+
+"ceremony.transfer.sender.title" = "播放二维码";
+"ceremony.transfer.sender.subtitle" = "让另一台设备持续扫描";
+"ceremony.transfer.sender.frame" = "第%d帧，共%d帧";
+"ceremony.transfer.sender.fps" = "%d帧/秒";
+"ceremony.transfer.sender.fps.default" = "%d帧/秒（默认）";
+"ceremony.transfer.sender.ready" = "接收者就绪";
+
+// MARK: - Ceremony - Transfer (Receiver)
+
+"ceremony.transfer.receiver.title" = "准备扫描";
+"ceremony.transfer.receiver.subtitle" = "将相机对准发送者的二维码";
+"ceremony.transfer.receiver.how_it_works" = "工作原理";
+"ceremony.transfer.receiver.scanning" = "扫描中...";
+"ceremony.transfer.receiver.scanning.subtitle" = "在此过程中保持应用打开";
+"ceremony.transfer.receiver.looking" = "正在寻找二维码...";
+"ceremony.transfer.receiver.hold_steady" = "保持稳定以获得最佳效果";
+"ceremony.transfer.receiver.progress" = "%d%%";
+"ceremony.transfer.receiver.blocks" = "%d / %d 块";
+"ceremony.transfer.receiver.complete" = "所有帧已接收！";
+"ceremony.transfer.receiver.start" = "开始扫描";
+
+// MARK: - Ceremony - Verification
+
+"ceremony.verify.title" = "验证校验和";
+"ceremony.verify.subtitle" = "两台设备必须显示相同的词语";
+"ceremony.verify.words" = "安全词语";
+"ceremony.verify.settings" = "接收的设置";
+"ceremony.verify.name.title" = "名称（可选）";
+"ceremony.verify.name.placeholder" = "例如：小明、工作、家庭";
+"ceremony.verify.name.hint" = "可选 - 帮助您识别此对话";
+"ceremony.verify.faceid_required.title" = "需要面容ID";
+"ceremony.verify.faceid_required.message" = "此对话启用了本地消息存储，需要面容ID。请在设置中启用面容ID后再继续。";
+"ceremony.verify.storage_enabled" = "本地存储已启用";
+"ceremony.verify.storage_enabled.detail" = "消息将本地存储在您的设备上，由面容ID保护。";
+"ceremony.verify.match" = "词语匹配";
+"ceremony.verify.nomatch" = "词语不匹配";
+
+// MARK: - Ceremony - Complete
+
+"ceremony.complete.title" = "对话已创建！";
+"ceremony.complete.details" = "详情";
+"ceremony.complete.padsize" = "密钥大小";
+"ceremony.complete.role" = "您的角色";
+"ceremony.complete.disappearing" = "阅后即焚";
+"ceremony.complete.security" = "安全已激活";
+"ceremony.complete.action" = "开始聊天";
+
+// MARK: - Ceremony - Failed
+
+"ceremony.failed.title" = "设置失败";
+"ceremony.failed.troubleshooting" = "故障排除";
+"ceremony.failed.retry" = "重试";
+
+// MARK: - Burn Confirmation
+
+"burn.title" = "销毁 \"%@\"？";
+"burn.subtitle" = "此操作无法撤销";
+"burn.all.title" = "销毁所有对话？";
+"burn.all.subtitle" = "紧急销毁所有数据";
+"burn.destroyed" = "将被永久销毁";
+"burn.item.pad" = "加密密钥";
+"burn.item.messages" = "所有消息历史";
+"burn.item.connection" = "与对方的连接";
+"burn.item.all" = "所有对话";
+"burn.confirm.prompt" = "输入\"BURN\"确认";
+"burn.confirm.action" = "永久销毁";
+"burn.confirm.all.action" = "销毁全部";
+
+// MARK: - Burned Conversation
+
+"burned.title" = "对话已销毁";
+"burned.message" = "\"%@\" 已被对方销毁。";
+"burned.detail" = "此对话和所有消息已被永久销毁。";
+
+// MARK: - App Settings
+
+"appsettings.title" = "设置";
+"appsettings.section.security" = "安全";
+"appsettings.security.biometric" = "使用生物识别解锁";
+"appsettings.security.lock_background" = "后台锁定";
+"appsettings.security.lock_background.description" = "返回应用时需要认证";
+"appsettings.security.unavailable" = "生物识别不可用";
+"appsettings.security.unavailable.description" = "请在设置中设置面容ID或触控ID";
+"appsettings.section.relay" = "中继服务器";
+"appsettings.relay.url" = "服务器地址";
+"appsettings.relay.modified" = "已修改";
+"appsettings.relay.status" = "连接状态";
+"appsettings.relay.testing" = "测试中...";
+"appsettings.relay.connected" = "已连接到 %@ • %dms";
+"appsettings.relay.not_tested" = "未测试";
+"appsettings.relay.footer" = "新对话的默认服务器。每个对话可以使用不同的中继。";
+"appsettings.section.about" = "关于";
+"appsettings.about.version" = "版本";
+"appsettings.about.version.value" = "1.0.0";
+"appsettings.about.encryption" = "加密";
+"appsettings.about.encryption.value" = "一次性密码本";
+"appsettings.about.security" = "安全模型";
+"appsettings.about.security.description" = "ASH如何保护您的消息";
+"appsettings.about.security.link" = "安全";
+"appsettings.about.privacy" = "隐私";
+"appsettings.about.privacy.description" = "我们收集的数据（无）";
+"appsettings.section.danger" = "危险区域";
+"appsettings.danger.burnall" = "紧急销毁全部";
+"appsettings.danger.burnall.description" = "立即销毁所有对话和密钥";
+"appsettings.danger.burnall.footer" = "紧急销毁将永久摧毁所有对话、加密密钥和消息。此操作无法撤销。";
+"appsettings.burnall.title" = "销毁所有对话？";
+"appsettings.burnall.message" = "这将永久销毁所有对话和加密密钥。此操作无法撤销。";
+"appsettings.burnall.action" = "销毁全部";
+
+// MARK: - Lock Screen
+
+"lock.title" = "应用已锁定";
+"lock.subtitle" = "点击以认证";
+"lock.authenticating" = "认证中...";
+"lock.unlock" = "使用%@解锁";
+
+// MARK: - Message Detail
+
+"detail.title" = "详情";
+"detail.section.content" = "内容";
+"detail.latitude" = "纬度";
+"detail.longitude" = "经度";
+"detail.section.status" = "状态";
+"detail.sent" = "已发送";
+"detail.delivery" = "送达";
+"detail.expires" = "过期";
+"detail.copy" = "复制到剪贴板";
+
+// MARK: - Conversation Info
+
+"convinfo.title" = "对话信息";
+"convinfo.section.security" = "安全验证";
+"convinfo.security.description" = "双方必须有相同的代码：";
+"convinfo.conversation_id" = "对话ID";
+"convinfo.identity" = "身份";
+"convinfo.section.relay" = "中继服务器";
+"convinfo.relay.url" = "地址";
+"convinfo.relay.latency" = "延迟";
+"convinfo.relay.latency.value" = "%d毫秒";
+"convinfo.relay.latency.unknown" = "—";
+"convinfo.section.settings" = "消息设置";
+"convinfo.settings.persistent" = "消息在会话之间本地存储（需要面容ID）。它们在计时器到期时自动删除。";
+"convinfo.settings.ephemeral" = "服务器保留：未读消息在服务器上等待的时长。阅后即焚：消息阅读后保持可见的时长。关闭应用时消息会被清除。";
+"convinfo.section.pad" = "加密密钥";
+"convinfo.pad.you" = "%d%% 您";
+"convinfo.pad.them" = "%d%% 对方";
+"convinfo.pad.exhausted" = "密钥已耗尽 - 无法再发送消息";
+"convinfo.section.danger" = "危险区域";
+
+// MARK: - QR Scanner
+
+"scanner.permission.title" = "需要相机权限";
+"scanner.permission.message" = "请在设置中启用相机权限以扫描二维码";
+"scanner.permission.action" = "打开设置";
+
+// MARK: - QR Code
+
+"qr.failed" = "二维码生成失败";
+
+// MARK: - Ethics
+
+"ethics.title" = "道德准则";
+"ethics.intro" = "ASH专为合法的私人通信设计。使用此应用，即表示您同意：";
+"ethics.principle.1.title" = "尊重隐私";
+"ethics.principle.1.detail" = "仅在双方同意且有合法隐私需求的情况下使用此工具进行通信。";
+"ethics.principle.2.title" = "禁止有害使用";
+"ethics.principle.2.detail" = "不要使用ASH计划、协调或促进非法活动、骚扰或伤害他人。";
+"ethics.principle.3.title" = "诚实沟通";
+"ethics.principle.3.detail" = "对您的通信伙伴诚实说明对话的性质和目的。";
+"ethics.principle.4.title" = "承担责任";
+"ethics.principle.4.detail" = "您对消息内容和工具使用方式负全部责任。";
+"ethics.principle.5.title" = "了解限制";
+"ethics.principle.5.detail" = "ASH提供技术隐私保护，但无法防止物理监控、设备被入侵或被迫披露。";
+"ethics.footer" = "ASH旨在保护合法的隐私需求，如记者与消息来源的通信、举报、个人隐私和人权工作。滥用会损害这些重要目的。";
+
+// MARK: - Errors
+
+"error.insufficient_pad" = "剩余密钥不足";
+"error.decryption_failed" = "消息解密失败";
+"error.invalid_url" = "无效的URL";
+"error.connection_failed" = "连接失败";
+"error.server_error" = "服务器返回错误";
+"error.no_connection" = "无法连接到中继";
+"error.relay_error" = "中继错误";
+"error.message_too_large" = "消息过大";
+"error.message_too_large.detail" = "最大%d KB，当前%d KB";
+
+// MARK: - Delivery Status
+
+"delivery.sending" = "发送中...";
+"delivery.sent" = "已发送至服务器";
+"delivery.delivered" = "已送达";
+"delivery.failed" = "失败";
+"delivery.tap_to_retry" = "点击重试";
+
+// MARK: - Retention Options
+
+"retention.5min" = "5分钟";
+"retention.1hour" = "1小时";
+"retention.1day" = "24小时";
+"retention.7days" = "7天";
+
+// MARK: - Disappearing Options
+
+"disappearing.off" = "关闭";
+"disappearing.30sec" = "30秒";
+"disappearing.5min" = "5分钟";
+"disappearing.1hour" = "1小时";
+"disappearing.1day" = "24小时";
+
+// MARK: - Biometric Types
+
+"biometric.faceid" = "面容ID";
+"biometric.touchid" = "触控ID";
+"biometric.opticid" = "光学ID";
+"biometric.none" = "密码";
+
+// MARK: - Language
+
+"language.section" = "语言";
+"language.app_language" = "应用语言";
+"language.select" = "选择语言";
+"language.footer" = "更改需要重新启动应用才能完全生效。";
+"language.system" = "系统默认";
+"language.english" = "英语";
+"language.slovak" = "斯洛伐克语";
+"language.german" = "德语";
+"language.spanish" = "西班牙语";
+"language.french" = "法语";
+"language.japanese" = "日语";
+"language.portuguese_brazil" = "葡萄牙语（巴西）";
+"language.chinese_simplified" = "简体中文";
+
+// MARK: - Accessibility
+
+"accessibility.send_message" = "发送消息";
+"accessibility.share_location" = "分享位置";
+"accessibility.conversation" = "%@，剩余%@，%@";
+"accessibility.qr_frame" = "二维码第%d帧，共%d帧";
+"accessibility.scanned_frames" = "已扫描%d/%d帧";
+"accessibility.expires_in" = "%@后过期";
+"accessibility.server_expires_in" = "服务器%@后过期";
+"accessibility.progress" = "进度：%d%%";
+"accessibility.usage" = "使用：%d%%";
+"accessibility.usage.both" = "我的使用：%d%%，对方：%d%%";

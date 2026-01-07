@@ -7,6 +7,7 @@ import Foundation
 
 enum SSEEvent: Sendable {
     case message(SSEMessageEvent)
+    case delivered(SSEDeliveredEvent)
     case burned(Date)
     case ping
     case error(Error)
@@ -19,6 +20,11 @@ struct SSEMessageEvent: Sendable {
     let sequence: UInt64?
     let ciphertext: Data
     let receivedAt: Date
+}
+
+struct SSEDeliveredEvent: Sendable {
+    let blobIds: [UUID]
+    let deliveredAt: Date
 }
 
 protocol SSEServiceProtocol: Sendable {
@@ -214,6 +220,14 @@ final class SSEService: NSObject, SSEServiceProtocol, @unchecked Sendable {
                     return .message(message)
                 }
 
+            case "delivered":
+                if let blobIds = rawEvent.blob_ids,
+                   let deliveredAt = rawEvent.delivered_at {
+                    let event = SSEDeliveredEvent(blobIds: blobIds, deliveredAt: deliveredAt)
+                    Log.debug(.sse, "[\(logId)] Received delivery confirmation for \(blobIds.count) messages")
+                    return .delivered(event)
+                }
+
             case "burned":
                 if let burnedAt = rawEvent.burned_at {
                     Log.warning(.sse, "[\(logId)] Received burn event")
@@ -271,4 +285,7 @@ private struct RawSSEEvent: Decodable {
     let ciphertext: String?
     let received_at: Date?
     let burned_at: Date?
+    // For delivered events
+    let blob_ids: [UUID]?
+    let delivered_at: Date?
 }

@@ -62,9 +62,6 @@ struct ConversationsScreen: View {
         .sheet(item: $conversationForInfo) { conversation in
             ConversationInfoScreen(
                 conversation: conversation,
-                onColorChange: { color in
-                    Task { await viewModel.updateConversationColor(conversation, color: color) }
-                },
                 onBurn: {
                     conversationForInfo = nil
                     // Small delay to allow sheet dismissal

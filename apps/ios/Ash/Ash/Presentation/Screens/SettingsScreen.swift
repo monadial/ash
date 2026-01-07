@@ -878,7 +878,6 @@ private struct PrivacySection: View {
     }
 }
 
-
 #Preview {
     SettingsScreen(lockViewModel: AppLockViewModel(), onBurnAll: {}, onRelaySettingsChanged: {})
 }

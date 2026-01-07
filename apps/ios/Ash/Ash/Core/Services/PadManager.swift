@@ -51,6 +51,10 @@ protocol PadManagerProtocol: Sendable {
     /// Get current pad state (for UI display)
     func getPadState(for conversationId: String) async throws -> PadState
 
+    /// Zero pad bytes at specific offset (for forward secrecy)
+    /// When a message expires, the key material is zeroed to prevent future decryption
+    func zeroPadBytes(offset: UInt64, length: UInt64, for conversationId: String) async throws
+
     /// Wipe pad for a conversation
     func wipePad(for conversationId: String) async throws
 
@@ -213,6 +217,23 @@ actor PadManager: PadManagerProtocol {
             remaining: pad.remaining(),
             isExhausted: pad.isExhausted()
         )
+    }
+
+    // MARK: - Forward Secrecy
+
+    func zeroPadBytes(offset: UInt64, length: UInt64, for conversationId: String) async throws {
+        let pad = try await loadPad(for: conversationId)
+
+        // Zero the bytes using Rust's secure zeroing
+        let success = pad.zeroBytesAt(offset: offset, length: length)
+
+        if success {
+            // Persist updated state (with zeroed bytes)
+            try savePadState(pad: pad, for: conversationId)
+            Log.debug(.crypto, "Zeroed \(length) pad bytes at offset \(offset) for forward secrecy")
+        } else {
+            Log.warning(.crypto, "Failed to zero pad bytes: offset \(offset), length \(length) out of bounds")
+        }
     }
 
     // MARK: - Cleanup

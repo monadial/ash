@@ -4,7 +4,10 @@
 //! No persistence - data is lost on restart (by design).
 
 use crate::config::Config;
-use crate::models::*;
+use crate::models::{
+    BurnFlag, ConversationId, ConversationPrefs, DeviceRegistration, Platform, SequenceNumber,
+    StoredBlob,
+};
 use chrono::Utc;
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -12,30 +15,29 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 use uuid::Uuid;
 
-/// Thread-safe in-memory store
+// =============================================================================
+// Store
+// =============================================================================
+
+/// Thread-safe in-memory store for ephemeral message relay.
 #[derive(Clone)]
 pub struct Store {
-    /// Encrypted blobs per conversation
+    /// Encrypted blobs per conversation.
     blobs: Arc<DashMap<ConversationId, Vec<StoredBlob>>>,
-
-    /// Burn flags per conversation
+    /// Burn flags per conversation.
     burns: Arc<DashMap<ConversationId, BurnFlag>>,
-
-    /// Device registrations per conversation
+    /// Device registrations per conversation.
     devices: Arc<DashMap<ConversationId, Vec<DeviceRegistration>>>,
-
-    /// Conversation notification preferences
+    /// Conversation notification preferences.
     prefs: Arc<DashMap<ConversationId, ConversationPrefs>>,
-
-    /// Configuration
+    /// Configuration.
     config: Arc<Config>,
-
-    /// Metrics (aggregate only, no PII)
+    /// Aggregate metrics (no PII).
     metrics: Arc<RwLock<StoreMetrics>>,
 }
 
-/// Aggregate metrics (no PII, no per-conversation data)
-#[derive(Debug, Default)]
+/// Aggregate metrics (no PII, no per-conversation data).
+#[derive(Debug, Default, Clone)]
 pub struct StoreMetrics {
     pub total_blobs_stored: u64,
     pub total_blobs_expired: u64,
@@ -44,7 +46,7 @@ pub struct StoreMetrics {
 }
 
 impl Store {
-    /// Create a new empty store
+    /// Create a new empty store with the given configuration.
     pub fn new(config: Config) -> Self {
         Self {
             blobs: Arc::new(DashMap::new()),
@@ -56,7 +58,7 @@ impl Store {
         }
     }
 
-    /// Start background TTL cleanup task
+    /// Start background TTL cleanup task.
     pub fn start_cleanup_task(self: Arc<Self>) {
         let store = self.clone();
         let interval = self.config.cleanup_interval;
@@ -75,7 +77,11 @@ impl Store {
         );
     }
 
-    /// Store an encrypted blob for a conversation
+    // =========================================================================
+    // Blob Operations
+    // =========================================================================
+
+    /// Store an encrypted blob for a conversation.
     ///
     /// Uses fixed 5-minute TTL. Messages are deleted on expiry or ACK.
     pub async fn store_blob(
@@ -84,94 +90,80 @@ impl Store {
         ciphertext: Vec<u8>,
         sequence: Option<SequenceNumber>,
     ) -> Result<Uuid, StoreError> {
-        // Check if conversation is burned
         if self.is_burned(&conversation_id) {
             return Err(StoreError::ConversationBurned);
         }
 
-        // Check ciphertext size
         if ciphertext.len() > self.config.max_ciphertext_size {
             return Err(StoreError::PayloadTooLarge);
         }
 
         let now = Utc::now();
         let ttl = self.config.blob_ttl;
+        let expires_at = now + chrono::Duration::from_std(ttl).expect("valid duration");
 
         let blob = StoredBlob {
             id: Uuid::new_v4(),
             sequence,
             ciphertext,
             received_at: now,
-            expires_at: now + chrono::Duration::from_std(ttl).unwrap(),
+            expires_at,
         };
 
         let blob_id = blob.id;
 
-        // Store blob
+        // Store blob with queue limit enforcement
         let mut entry = self.blobs.entry(conversation_id).or_default();
-        let blobs = entry.value_mut();
-
-        // Enforce max blobs limit
-        if blobs.len() >= self.config.max_blobs_per_conversation {
+        if entry.value().len() >= self.config.max_blobs_per_conversation {
             return Err(StoreError::QueueFull);
         }
-
-        blobs.push(blob);
+        entry.value_mut().push(blob);
 
         // Update metrics
-        {
-            let mut metrics = self.metrics.write().await;
-            metrics.total_blobs_stored += 1;
-        }
+        self.metrics.write().await.total_blobs_stored += 1;
 
-        debug!(
-            blob_id = %blob_id,
-            ttl_secs = ttl.as_secs(),
-            "Stored blob"
-        );
-
+        debug!(blob_id = %blob_id, ttl_secs = ttl.as_secs(), "Stored blob");
         Ok(blob_id)
     }
 
-    /// Get blobs for a conversation since a cursor
+    /// Get blobs for a conversation, optionally filtered by cursor.
     pub fn get_blobs(
         &self,
         conversation_id: &ConversationId,
-        cursor: Option<&Cursor>,
-    ) -> (Vec<StoredBlob>, Option<Cursor>) {
-        let now = Utc::now();
+        cursor: Option<&crate::models::Cursor>,
+    ) -> (Vec<StoredBlob>, Option<crate::models::Cursor>) {
+        use crate::models::Cursor;
 
-        // Check burn status
-        let burned = self.is_burned(conversation_id);
-        if burned {
+        if self.is_burned(conversation_id) {
             return (vec![], None);
         }
 
-        let blobs = self.blobs.get(conversation_id);
-        let blobs = match blobs {
-            Some(ref entry) => entry.value(),
-            None => return (vec![], None),
+        let now = Utc::now();
+
+        let Some(entry) = self.blobs.get(conversation_id) else {
+            return (vec![], None);
         };
 
         // Filter expired and apply cursor
-        let filtered: Vec<StoredBlob> = blobs
+        let filtered: Vec<StoredBlob> = entry
+            .value()
             .iter()
             .filter(|b| b.expires_at > now)
             .filter(|b| {
-                if let Some(cursor) = cursor {
-                    if let Some(last_id) = cursor.last_id {
-                        return b.id != last_id; // Skip if same as last seen
+                cursor.map_or(true, |c| {
+                    if let Some(last_id) = c.last_id {
+                        return b.id != last_id;
                     }
-                    if let Some(since) = cursor.since {
+                    if let Some(since) = c.since {
                         return b.received_at > since;
                     }
-                }
-                true
+                    true
+                })
             })
             .cloned()
             .collect();
 
-        // Generate next cursor
+        // Generate next cursor from last blob
         let next_cursor = filtered.last().map(|b| Cursor {
             last_id: Some(b.id),
             last_sequence: b.sequence,
@@ -181,21 +173,40 @@ impl Store {
         (filtered, next_cursor)
     }
 
-    /// Register a device for push notifications
+    /// Delete a specific blob by ID (used for ACK).
+    ///
+    /// Returns `true` if the blob was found and deleted.
+    pub async fn delete_blob(&self, conversation_id: &ConversationId, blob_id: &Uuid) -> bool {
+        if let Some(mut entry) = self.blobs.get_mut(conversation_id) {
+            let before = entry.value().len();
+            entry.value_mut().retain(|b| b.id != *blob_id);
+            let deleted = entry.value().len() < before;
+            if deleted {
+                debug!(blob_id = %blob_id, "Deleted blob on ACK");
+            }
+            return deleted;
+        }
+        false
+    }
+
+    // =========================================================================
+    // Device Registration
+    // =========================================================================
+
+    /// Register a device for push notifications.
     pub async fn register_device(
         &self,
         conversation_id: ConversationId,
         device_token: String,
         platform: Platform,
     ) -> Result<(), StoreError> {
-        // Check if conversation is burned
         if self.is_burned(&conversation_id) {
             return Err(StoreError::ConversationBurned);
         }
 
         let now = Utc::now();
-        let expires_at = now
-            + chrono::Duration::from_std(self.config.device_token_ttl).unwrap();
+        let expires_at =
+            now + chrono::Duration::from_std(self.config.device_token_ttl).expect("valid duration");
 
         let registration = DeviceRegistration {
             device_token: device_token.clone(),
@@ -205,29 +216,18 @@ impl Store {
         };
 
         let mut entry = self.devices.entry(conversation_id).or_default();
-        let devices = entry.value_mut();
-
         // Remove existing registration with same token (refresh)
-        devices.retain(|d| d.device_token != device_token);
+        entry.value_mut().retain(|d| d.device_token != device_token);
+        entry.value_mut().push(registration);
 
-        // Add new registration
-        devices.push(registration);
-
-        // Update metrics
-        {
-            let mut metrics = self.metrics.write().await;
-            metrics.total_registrations += 1;
-        }
-
+        self.metrics.write().await.total_registrations += 1;
         debug!("Registered device for push notifications");
-
         Ok(())
     }
 
-    /// Get device tokens for a conversation
+    /// Get valid device tokens for a conversation.
     pub fn get_device_tokens(&self, conversation_id: &ConversationId) -> Vec<DeviceRegistration> {
         let now = Utc::now();
-
         self.devices
             .get(conversation_id)
             .map(|entry| {
@@ -241,35 +241,31 @@ impl Store {
             .unwrap_or_default()
     }
 
-    /// Burn a conversation (delete all data, set burn flag)
+    // =========================================================================
+    // Burn Operations
+    // =========================================================================
+
+    /// Burn a conversation (delete all data, set burn flag).
     pub async fn burn(&self, conversation_id: ConversationId) {
-        // Remove all blobs immediately
+        // Remove all data immediately
         self.blobs.remove(&conversation_id);
-
-        // Remove device registrations
         self.devices.remove(&conversation_id);
-
-        // Remove notification preferences
         self.prefs.remove(&conversation_id);
 
         // Set burn flag with TTL
         let now = Utc::now();
         let burn_flag = BurnFlag {
             burned_at: now,
-            expires_at: now + chrono::Duration::from_std(self.config.burn_ttl).unwrap(),
+            expires_at: now
+                + chrono::Duration::from_std(self.config.burn_ttl).expect("valid duration"),
         };
         self.burns.insert(conversation_id, burn_flag);
 
-        // Update metrics
-        {
-            let mut metrics = self.metrics.write().await;
-            metrics.total_burns += 1;
-        }
-
+        self.metrics.write().await.total_burns += 1;
         debug!("Burned conversation");
     }
 
-    /// Check if a conversation is burned
+    /// Check if a conversation is burned.
     pub fn is_burned(&self, conversation_id: &ConversationId) -> bool {
         let now = Utc::now();
         self.burns
@@ -278,7 +274,7 @@ impl Store {
             .unwrap_or(false)
     }
 
-    /// Get burn status for a conversation
+    /// Get burn status for a conversation.
     pub fn get_burn_status(&self, conversation_id: &ConversationId) -> Option<BurnFlag> {
         let now = Utc::now();
         self.burns
@@ -287,20 +283,28 @@ impl Store {
             .map(|entry| entry.value().clone())
     }
 
-    /// Store notification preferences for a conversation
-    pub fn store_prefs(&self, conversation_id: ConversationId, notification_flags: u16, ttl_seconds: u64) {
+    // =========================================================================
+    // Preferences
+    // =========================================================================
+
+    /// Store notification preferences for a conversation.
+    pub fn store_prefs(
+        &self,
+        conversation_id: ConversationId,
+        notification_flags: u16,
+        ttl_seconds: u64,
+    ) {
         let prefs = ConversationPrefs::new(notification_flags, ttl_seconds);
         self.prefs.insert(conversation_id, prefs);
         debug!("Stored conversation preferences");
     }
 
-    /// Get notification preferences for a conversation
+    /// Get notification preferences for a conversation.
     pub fn get_prefs(&self, conversation_id: &ConversationId) -> Option<ConversationPrefs> {
-        self.prefs.get(conversation_id).map(|entry| entry.value().clone())
+        self.prefs.get(conversation_id).map(|e| e.value().clone())
     }
 
-    /// Get all conversations with expiring message notifications enabled
-    /// Returns conversation IDs that have NOTIFY_MESSAGE_EXPIRING flag set
+    /// Get all conversations with expiry notifications enabled.
     pub fn get_conversations_with_expiry_notifications(&self) -> Vec<ConversationId> {
         self.prefs
             .iter()
@@ -309,7 +313,11 @@ impl Store {
             .collect()
     }
 
-    /// Clean up expired data
+    // =========================================================================
+    // Cleanup
+    // =========================================================================
+
+    /// Clean up expired data.
     async fn cleanup_expired(&self) {
         let now = Utc::now();
         let mut expired_blobs = 0u64;
@@ -318,11 +326,8 @@ impl Store {
         for mut entry in self.blobs.iter_mut() {
             let before = entry.value().len();
             entry.value_mut().retain(|b| b.expires_at > now);
-            let after = entry.value().len();
-            expired_blobs += (before - after) as u64;
+            expired_blobs += (before - entry.value().len()) as u64;
         }
-
-        // Remove empty blob entries
         self.blobs.retain(|_, v| !v.is_empty());
 
         // Clean up expired burn flags
@@ -334,27 +339,23 @@ impl Store {
         }
         self.devices.retain(|_, v| !v.is_empty());
 
-        // Update metrics
         if expired_blobs > 0 {
-            let mut metrics = self.metrics.write().await;
-            metrics.total_blobs_expired += expired_blobs;
+            self.metrics.write().await.total_blobs_expired += expired_blobs;
             debug!(expired_blobs, "Cleaned up expired data");
         }
     }
 
-    /// Get aggregate metrics (no PII)
+    /// Get aggregate metrics (no PII).
     pub async fn get_metrics(&self) -> StoreMetrics {
-        let metrics = self.metrics.read().await;
-        StoreMetrics {
-            total_blobs_stored: metrics.total_blobs_stored,
-            total_blobs_expired: metrics.total_blobs_expired,
-            total_burns: metrics.total_burns,
-            total_registrations: metrics.total_registrations,
-        }
+        self.metrics.read().await.clone()
     }
 }
 
-/// Store errors
+// =============================================================================
+// Errors
+// =============================================================================
+
+/// Store operation errors.
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
     #[error("conversation has been burned")]
@@ -368,4 +369,132 @@ pub enum StoreError {
 
     #[error("database error: {0}")]
     DatabaseError(String),
+}
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    fn test_config() -> Config {
+        Config {
+            bind_addr: "127.0.0.1".to_string(),
+            port: 8080,
+            blob_ttl: std::time::Duration::from_secs(300),
+            burn_ttl: std::time::Duration::from_secs(300),
+            device_token_ttl: std::time::Duration::from_secs(3600),
+            max_ciphertext_size: 8192,
+            max_blobs_per_conversation: 50,
+            cleanup_interval: std::time::Duration::from_secs(10),
+            apns_team_id: None,
+            apns_key_id: None,
+            apns_key_path: None,
+            apns_bundle_id: None,
+            apns_sandbox: true,
+        }
+    }
+
+    #[tokio::test]
+    async fn store_and_retrieve_blob() {
+        let store = Store::new(test_config());
+        let conv_id = "a".repeat(64);
+        let ciphertext = vec![1, 2, 3, 4];
+
+        let blob_id = store
+            .store_blob(conv_id.clone(), ciphertext.clone(), Some(1))
+            .await
+            .expect("store failed");
+
+        let (blobs, cursor) = store.get_blobs(&conv_id, None);
+        assert_eq!(blobs.len(), 1);
+        assert_eq!(blobs[0].id, blob_id);
+        assert_eq!(blobs[0].ciphertext, ciphertext);
+        assert!(cursor.is_some());
+    }
+
+    #[tokio::test]
+    async fn delete_blob_on_ack() {
+        let store = Store::new(test_config());
+        let conv_id = "b".repeat(64);
+
+        let blob_id = store
+            .store_blob(conv_id.clone(), vec![1], None)
+            .await
+            .unwrap();
+
+        assert!(store.delete_blob(&conv_id, &blob_id).await);
+        assert!(!store.delete_blob(&conv_id, &blob_id).await); // Already deleted
+
+        let (blobs, _) = store.get_blobs(&conv_id, None);
+        assert!(blobs.is_empty());
+    }
+
+    #[tokio::test]
+    async fn burn_removes_all_data() {
+        let store = Store::new(test_config());
+        let conv_id = "c".repeat(64);
+
+        store
+            .store_blob(conv_id.clone(), vec![1], None)
+            .await
+            .unwrap();
+        store.store_prefs(conv_id.clone(), 0, 300);
+
+        store.burn(conv_id.clone()).await;
+
+        assert!(store.is_burned(&conv_id));
+        let (blobs, _) = store.get_blobs(&conv_id, None);
+        assert!(blobs.is_empty());
+    }
+
+    #[tokio::test]
+    async fn queue_full_error() {
+        let mut config = test_config();
+        config.max_blobs_per_conversation = 2;
+        let store = Store::new(config);
+        let conv_id = "d".repeat(64);
+
+        store
+            .store_blob(conv_id.clone(), vec![1], None)
+            .await
+            .unwrap();
+        store
+            .store_blob(conv_id.clone(), vec![2], None)
+            .await
+            .unwrap();
+
+        let result = store.store_blob(conv_id.clone(), vec![3], None).await;
+        assert!(matches!(result, Err(StoreError::QueueFull)));
+    }
+
+    #[tokio::test]
+    async fn payload_too_large_error() {
+        let mut config = test_config();
+        config.max_ciphertext_size = 10;
+        let store = Store::new(config);
+        let conv_id = "e".repeat(64);
+
+        let result = store.store_blob(conv_id, vec![0; 100], None).await;
+        assert!(matches!(result, Err(StoreError::PayloadTooLarge)));
+    }
+
+    #[tokio::test]
+    async fn burned_conversation_rejects_operations() {
+        let store = Store::new(test_config());
+        let conv_id = "f".repeat(64);
+
+        store.burn(conv_id.clone()).await;
+
+        let result = store.store_blob(conv_id.clone(), vec![1], None).await;
+        assert!(matches!(result, Err(StoreError::ConversationBurned)));
+
+        let result = store
+            .register_device(conv_id, "token".to_string(), Platform::Ios)
+            .await;
+        assert!(matches!(result, Err(StoreError::ConversationBurned)));
+    }
 }

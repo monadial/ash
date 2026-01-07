@@ -160,7 +160,11 @@ fn extract_auth_token(headers: &axum::http::HeaderMap) -> Result<String, AuthErr
 }
 
 /// Verify auth token for a conversation
-fn verify_auth_token(state: &AppState, conversation_id: &str, token: &str) -> Result<(), AuthError> {
+fn verify_auth_token(
+    state: &AppState,
+    conversation_id: &str,
+    token: &str,
+) -> Result<(), AuthError> {
     if !state.auth.is_registered(conversation_id) {
         return Err(AuthError::ConversationNotFound);
     }
@@ -175,7 +179,11 @@ fn verify_auth_token(state: &AppState, conversation_id: &str, token: &str) -> Re
 }
 
 /// Verify burn token for a conversation
-fn verify_burn_token(state: &AppState, conversation_id: &str, token: &str) -> Result<(), AuthError> {
+fn verify_burn_token(
+    state: &AppState,
+    conversation_id: &str,
+    token: &str,
+) -> Result<(), AuthError> {
     if !state.auth.is_registered(conversation_id) {
         return Err(AuthError::ConversationNotFound);
     }
@@ -283,7 +291,10 @@ pub async fn submit_message(
     // Send push notifications to registered devices (best-effort, async)
     // Only send if NOTIFY_NEW_MESSAGE flag is set
     let prefs = state.store.get_prefs(&conversation_id);
-    let should_notify = prefs.as_ref().map(|p| p.notify_new_message()).unwrap_or(true);
+    let should_notify = prefs
+        .as_ref()
+        .map(|p| p.notify_new_message())
+        .unwrap_or(true);
 
     if should_notify {
         let devices = state.store.get_device_tokens(&conversation_id);
@@ -410,6 +421,55 @@ pub async fn burn_conversation(
     Ok(Json(BurnConversationResponse { accepted: true }))
 }
 
+// === Message Acknowledgment ===
+
+/// POST /v1/messages/ack - Acknowledge message delivery
+///
+/// Called by recipient when they receive and decrypt a message.
+/// This deletes the message from the server and notifies the sender via SSE.
+pub async fn ack_messages(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<AckMessageRequest>,
+) -> Result<Json<AckMessageResponse>, ApiError> {
+    // Verify auth token
+    let token = extract_auth_token(&headers)?;
+    verify_auth_token(&state, &req.conversation_id, &token)?;
+
+    if req.blob_ids.is_empty() {
+        return Ok(Json(AckMessageResponse { acknowledged: 0 }));
+    }
+
+    let conversation_id = req.conversation_id.clone();
+    let mut acknowledged = 0;
+
+    // Delete acknowledged messages from store
+    for blob_id in &req.blob_ids {
+        if state.store.delete_blob(&conversation_id, blob_id).await {
+            acknowledged += 1;
+        }
+    }
+
+    if acknowledged > 0 {
+        debug!(
+            conv_id_prefix = &conversation_id[..8],
+            count = acknowledged,
+            "Messages acknowledged"
+        );
+
+        // Broadcast delivery event to SSE subscribers (notifies sender)
+        let _ = state.broadcast_tx.send(BroadcastEvent {
+            conversation_id,
+            event: StreamEvent::Delivered {
+                blob_ids: req.blob_ids,
+                delivered_at: chrono::Utc::now(),
+            },
+        });
+    }
+
+    Ok(Json(AckMessageResponse { acknowledged }))
+}
+
 // === Burn Status ===
 
 /// GET /v1/burn - Check burn status
@@ -500,21 +560,31 @@ impl IntoResponse for ApiError {
             other => {
                 let (status, code, message) = match other {
                     ApiError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, "INVALID_INPUT", msg),
-                    ApiError::ConversationBurned => {
-                        (StatusCode::GONE, "CONVERSATION_BURNED", "conversation has been burned")
-                    }
-                    ApiError::PayloadTooLarge => {
-                        (StatusCode::PAYLOAD_TOO_LARGE, "PAYLOAD_TOO_LARGE", "ciphertext exceeds size limit")
-                    }
-                    ApiError::QueueFull => {
-                        (StatusCode::TOO_MANY_REQUESTS, "QUEUE_FULL", "message queue is full")
-                    }
-                    ApiError::ServerAtCapacity => {
-                        (StatusCode::SERVICE_UNAVAILABLE, "SERVER_AT_CAPACITY", "server at capacity, try again later")
-                    }
-                    ApiError::Internal => {
-                        (StatusCode::INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "internal server error")
-                    }
+                    ApiError::ConversationBurned => (
+                        StatusCode::GONE,
+                        "CONVERSATION_BURNED",
+                        "conversation has been burned",
+                    ),
+                    ApiError::PayloadTooLarge => (
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        "PAYLOAD_TOO_LARGE",
+                        "ciphertext exceeds size limit",
+                    ),
+                    ApiError::QueueFull => (
+                        StatusCode::TOO_MANY_REQUESTS,
+                        "QUEUE_FULL",
+                        "message queue is full",
+                    ),
+                    ApiError::ServerAtCapacity => (
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "SERVER_AT_CAPACITY",
+                        "server at capacity, try again later",
+                    ),
+                    ApiError::Internal => (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "INTERNAL_ERROR",
+                        "internal server error",
+                    ),
                     ApiError::Auth(_) => unreachable!(),
                 };
 

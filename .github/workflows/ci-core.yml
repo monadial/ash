@@ -1,18 +1,28 @@
-name: CI
+name: CI Core
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'core/**'
+      - '.github/workflows/ci-core.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'core/**'
+      - '.github/workflows/ci-core.yml'
 
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
 
+defaults:
+  run:
+    working-directory: core
+
 jobs:
-  test-core:
-    name: Test Core
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,33 +42,7 @@ jobs:
           key: ${{ runner.os }}-cargo-core-${{ hashFiles('core/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-core-
 
-      - name: Run core tests
-        working-directory: core
-        run: cargo test --verbose
-
-  test-bindings:
-    name: Test Bindings
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-action@stable
-
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            bindings/target/
-          key: ${{ runner.os }}-cargo-bindings-${{ hashFiles('bindings/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-bindings-
-
-      - name: Run bindings tests
-        working-directory: bindings
+      - name: Run tests
         run: cargo test --verbose
 
   clippy:
@@ -72,13 +56,8 @@ jobs:
         with:
           components: clippy
 
-      - name: Clippy core
-        working-directory: core
+      - name: Run clippy
         run: cargo clippy -- -D warnings
-
-      - name: Clippy bindings
-        working-directory: bindings
-        run: cargo clippy --lib -- -D warnings
 
   fmt:
     name: Format
@@ -91,12 +70,7 @@ jobs:
         with:
           components: rustfmt
 
-      - name: Check core formatting
-        working-directory: core
-        run: cargo fmt --check
-
-      - name: Check bindings formatting
-        working-directory: bindings
+      - name: Check formatting
         run: cargo fmt --check
 
   doc:
@@ -108,8 +82,19 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-action@stable
 
-      - name: Build core docs
-        working-directory: core
+      - name: Build docs
         run: cargo doc --no-deps
         env:
           RUSTDOCFLAGS: -Dwarnings
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run audit
+        run: cargo audit

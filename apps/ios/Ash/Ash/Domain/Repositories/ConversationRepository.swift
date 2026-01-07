@@ -26,4 +26,15 @@ protocol MessageRepository: Sendable {
     func clearAll() async
     /// Check if a message with the given sequence already exists (for deduplication)
     func hasMessage(withSequence sequence: UInt64, in conversationId: String) async -> Bool
+    /// Securely wipe all messages by overwriting with zeros before deallocation
+    /// Call this when the app is going to background or terminating
+    func secureWipeAll() async
+}
+
+// Default implementation for repositories that don't need secure wipe (e.g., persistent storage)
+extension MessageRepository {
+    func secureWipeAll() async {
+        // Default: just clear all (persistent storage doesn't need memory zeroing)
+        await clearAll()
+    }
 }

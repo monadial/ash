@@ -2,230 +2,450 @@
   Localizable.strings
   Ash
 
-  English (Base) localization
+  Slovak localization
 */
 
 // MARK: - Common
 
-"common.cancel" = "Cancel";
-"common.save" = "Save";
-"common.done" = "Done";
-"common.continue" = "Continue";
-"common.back" = "Back";
-"common.delete" = "Delete";
-"common.settings" = "Settings";
-"common.rename" = "Rename";
-"common.error" = "Error";
+"common.cancel" = "Zrusiť";
+"common.save" = "Uložiť";
+"common.done" = "Hotovo";
+"common.continue" = "Pokračovať";
+"common.back" = "Späť";
+"common.delete" = "Zmazať";
+"common.settings" = "Nastavenia";
+"common.rename" = "Premenovať";
+"common.error" = "Chyba";
 "common.ok" = "OK";
+"common.test" = "Test";
+"common.reset" = "Obnoviť";
+"common.copy" = "Kopírovať";
+"common.retry" = "Skúsiť znova";
+"common.info" = "Info";
+"common.dismiss" = "Zavrieť";
 
 // MARK: - Conversations Screen
 
-"conversations.title" = "Conversations";
-"conversations.empty.title" = "No Conversations";
-"conversations.empty.message" = "Start a secure conversation by performing a ceremony with another device.";
-"conversations.empty.action" = "New Conversation";
-"conversations.new" = "New";
-"conversations.burn" = "Burn";
-"conversations.burn.title" = "Burn Conversation?";
-"conversations.burn.message" = "This will permanently destroy all messages and the encryption pad. This cannot be undone.";
-"conversations.remaining" = "%@ remaining";
+"conversations.title" = "Konverzácie";
+"conversations.empty.title" = "Žiadne konverzácie";
+"conversations.empty.message" = "Začnite bezpečnú konverzáciu vykonaním ceremónie s ďalším zariadením.";
+"conversations.empty.action" = "Nová konverzácia";
+"conversations.new" = "Nová";
+"conversations.burn" = "Spáliť";
+"conversations.burn.title" = "Spáliť konverzáciu?";
+"conversations.burn.message" = "Toto natrvalo zničí všetky správy a šifrovací kľúč. Túto akciu nie je možné vrátiť späť.";
+"conversations.remaining" = "zostáva %@";
+"conversations.info" = "Info o konverzácii";
+"conversations.you" = "Vy %d%%";
+"conversations.them" = "Oni %d%%";
 
 // MARK: - Messaging Screen
 
-"messaging.empty.title" = "No Messages";
-"messaging.empty.message" = "Messages are ephemeral and disappear after viewing";
-"messaging.input.placeholder" = "Message";
-"messaging.send" = "Send message";
-"messaging.peer.burned" = "This conversation has been burned";
-"messaging.location" = "Location";
+"messaging.empty.title" = "Žiadne správy";
+"messaging.empty.message" = "Správy sú dočasné a po prečítaní zmiznú";
+"messaging.input.placeholder" = "Správa";
+"messaging.send" = "Odoslať správu";
+"messaging.peer.burned" = "Táto konverzácia bola spálená";
+"messaging.location" = "Poloha";
+"messaging.expired" = "Správa vypršala";
+"messaging.open_maps" = "Otvoriť v Mapách";
+"messaging.size_indicator" = "%@ / %d KB";
+
+// MARK: - Message Status
+
+"status.sending" = "Odosielanie...";
+"status.sent" = "Odoslané na server";
+"status.delivered" = "Doručené";
+"status.failed" = "Zlyhalo";
+"status.relay_error" = "Chyba relay";
+"status.expired" = "vypršané";
+
+// MARK: - Time Formats
+
+"time.seconds" = "%ds";
+"time.minutes" = "%dm";
+"time.hours" = "%dh";
+"time.days" = "%dd";
+"time.minutes_seconds" = "%dm %ds";
+"time.hours_minutes" = "%dh %dm";
+"time.days_hours" = "%dd %dh";
 
 // MARK: - Conversation Settings
 
-"settings.conversation.title" = "Settings";
-"settings.privacy" = "Privacy";
-"settings.privacy.secret_mode" = "Secret Mode";
-"settings.privacy.secret_mode.description" = "Hold to reveal messages";
-"settings.privacy.secret_mode.footer" = "When enabled, incoming messages stay encrypted until you hold the bubble to reveal them.";
-"settings.relay" = "Relay Server";
-"settings.relay.url" = "Server URL";
-"settings.relay.test" = "Test Connection";
-"settings.relay.connected" = "Connected - %@";
-"settings.persistence" = "Message Persistence";
-"settings.persistence.delayed" = "Delayed Reading";
-"settings.persistence.delayed.description" = "Messages persist for 48 hours";
-"settings.persistence.delayed.footer.on" = "Messages will be available for up to 48 hours, allowing delayed reading.";
-"settings.persistence.delayed.footer.off" = "Messages expire in 30 seconds (real-time mode).";
+"settings.conversation.title" = "Nastavenia";
+"settings.privacy" = "Súkromie";
+"settings.privacy.secret_mode" = "Tajný režim";
+"settings.privacy.secret_mode.description" = "Podržte pre zobrazenie";
+"settings.privacy.secret_mode.footer" = "Keď je zapnuté, prichádzajúce správy zostávajú šifrované, kým nepodržíte bublinu na ich zobrazenie.";
+"settings.relay" = "Relay server";
+"settings.relay.url" = "URL servera";
+"settings.relay.url.placeholder" = "https://relay.example.com";
+"settings.relay.test" = "Otestovať pripojenie";
+"settings.relay.connected" = "Pripojené - %@";
+"settings.relay.connected.latency" = "Pripojené - %@ (%dms)";
+"settings.relay.footer" = "Správy sú uložené v RAM servera po dobu %@ a zmazané po doručení alebo vypršaní.";
+"settings.persistence" = "Perzistencia správ";
+"settings.persistence.delayed" = "Oneskorené čítanie";
+"settings.persistence.delayed.description" = "Správy sa uchovávajú 48 hodín";
+"settings.persistence.delayed.footer.on" = "Správy budú dostupné až 48 hodín, čo umožňuje oneskorené čítanie.";
+"settings.persistence.delayed.footer.off" = "Správy vypršia za 30 sekúnd (režim reálneho času).";
 
 // MARK: - Rename Dialog
 
-"rename.title" = "Rename Conversation";
-"rename.placeholder" = "Name";
-"rename.message" = "Enter a custom name or leave empty to use mnemonic words";
+"rename.title" = "Premenovať konverzáciu";
+"rename.placeholder" = "Názov";
+"rename.message" = "Zadajte vlastný názov alebo nechajte prázdne pre použitie mnemotechnických slov";
 
 // MARK: - Ceremony - General
 
-"ceremony.title" = "New Conversation";
+"ceremony.title" = "Nová konverzácia";
 
 // MARK: - Ceremony - Role Selection
 
-"ceremony.role.title" = "Choose Your Role";
-"ceremony.role.subtitle" = "One device initiates, the other receives";
-"ceremony.role.initiate" = "Initiate";
-"ceremony.role.initiate.description" = "Generate pad and display QR codes";
-"ceremony.role.receive" = "Receive";
-"ceremony.role.receive.description" = "Scan QR codes from other device";
+"ceremony.role.title" = "Vyberte si rolu";
+"ceremony.role.subtitle" = "Jedno zariadenie vytvorí konverzáciu, druhé sa pripojí skenovaním";
+"ceremony.role.initiate" = "Vytvoriť";
+"ceremony.role.initiate.description" = "Vygenerovať kľúč a zobraziť QR kódy";
+"ceremony.role.initiate.badge" = "Iniciátor";
+"ceremony.role.receive" = "Pripojiť sa";
+"ceremony.role.receive.description" = "Naskenovať QR kódy z druhého zariadenia";
+"ceremony.role.receive.badge" = "Príjemca";
 
 // MARK: - Ceremony - Pad Size Selection
 
-"ceremony.padsize.title" = "Select Pad Size";
-"ceremony.padsize.subtitle" = "Larger pads = more messages, longer transfer";
+"ceremony.padsize.title" = "Veľkosť kľúča";
+"ceremony.padsize.subtitle" = "Väčšie kľúče umožňujú viac správ, ale prenos trvá dlhšie";
 "ceremony.padsize.small" = "64 KB";
-"ceremony.padsize.small.description" = "~100 messages • Quick transfer";
+"ceremony.padsize.small.description" = "~100 správ";
 "ceremony.padsize.medium" = "256 KB";
-"ceremony.padsize.medium.description" = "~400 messages • Balanced";
+"ceremony.padsize.medium.description" = "~400 správ";
 "ceremony.padsize.large" = "1 MB";
-"ceremony.padsize.large.description" = "~1,600 messages • Extended use";
+"ceremony.padsize.large.description" = "~1 600 správ";
+
+// MARK: - Ceremony - Options
+
+"ceremony.options.title" = "Nastavenia";
+"ceremony.options.subtitle" = "Nakonfigurujte spracovanie a doručovanie správ";
+"ceremony.options.timing" = "Časovanie správ";
+"ceremony.options.retention" = "Uchovanie na serveri";
+"ceremony.options.retention.description" = "Ako dlho čakajú neprečítané správy";
+"ceremony.options.disappearing" = "Miznúce správy";
+"ceremony.options.disappearing.description" = "Automaticky zmazať po prečítaní";
+"ceremony.options.storage" = "Lokálne ukladanie správ";
+"ceremony.options.storage.faceid_enabled" = "Face ID zapnuté";
+"ceremony.options.storage.enabled_description" = "Správy môžu byť uložené lokálne vo vašom zariadení, chránené Face ID. Budú bezpečne vymazané po vypršaní časovača.";
+"ceremony.options.storage.enable_toggle" = "Zapnúť lokálne ukladanie";
+"ceremony.options.storage.enabled_footer" = "Správy zostanú medzi reláciami aplikácie, kým nevypršia.";
+"ceremony.options.storage.faceid_disabled" = "Face ID nie je zapnuté";
+"ceremony.options.storage.disabled_description" = "Pre zapnutie lokálneho ukladania správ musíte najprv zapnúť Face ID v Nastaveniach. Bez neho sú správy uložené len v pamäti a stratia sa, keď opustíte konverzáciu.";
+"ceremony.options.notifications" = "Notifikácie";
+"ceremony.options.notifications.new" = "Nové správy";
+"ceremony.options.notifications.new.description" = "Upozornenie pri príchode správy";
+"ceremony.options.notifications.expiring" = "Upozornenia na vypršanie";
+"ceremony.options.notifications.expiring.description" = "5 min a 1 min pred vypršaním";
+"ceremony.options.notifications.expired" = "Vypršané správy";
+"ceremony.options.notifications.expired.description" = "Upozornenie pri vypršaní správy";
+"ceremony.options.notifications.failed" = "Doručenie zlyhalo";
+"ceremony.options.notifications.failed.description" = "Upozornenie ak príjemca zmešká správu";
+"ceremony.options.color" = "Farba konverzácie";
 
 // MARK: - Ceremony - Passphrase
 
-"ceremony.passphrase.title" = "Passphrase Protection";
-"ceremony.passphrase.toggle" = "Encrypt QR codes";
-"ceremony.passphrase.toggle.description" = "Both parties must agree on the same passphrase";
-"ceremony.passphrase.placeholder" = "Enter passphrase";
-"ceremony.passphrase.valid" = "Passphrase valid";
-"ceremony.passphrase.invalid" = "4-64 printable characters required";
-"ceremony.passphrase.hint" = "Speak this passphrase aloud to your partner";
-"ceremony.passphrase.receiver.toggle" = "Sender used passphrase";
-"ceremony.passphrase.receiver.hint" = "Enter the same passphrase spoken by sender";
+"ceremony.passphrase.title" = "Ochrana heslom";
+"ceremony.passphrase.toggle" = "Šifrovať QR kódy zdieľaným tajomstvom";
+"ceremony.passphrase.toggle.description" = "Obe strany musia súhlasiť s rovnakým heslom";
+"ceremony.passphrase.placeholder" = "Zadajte heslo";
+"ceremony.passphrase.valid" = "Heslo platné";
+"ceremony.passphrase.invalid" = "Vyžaduje sa 4-64 tlačiteľných znakov";
+"ceremony.passphrase.hint" = "Povedzte toto heslo nahlas vášmu partnerovi";
+"ceremony.passphrase.receiver.toggle" = "Chránené heslom";
+"ceremony.passphrase.receiver.toggle.description" = "Zapnite ak odosielateľ použil heslo";
+"ceremony.passphrase.receiver.hint" = "Zadajte rovnaké heslo, ktoré povedal odosielateľ";
 
 // MARK: - Ceremony - Consent
 
-"ceremony.consent.title" = "Security Verification";
-"ceremony.consent.subtitle" = "Confirm before proceeding";
-"ceremony.consent.environment" = "I confirm no one is watching my screen";
-"ceremony.consent.environment.detail" = "Ensure you have visual privacy - no cameras, mirrors, or people who can see your display";
-"ceremony.consent.surveillance" = "I am not under surveillance or coercion";
-"ceremony.consent.surveillance.detail" = "Do not proceed if you are being forced or monitored by others";
-"ceremony.consent.ethics" = "I understand the ethical responsibilities";
-"ceremony.consent.ethics.detail" = "This tool is for legitimate private communication only";
-"ceremony.consent.understand" = "I understand this creates unrecoverable keys";
-"ceremony.consent.understand.detail" = "If you lose access, messages cannot be recovered - there is no backup";
-"ceremony.consent.relay_warning" = "I understand relay limitations";
-"ceremony.consent.relay_warning.detail" = "If the relay server is unavailable, you may not receive messages or notifications until connectivity is restored";
-"ceremony.consent.proceed" = "I Understand & Proceed";
-"ceremony.consent.ethics.link" = "Read Ethics Guidelines";
+"ceremony.consent.title" = "Bezpečnostné overenie";
+"ceremony.consent.subtitle" = "Potvrďte, že rozumiete pred pokračovaním";
+"ceremony.consent.section.environment" = "Prostredie";
+"ceremony.consent.environment" = "Nikto nevidí moju obrazovku";
+"ceremony.consent.environment.detail" = "Žiadne kamery, zrkadlá ani ľudia nemôžu vidieť váš displej";
+"ceremony.consent.surveillance" = "Nie som pod dohľadom ani nátlakom";
+"ceremony.consent.surveillance.detail" = "Nepokračujte ak ste nútení alebo sledovaní";
+"ceremony.consent.section.responsibilities" = "Zodpovednosti";
+"ceremony.consent.ethics" = "Rozumiem etickým zodpovednostiam";
+"ceremony.consent.ethics.detail" = "Tento nástroj je pre legitímnu súkromnú komunikáciu";
+"ceremony.consent.understand" = "Kľúče nie je možné obnoviť";
+"ceremony.consent.understand.detail" = "Ak stratíte prístup, správy sú navždy stratené";
+"ceremony.consent.section.limitations" = "Obmedzenia";
+"ceremony.consent.relay_warning" = "Relay server môže byť nedostupný";
+"ceremony.consent.relay_warning.detail" = "Správy sa nedoručia bez pripojenia";
+"ceremony.consent.persistence_warning" = "Dáta relay nie sú perzistentné";
+"ceremony.consent.persistence_warning.detail" = "Reštart servera môže spôsobiť stratu neprečítaných správ";
+"ceremony.consent.burn_warning" = "Spálenie zničí všetok kľúčový materiál";
+"ceremony.consent.burn_warning.detail" = "Ktorákoľvek strana môže spáliť, nie je možné vrátiť späť";
+"ceremony.consent.proceed" = "Rozumiem a pokračujem";
+"ceremony.consent.ethics.link" = "Prečítať etické smernice";
 
 // MARK: - Ceremony - Entropy
 
-"ceremony.entropy.title" = "Generate Entropy";
-"ceremony.entropy.subtitle" = "Draw random patterns anywhere on screen";
-"ceremony.entropy.hint" = "Touch and draw here";
-"ceremony.entropy.progress" = "Keep drawing...";
-"ceremony.entropy.progress.hint" = "Random patterns increase security";
-"ceremony.entropy.complete" = "Entropy collected!";
-"ceremony.entropy.complete.hint" = "Generating secure pad...";
+"ceremony.entropy.title" = "Generovať entropiu";
+"ceremony.entropy.subtitle" = "Kreslite náhodné vzory pre generovanie bezpečnej náhodnosti";
+"ceremony.entropy.complete" = "Entropia dokončená!";
+"ceremony.entropy.hint" = "Kreslite tu";
+"ceremony.entropy.progress.hint" = "Náhodné vzory posilňujú šifrovanie";
+"ceremony.entropy.progress" = "%d%%";
 
 // MARK: - Ceremony - Generating
 
-"ceremony.generating.pad" = "Generating secure pad...";
-"ceremony.generating.qr" = "Generating QR Codes";
-"ceremony.generating.qr.subtitle" = "Preparing %d frames for transfer...";
+"ceremony.generating.pad" = "Generovanie kľúča";
+"ceremony.generating.pad.subtitle" = "Vytváranie bezpečného šifrovacieho kľúča...";
+"ceremony.generating.qr" = "Generovanie QR kódov";
+"ceremony.generating.qr.subtitle" = "Príprava %d snímok na prenos...";
 
 // MARK: - Ceremony - Transfer (Sender)
 
-"ceremony.transfer.sender.title" = "Streaming QR Codes";
-"ceremony.transfer.sender.subtitle" = "Let the other device scan continuously";
-"ceremony.transfer.sender.frame" = "Frame %d of %d";
+"ceremony.transfer.sender.title" = "Streamovanie QR kódov";
+"ceremony.transfer.sender.subtitle" = "Nechajte druhé zariadenie priebežne skenovať";
+"ceremony.transfer.sender.frame" = "Snímka %d z %d";
 "ceremony.transfer.sender.fps" = "%d fps";
-"ceremony.transfer.sender.ready" = "Receiver Ready";
+"ceremony.transfer.sender.fps.default" = "%d fps (predvolené)";
+"ceremony.transfer.sender.ready" = "Príjemca pripravený";
 
 // MARK: - Ceremony - Transfer (Receiver)
 
-"ceremony.transfer.receiver.title" = "Scan QR Codes";
-"ceremony.transfer.receiver.subtitle" = "Point camera at the streaming QR codes";
-"ceremony.transfer.receiver.waiting" = "Waiting for first frame...";
-"ceremony.transfer.receiver.scanning" = "Scanning frames...";
-"ceremony.transfer.receiver.complete" = "All frames received!";
-"ceremony.transfer.receiver.passphrase.title" = "Passphrase protection";
-"ceremony.transfer.receiver.passphrase.enabled" = "Passphrase enabled";
+"ceremony.transfer.receiver.title" = "Pripravené na skenovanie";
+"ceremony.transfer.receiver.subtitle" = "Namierte kameru na QR kódy odosielateľa";
+"ceremony.transfer.receiver.how_it_works" = "Ako to funguje";
+"ceremony.transfer.receiver.scanning" = "Skenovanie...";
+"ceremony.transfer.receiver.scanning.subtitle" = "Nechajte aplikáciu otvorenú počas tohto procesu";
+"ceremony.transfer.receiver.looking" = "Hľadanie QR kódov...";
+"ceremony.transfer.receiver.hold_steady" = "Držte stabilne pre najlepšie výsledky";
+"ceremony.transfer.receiver.progress" = "%d%%";
+"ceremony.transfer.receiver.blocks" = "%d z %d blokov";
+"ceremony.transfer.receiver.complete" = "Všetky snímky prijaté!";
+"ceremony.transfer.receiver.start" = "Začať skenovanie";
 
 // MARK: - Ceremony - Verification
 
-"ceremony.verify.title" = "Verify Checksum";
-"ceremony.verify.subtitle" = "Confirm these words match the other device";
-"ceremony.verify.name.title" = "Name this conversation";
-"ceremony.verify.name.placeholder" = "e.g. Alice, Work, Family";
-"ceremony.verify.name.hint" = "Optional - helps you identify this conversation";
-"ceremony.verify.match" = "Words Match";
-"ceremony.verify.nomatch" = "Words Don't Match";
+"ceremony.verify.title" = "Overiť kontrolný súčet";
+"ceremony.verify.subtitle" = "Obe zariadenia musia zobrazovať rovnaké slová";
+"ceremony.verify.words" = "Bezpečnostné slová";
+"ceremony.verify.settings" = "Prijaté nastavenia";
+"ceremony.verify.name.title" = "Názov (voliteľné)";
+"ceremony.verify.name.placeholder" = "napr. Alica, Práca, Rodina";
+"ceremony.verify.name.hint" = "Voliteľné - pomáha identifikovať túto konverzáciu";
+"ceremony.verify.faceid_required.title" = "Vyžaduje sa Face ID";
+"ceremony.verify.faceid_required.message" = "Táto konverzácia má zapnuté lokálne ukladanie správ, čo vyžaduje Face ID. Prosím zapnite Face ID v Nastaveniach pred pokračovaním.";
+"ceremony.verify.storage_enabled" = "Lokálne ukladanie zapnuté";
+"ceremony.verify.storage_enabled.detail" = "Správy budú uložené lokálne vo vašom zariadení, chránené Face ID.";
+"ceremony.verify.match" = "Slová sa zhodujú";
+"ceremony.verify.nomatch" = "Slová sa nezhodujú";
 
 // MARK: - Ceremony - Complete
 
-"ceremony.complete.title" = "Ceremony Complete";
-"ceremony.complete.subtitle" = "Your secure conversation is ready";
-"ceremony.complete.action" = "Start Messaging";
+"ceremony.complete.title" = "Konverzácia vytvorená!";
+"ceremony.complete.details" = "Detaily";
+"ceremony.complete.padsize" = "Veľkosť kľúča";
+"ceremony.complete.role" = "Vaša rola";
+"ceremony.complete.disappearing" = "Miznúce";
+"ceremony.complete.security" = "Zabezpečenie aktívne";
+"ceremony.complete.action" = "Začať písať";
 
 // MARK: - Ceremony - Failed
 
-"ceremony.failed.title" = "Ceremony Failed";
-"ceremony.failed.retry" = "Try Again";
+"ceremony.failed.title" = "Nastavenie zlyhalo";
+"ceremony.failed.troubleshooting" = "Riešenie problémov";
+"ceremony.failed.retry" = "Skúsiť znova";
 
-// MARK: - Encrypted Message
+// MARK: - Burn Confirmation
 
-"message.encrypted" = "Hold to reveal";
+"burn.title" = "Spáliť \"%@\"?";
+"burn.subtitle" = "Túto akciu nie je možné vrátiť späť";
+"burn.all.title" = "Spáliť všetky konverzácie?";
+"burn.all.subtitle" = "Núdzové zničenie všetkých dát";
+"burn.destroyed" = "Bude natrvalo zničené";
+"burn.item.pad" = "Šifrovací kľúč";
+"burn.item.messages" = "Celá história správ";
+"burn.item.connection" = "Spojenie s partnerom";
+"burn.item.all" = "Všetky konverzácie";
+"burn.confirm.prompt" = "Napíšte \"BURN\" pre potvrdenie";
+"burn.confirm.action" = "Spáliť navždy";
+"burn.confirm.all.action" = "Spáliť všetko";
+
+// MARK: - Burned Conversation
+
+"burned.title" = "Konverzácia spálená";
+"burned.message" = "\"%@\" bola spálená druhou stranou.";
+"burned.detail" = "Táto konverzácia a všetky správy boli natrvalo zničené.";
 
 // MARK: - App Settings
 
-"appsettings.title" = "Settings";
-"appsettings.relay.title" = "Default Relay Server";
-"appsettings.relay.url" = "Server URL";
-"appsettings.relay.test" = "Test Connection";
-"appsettings.security" = "Security";
-"appsettings.security.burnall" = "Burn All Conversations";
-"appsettings.security.burnall.description" = "Permanently destroy all data";
-"appsettings.security.burnall.title" = "Burn Everything?";
-"appsettings.security.burnall.message" = "This will permanently destroy ALL conversations, messages, and encryption pads. This cannot be undone.";
-"appsettings.about" = "About";
-"appsettings.version" = "Version";
-"appsettings.ethics" = "Ethics Guidelines";
+"appsettings.title" = "Nastavenia";
+"appsettings.section.security" = "Zabezpečenie";
+"appsettings.security.biometric" = "Odomknúť biometrickou autentifikáciou";
+"appsettings.security.lock_background" = "Zamknúť na pozadí";
+"appsettings.security.lock_background.description" = "Vyžadovať autentifikáciu pri návrate aplikácie";
+"appsettings.security.unavailable" = "Biometria nedostupná";
+"appsettings.security.unavailable.description" = "Nastavte Face ID alebo Touch ID v Nastaveniach";
+"appsettings.section.relay" = "Relay server";
+"appsettings.relay.url" = "URL servera";
+"appsettings.relay.modified" = "Zmenené";
+"appsettings.relay.status" = "Stav pripojenia";
+"appsettings.relay.testing" = "Testovanie...";
+"appsettings.relay.connected" = "Pripojené k %@ • %dms";
+"appsettings.relay.not_tested" = "Netestované";
+"appsettings.relay.footer" = "Predvolený server pre nové konverzácie. Každá konverzácia môže používať iný relay.";
+"appsettings.section.about" = "O aplikácii";
+"appsettings.about.version" = "Verzia";
+"appsettings.about.version.value" = "1.0.0";
+"appsettings.about.encryption" = "Šifrovanie";
+"appsettings.about.encryption.value" = "Jednorazový šifrovací blok";
+"appsettings.about.security" = "Bezpečnostný model";
+"appsettings.about.security.description" = "Ako ASH chráni vaše správy";
+"appsettings.about.security.link" = "Zabezpečenie";
+"appsettings.about.privacy" = "Súkromie";
+"appsettings.about.privacy.description" = "Aké údaje zbierame (žiadne)";
+"appsettings.section.danger" = "Nebezpečná zóna";
+"appsettings.danger.burnall" = "Núdzové spálenie všetkého";
+"appsettings.danger.burnall.description" = "Okamžite zničiť všetky konverzácie a kľúče";
+"appsettings.danger.burnall.footer" = "Núdzové spálenie natrvalo zničí všetky konverzácie, šifrovacie kľúče a správy. Túto akciu nie je možné vrátiť späť.";
+"appsettings.burnall.title" = "Spáliť všetky konverzácie?";
+"appsettings.burnall.message" = "Toto natrvalo zničí všetky konverzácie a šifrovacie kľúče. Túto akciu nie je možné vrátiť späť.";
+"appsettings.burnall.action" = "Spáliť všetko";
+
+// MARK: - Lock Screen
+
+"lock.title" = "Aplikácia zamknutá";
+"lock.subtitle" = "Ťuknite pre autentifikáciu";
+"lock.authenticating" = "Autentifikácia...";
+"lock.unlock" = "Odomknúť pomocou %@";
+
+// MARK: - Message Detail
+
+"detail.title" = "Detaily";
+"detail.section.content" = "Obsah";
+"detail.latitude" = "Zemepisná šírka";
+"detail.longitude" = "Zemepisná dĺžka";
+"detail.section.status" = "Stav";
+"detail.sent" = "Odoslané";
+"detail.delivery" = "Doručenie";
+"detail.expires" = "Vyprší";
+"detail.copy" = "Kopírovať do schránky";
+
+// MARK: - Conversation Info
+
+"convinfo.title" = "Info o konverzácii";
+"convinfo.section.security" = "Bezpečnostné overenie";
+"convinfo.security.description" = "Obe strany musia mať identické kódy:";
+"convinfo.conversation_id" = "ID konverzácie";
+"convinfo.identity" = "Identita";
+"convinfo.section.relay" = "Relay server";
+"convinfo.relay.url" = "URL";
+"convinfo.relay.latency" = "Latencia";
+"convinfo.relay.latency.value" = "%d ms";
+"convinfo.relay.latency.unknown" = "—";
+"convinfo.section.settings" = "Nastavenia správ";
+"convinfo.settings.persistent" = "Správy sú uložené lokálne medzi reláciami (vyžaduje Face ID). Automaticky sa zmažú po vypršaní časovača miznúcich správ.";
+"convinfo.settings.ephemeral" = "Uchovanie na serveri: ako dlho neprečítané správy čakajú na serveri. Miznúce: ako dlho správy zostávajú viditeľné po prečítaní. Správy sa vymažú pri zatvorení aplikácie.";
+"convinfo.section.pad" = "Šifrovací kľúč";
+"convinfo.pad.you" = "%d%% Vy";
+"convinfo.pad.them" = "%d%% Oni";
+"convinfo.pad.exhausted" = "Kľúč vyčerpaný - nie je možné posielať ďalšie správy";
+"convinfo.section.danger" = "Nebezpečná zóna";
+
+// MARK: - QR Scanner
+
+"scanner.permission.title" = "Vyžaduje sa prístup ku kamere";
+"scanner.permission.message" = "Povoľte prístup ku kamere v Nastaveniach pre skenovanie QR kódov";
+"scanner.permission.action" = "Otvoriť Nastavenia";
+
+// MARK: - QR Code
+
+"qr.failed" = "Generovanie QR zlyhalo";
 
 // MARK: - Ethics
 
-"ethics.title" = "Ethics Guidelines";
-"ethics.intro" = "ASH is designed for legitimate private communication. By using this application, you agree to:";
-"ethics.principle.1.title" = "Respect Privacy";
-"ethics.principle.1.detail" = "Use this tool only for communications where both parties consent and have a legitimate need for privacy.";
-"ethics.principle.2.title" = "No Harmful Use";
-"ethics.principle.2.detail" = "Do not use ASH to plan, coordinate, or facilitate illegal activities, harassment, or harm to others.";
-"ethics.principle.3.title" = "Honest Communication";
-"ethics.principle.3.detail" = "Be truthful with your communication partners about the nature and purpose of your conversations.";
-"ethics.principle.4.title" = "Accept Responsibility";
-"ethics.principle.4.detail" = "You are solely responsible for the content of your messages and how you use this tool.";
-"ethics.principle.5.title" = "Understand Limitations";
-"ethics.principle.5.detail" = "ASH provides technical privacy but cannot protect against physical surveillance, compromised devices, or coerced disclosure.";
-"ethics.footer" = "ASH was created to protect legitimate privacy needs such as journalist-source communication, whistleblowing, personal privacy, and human rights work. Misuse undermines these important purposes.";
+"ethics.title" = "Etické smernice";
+"ethics.intro" = "ASH je navrhnutý pre legitímnu súkromnú komunikáciu. Používaním tejto aplikácie súhlasíte s:";
+"ethics.principle.1.title" = "Rešpektovať súkromie";
+"ethics.principle.1.detail" = "Používajte tento nástroj len pre komunikáciu, kde obe strany súhlasia a majú legitímnu potrebu súkromia.";
+"ethics.principle.2.title" = "Žiadne škodlivé použitie";
+"ethics.principle.2.detail" = "Nepoužívajte ASH na plánovanie, koordináciu alebo uľahčenie nelegálnych aktivít, obťažovania alebo ublíženia iným.";
+"ethics.principle.3.title" = "Čestná komunikácia";
+"ethics.principle.3.detail" = "Buďte úprimní s vašimi komunikačnými partnermi o povahe a účele vašich konverzácií.";
+"ethics.principle.4.title" = "Prijať zodpovednosť";
+"ethics.principle.4.detail" = "Ste výhradne zodpovední za obsah vašich správ a spôsob, akým používate tento nástroj.";
+"ethics.principle.5.title" = "Porozumieť obmedzeniam";
+"ethics.principle.5.detail" = "ASH poskytuje technické súkromie, ale nemôže chrániť pred fyzickým sledovaním, kompromitovanými zariadeniami alebo vynúteným zverejnením.";
+"ethics.footer" = "ASH bol vytvorený na ochranu legitímnych potrieb súkromia ako komunikácia novinárov so zdrojmi, whistleblowing, osobné súkromie a práca na ľudských právach. Zneužitie podkopáva tieto dôležité účely.";
 
 // MARK: - Errors
 
-"error.insufficient_pad" = "Insufficient pad remaining";
-"error.decryption_failed" = "Failed to decrypt message";
-"error.invalid_url" = "Invalid URL";
-"error.connection_failed" = "Connection failed";
-"error.server_error" = "Server returned error";
-"error.no_connection" = "No connection to relay";
-"error.relay_error" = "Relay error";
+"error.insufficient_pad" = "Nedostatok zostávajúceho kľúča";
+"error.decryption_failed" = "Nepodarilo sa dešifrovať správu";
+"error.invalid_url" = "Neplatná URL";
+"error.connection_failed" = "Pripojenie zlyhalo";
+"error.server_error" = "Server vrátil chybu";
+"error.no_connection" = "Žiadne pripojenie k relay";
+"error.relay_error" = "Chyba relay";
+"error.message_too_large" = "Správa je príliš veľká";
+"error.message_too_large.detail" = "Maximum %d KB, aktuálne %d KB";
 
 // MARK: - Delivery Status
 
-"delivery.sending" = "Sending...";
-"delivery.sent" = "Sent";
-"delivery.failed" = "Failed to send";
-"delivery.tap_to_retry" = "Tap to retry";
+"delivery.sending" = "Odosielanie...";
+"delivery.sent" = "Odoslané na server";
+"delivery.delivered" = "Doručené";
+"delivery.failed" = "Zlyhalo";
+"delivery.tap_to_retry" = "Ťuknite pre opakovanie";
+
+// MARK: - Retention Options
+
+"retention.5min" = "5 minút";
+"retention.1hour" = "1 hodina";
+"retention.1day" = "24 hodín";
+"retention.7days" = "7 dní";
+
+// MARK: - Disappearing Options
+
+"disappearing.off" = "Vypnuté";
+"disappearing.30sec" = "30 sekúnd";
+"disappearing.5min" = "5 minút";
+"disappearing.1hour" = "1 hodina";
+"disappearing.1day" = "24 hodín";
+
+// MARK: - Biometric Types
+
+"biometric.faceid" = "Face ID";
+"biometric.touchid" = "Touch ID";
+"biometric.opticid" = "Optic ID";
+"biometric.none" = "Heslo";
+
+// MARK: - Language
+
+"language.section" = "Jazyk";
+"language.app_language" = "Jazyk aplikácie";
+"language.select" = "Vybrať jazyk";
+"language.footer" = "Zmena vyžaduje reštart aplikácie pre úplný efekt.";
+"language.system" = "Systémový predvolený";
+"language.english" = "Angličtina";
+"language.slovak" = "Slovenčina";
+"language.german" = "Nemčina";
+"language.spanish" = "Španielčina";
+"language.french" = "Francúzština";
+"language.japanese" = "Japončina";
+"language.portuguese_brazil" = "Portugalčina (Brazília)";
+"language.chinese_simplified" = "Čínština (zjednodušená)";
 
 // MARK: - Accessibility
 
-"accessibility.send_message" = "Send message";
-"accessibility.conversation" = "%@, %@ remaining, %@";
-"accessibility.qr_frame" = "QR Code frame %d of %d";
-"accessibility.scanned_frames" = "Scanned %d of %d frames";
-"accessibility.expires_in" = "Expires in %@";
+"accessibility.send_message" = "Odoslať správu";
+"accessibility.share_location" = "Zdieľať polohu";
+"accessibility.conversation" = "%@, zostáva %@, %@";
+"accessibility.qr_frame" = "QR kód snímka %d z %d";
+"accessibility.scanned_frames" = "Naskenované %d z %d snímok";
+"accessibility.expires_in" = "Vyprší za %@";
+"accessibility.server_expires_in" = "Server vyprší za %@";
+"accessibility.progress" = "Pokrok: %d percent";
+"accessibility.usage" = "Použitie: %d percent";
+"accessibility.usage.both" = "Moje použitie: %d percent, Partner: %d percent";

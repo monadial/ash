@@ -214,6 +214,15 @@ struct MessageDetailView: View {
 
         case .sent:
             HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle")
+                    .foregroundStyle(.secondary)
+                Text("Sent to server")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+        case .delivered:
+            HStack(spacing: 6) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                 Text("Delivered")

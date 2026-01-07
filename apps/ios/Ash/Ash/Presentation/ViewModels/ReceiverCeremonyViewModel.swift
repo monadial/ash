@@ -37,6 +37,9 @@ final class ReceiverCeremonyViewModel {
     /// Selected accent color for the conversation
     var selectedColor: ConversationColor = .indigo
 
+    /// Persistence consent decoded from initiator's metadata
+    private(set) var receivedPersistenceConsent: Bool = false
+
     // MARK: - Initialization
 
     init(dependencies: Dependencies) {
@@ -50,6 +53,23 @@ final class ReceiverCeremonyViewModel {
         guard isPassphraseEnabled else { return true }
         guard !passphrase.isEmpty else { return false }
         return validatePassphrase(passphrase: passphrase)
+    }
+
+    /// Whether Face ID/biometric lock is enabled in settings
+    var isFaceIDEnabled: Bool {
+        dependencies.settingsService.isBiometricLockEnabled
+    }
+
+    /// Whether persistence requires Face ID but it's not enabled
+    /// If initiator enabled persistence, receiver must have Face ID enabled
+    var requiresFaceIDForPersistence: Bool {
+        receivedPersistenceConsent && !isFaceIDEnabled
+    }
+
+    /// Whether receiver can proceed with verification
+    /// Blocked if persistence requires Face ID
+    var canProceedWithVerification: Bool {
+        !requiresFaceIDForPersistence
     }
 
     // MARK: - Received Metadata Display
@@ -173,7 +193,10 @@ final class ReceiverCeremonyViewModel {
         let decodedColor = NotificationFlagsConstants.decodeColor(from: result.metadata.notificationFlags)
         selectedColor = decodedColor
 
-        Log.info(.ceremony, "Decoded metadata: ttl=\(metadata.ttlSeconds)s, disappearing=\(metadata.disappearingMessagesSeconds)s, color=\(decodedColor.rawValue)")
+        // Decode persistence consent from notification flags (bit 4)
+        receivedPersistenceConsent = NotificationFlagsConstants.hasPersistenceConsent(result.metadata.notificationFlags)
+
+        Log.info(.ceremony, "Decoded metadata: ttl=\(metadata.ttlSeconds)s, disappearing=\(metadata.disappearingMessagesSeconds)s, color=\(decodedColor.rawValue), persistence=\(receivedPersistenceConsent)")
 
         // Generate mnemonic for verification
         let mnemonic = generateMnemonic(padBytes: result.pad)
@@ -199,12 +222,17 @@ final class ReceiverCeremonyViewModel {
             // Use relay URL from metadata or fallback to settings
             let relayURL = receivedMetadata?.relayURL ?? dependencies.settingsService.relayServerURL
 
+            // Extract message retention (server TTL) from metadata
+            let messageRetention = MessageRetention.from(
+                seconds: receivedMetadata?.ttlSeconds ?? MessageTTL.defaultSeconds
+            )
+
             // Extract disappearing messages setting from metadata
             let disappearingMessages = DisappearingMessages.from(
                 seconds: receivedMetadata?.disappearingMessagesSeconds ?? 0
             )
 
-            Log.info(.ceremony, "Receiver finalizing ceremony (disappearing=\(disappearingMessages.displayName))")
+            Log.info(.ceremony, "Receiver finalizing ceremony (retention=\(messageRetention.displayName), disappearing=\(disappearingMessages.displayName))")
 
             let mnemonic = generateMnemonic(padBytes: padBytes)
             let conversation = try await dependencies.performCeremonyUseCase.finalizeCeremony(
@@ -213,8 +241,10 @@ final class ReceiverCeremonyViewModel {
                 role: .responder,
                 relayURL: relayURL,
                 customName: finalName,
+                messageRetention: messageRetention,
                 disappearingMessages: disappearingMessages,
-                accentColor: selectedColor
+                accentColor: selectedColor,
+                persistenceConsent: receivedPersistenceConsent
             )
 
             Log.info(.ceremony, "Ceremony completed: conversation \(conversation.id.prefix(8)), role=responder, pad=\(padBytes.count) bytes")
@@ -245,6 +275,7 @@ final class ReceiverCeremonyViewModel {
         receivedFrameCount = 0
         progress = 0.0
         selectedColor = .indigo
+        receivedPersistenceConsent = false
     }
 
     func cancel() {

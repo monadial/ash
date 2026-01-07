@@ -6,14 +6,46 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct AshApp: App {
     /// App delegate for system callbacks (push notifications, etc.)
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    /// SwiftData model container for persistent message storage
+    /// Only used when conversation has disappearing messages enabled AND biometric lock is on
+    private let modelContainer: ModelContainer
+
     /// Dependency container - single source of truth for all dependencies
-    @StateObject private var dependencies = Dependencies()
+    @StateObject private var dependencies: Dependencies
+
+    init() {
+        // Create SwiftData model container for persistent messages
+        let schema = Schema([PersistedMessage.self])
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            allowsSave: true
+        )
+
+        do {
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            self.modelContainer = container
+            // Create Dependencies with model container for persistent repository
+            self._dependencies = StateObject(wrappedValue: Dependencies(modelContainer: container))
+            Log.info(.app, "SwiftData ModelContainer created successfully")
+        } catch {
+            // If SwiftData fails, continue without persistence
+            Log.error(.app, "Failed to create ModelContainer: \(error) - messages won't persist")
+            // Create a fallback container (in-memory only)
+            let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            // swiftlint:disable:next force_try
+            let container = try! ModelContainer(for: schema, configurations: [fallbackConfig])
+            self.modelContainer = container
+            self._dependencies = StateObject(wrappedValue: Dependencies())
+        }
+    }
 
     /// Root view model
     @State private var appViewModel: AppViewModel?
@@ -55,6 +87,10 @@ struct AshApp: App {
                 switch newPhase {
                 case .background:
                     lockViewModel.appDidEnterBackground()
+                    // Secure wipe ephemeral messages when going to background
+                    Task {
+                        await dependencies.messageStorageService.secureWipeEphemeral()
+                    }
                 case .active:
                     lockViewModel.appDidBecomeActive()
                     // Re-register for push when app becomes active
@@ -131,9 +167,6 @@ struct RootView: View {
                         },
                         onUpdateRelayURL: { url in
                             Task { await viewModel.updateConversationRelayURL(conversation, url: url) }
-                        },
-                        onUpdateColor: { color in
-                            Task { await viewModel.updateConversationColor(conversation, color: color) }
                         },
                         onDismiss: {
                             // Reload conversations to get updated state (pad consumption, cursor, etc.)

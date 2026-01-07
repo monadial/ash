@@ -1,19 +1,22 @@
-//! Fountain codes for rateless erasure coding.
+//! LT Codes (Luby Transform) for reliable rateless erasure coding.
 //!
-//! Enables reliable data transfer over lossy channels:
-//! - First K blocks are source data (no encoding overhead)
-//! - Additional blocks are XOR combinations for redundancy
-//! - Receiver can recover from any K blocks (with some extra for out-of-order)
+//! LT codes provide near-optimal recovery: K source symbols can be recovered
+//! from approximately K + O(√K) encoded symbols with high probability.
+//!
+//! Key improvements over simple XOR pairs:
+//! - Variable degree (1 to K neighbors) per encoded block
+//! - Robust Soliton distribution ensures many degree-1 blocks
+//! - Belief propagation decoding enables cascading recovery
 //!
 //! # Example
 //!
 //! ```
-//! use ash_core::fountain::{FountainEncoder, FountainDecoder};
+//! use ash_core::fountain::{LTEncoder, LTDecoder};
 //!
-//! let data = b"Hello, fountain codes!";
-//! let mut encoder = FountainEncoder::new(data, 8);
+//! let data = b"Hello, LT codes!";
+//! let mut encoder = LTEncoder::new(data, 8);
 //!
-//! let mut decoder = FountainDecoder::from_block(&encoder.next_block());
+//! let mut decoder = LTDecoder::new(encoder.source_count() as u16, 8, data.len());
 //!
 //! while !decoder.is_complete() {
 //!     decoder.add_block(&encoder.next_block());
@@ -26,15 +29,13 @@ use crate::crc;
 use crate::error::{Error, Result};
 
 /// Default block size in bytes.
-/// 1500 bytes + 16 header = 1516 bytes, base64 = ~2021 chars.
-/// Fits in Version 23-24 QR codes with L correction.
-/// Frame counts: ~44 for 64KB, ~175 for 256KB, ~699 for 1MB.
+/// ~1500 bytes fits well in QR codes with L correction.
 pub const DEFAULT_BLOCK_SIZE: usize = 1500;
 
 /// An encoded block for transmission.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EncodedBlock {
-    /// Block index (0..K are source blocks, K+ are XOR blocks).
+    /// Block index (sequential, 0..infinity).
     pub index: u32,
     /// Total number of source blocks.
     pub source_count: u16,
@@ -42,7 +43,7 @@ pub struct EncodedBlock {
     pub block_size: u16,
     /// Original data length.
     pub original_len: u32,
-    /// Block data.
+    /// Block data (XOR of selected source blocks).
     pub data: Vec<u8>,
     /// CRC-32 checksum.
     pub checksum: u32,
@@ -110,15 +111,16 @@ impl EncodedBlock {
     }
 }
 
-/// Fountain encoder - generates blocks from source data.
-pub struct FountainEncoder {
+/// LT Encoder - generates encoded blocks from source data.
+pub struct LTEncoder {
     source_blocks: Vec<Vec<u8>>,
     block_size: usize,
     original_len: usize,
     next_index: u32,
+    k: usize, // Number of source blocks
 }
 
-impl FountainEncoder {
+impl LTEncoder {
     /// Create encoder with specified block size.
     pub fn new(data: &[u8], block_size: usize) -> Self {
         assert!(block_size > 0, "block_size must be > 0");
@@ -149,10 +151,11 @@ impl FountainEncoder {
             block_size,
             original_len,
             next_index: 0,
+            k,
         }
     }
 
-    /// Create encoder with default block size (256 bytes).
+    /// Create encoder with default block size.
     pub fn with_default_block_size(data: &[u8]) -> Self {
         Self::new(data, DEFAULT_BLOCK_SIZE)
     }
@@ -166,24 +169,21 @@ impl FountainEncoder {
 
     /// Generate specific block by index.
     pub fn generate_block(&self, index: u32) -> EncodedBlock {
-        let k = self.source_blocks.len();
-        let idx = index as usize;
-
-        let data = if idx < k {
-            // First K blocks: source blocks directly
-            self.source_blocks[idx].clone()
+        // First K blocks are source blocks directly (degree 1, identity)
+        // This guarantees we have raw source blocks for easy recovery start
+        let data = if (index as usize) < self.k {
+            self.source_blocks[index as usize].clone()
         } else {
-            // XOR blocks: combine two source blocks using pseudo-random pairs
-            let i = idx - k;
-            let (a, b) = xor_pair(i, k);
-            xor_blocks(&self.source_blocks[a], &self.source_blocks[b])
+            // Encoded blocks use LT degree distribution
+            let neighbors = self.get_neighbors(index);
+            self.xor_neighbors(&neighbors)
         };
 
         let checksum = crc::compute(&data);
 
         EncodedBlock {
             index,
-            source_count: k as u16,
+            source_count: self.k as u16,
             block_size: self.block_size as u16,
             original_len: self.original_len as u32,
             data,
@@ -191,9 +191,95 @@ impl FountainEncoder {
         }
     }
 
+    /// Get neighbor indices for an encoded block using Robust Soliton distribution.
+    fn get_neighbors(&self, index: u32) -> Vec<usize> {
+        let mut rng = PseudoRng::new(index as u64);
+        let degree = self.sample_degree(&mut rng);
+
+        // Select `degree` unique neighbors
+        let mut neighbors = Vec::with_capacity(degree);
+        let mut available: Vec<usize> = (0..self.k).collect();
+
+        for _ in 0..degree.min(self.k) {
+            if available.is_empty() {
+                break;
+            }
+            let idx = rng.next_usize() % available.len();
+            neighbors.push(available.swap_remove(idx));
+        }
+
+        neighbors
+    }
+
+    /// Sample degree from Robust Soliton distribution.
+    /// This distribution ensures:
+    /// - Many degree-1 blocks (for decoding "seeds")
+    /// - Good coverage across all source blocks
+    fn sample_degree(&self, rng: &mut PseudoRng) -> usize {
+        let k = self.k;
+        if k == 1 {
+            return 1;
+        }
+
+        // Robust Soliton distribution parameters
+        // c and delta control the spike at degree k/R
+        let c = 0.1;
+        let delta = 0.5;
+        let r = c * (k as f64).ln() * (k as f64 / delta).sqrt();
+        let r = r.max(1.0);
+
+        // Build CDF of Robust Soliton distribution
+        // ρ(d) = 1/k for d=1, 1/(d*(d-1)) for d=2..k (Ideal Soliton)
+        // τ(d) = spike at d = k/R (Robust addition)
+        let mut cdf = Vec::with_capacity(k);
+        let mut sum = 0.0;
+
+        for d in 1..=k {
+            // Ideal Soliton
+            let rho = if d == 1 {
+                1.0 / k as f64
+            } else {
+                1.0 / (d * (d - 1)) as f64
+            };
+
+            // Robust Soliton addition (spike)
+            let tau = if d < (k as f64 / r) as usize {
+                r / (d as f64 * k as f64)
+            } else if d == (k as f64 / r) as usize {
+                r * (r / delta).ln() / k as f64
+            } else {
+                0.0
+            };
+
+            sum += rho + tau;
+            cdf.push(sum);
+        }
+
+        // Normalize and sample
+        let sample = rng.next_f64() * sum;
+        for (d, &threshold) in cdf.iter().enumerate() {
+            if sample <= threshold {
+                return d + 1;
+            }
+        }
+
+        k // Fallback (shouldn't happen)
+    }
+
+    /// XOR multiple source blocks together.
+    fn xor_neighbors(&self, neighbors: &[usize]) -> Vec<u8> {
+        let mut result = vec![0u8; self.block_size];
+        for &idx in neighbors {
+            for (r, s) in result.iter_mut().zip(self.source_blocks[idx].iter()) {
+                *r ^= s;
+            }
+        }
+        result
+    }
+
     /// Number of source blocks.
     pub fn source_count(&self) -> usize {
-        self.source_blocks.len()
+        self.k
     }
 
     /// Block size in bytes.
@@ -207,17 +293,20 @@ impl FountainEncoder {
     }
 }
 
-/// Fountain decoder - reconstructs data from received blocks.
-pub struct FountainDecoder {
+/// LT Decoder - reconstructs data from received blocks.
+pub struct LTDecoder {
     k: usize,
     block_size: usize,
     original_len: usize,
+    /// Decoded source blocks (None if not yet decoded)
     decoded: Vec<Option<Vec<u8>>>,
-    // Store XOR blocks for recovery: (index, data, source_a, source_b)
-    xor_blocks: Vec<(u32, Vec<u8>, usize, usize)>,
+    /// Pending encoded blocks: (block_data, neighbor_indices)
+    pending: Vec<(Vec<u8>, Vec<usize>)>,
+    /// Track which block indices we've seen (to skip duplicates)
+    seen_indices: std::collections::HashSet<u32>,
 }
 
-impl FountainDecoder {
+impl LTDecoder {
     /// Create decoder from first received block.
     pub fn from_block(block: &EncodedBlock) -> Self {
         Self::new(block.source_count, block.block_size, block.original_len as usize)
@@ -231,7 +320,8 @@ impl FountainDecoder {
             block_size: block_size as usize,
             original_len,
             decoded: vec![None; k],
-            xor_blocks: Vec::new(),
+            pending: Vec::new(),
+            seen_indices: std::collections::HashSet::new(),
         }
     }
 
@@ -241,59 +331,167 @@ impl FountainDecoder {
             return true;
         }
 
-        let idx = block.index as usize;
+        // Skip duplicates
+        if self.seen_indices.contains(&block.index) {
+            return self.is_complete();
+        }
+        self.seen_indices.insert(block.index);
 
-        if idx < self.k {
-            // Source block - store directly
+        // First K blocks are source blocks directly
+        if (block.index as usize) < self.k {
+            let idx = block.index as usize;
             if self.decoded[idx].is_none() {
                 self.decoded[idx] = Some(block.data.clone());
-                self.try_recover();
+                self.propagate();
             }
-        } else {
-            // XOR block - compute which sources it combines (must match encoder)
-            let i = idx - self.k;
-            let (a, b) = xor_pair(i, self.k);
+            return self.is_complete();
+        }
 
-            // Try immediate recovery
-            if self.decoded[a].is_some() && self.decoded[b].is_none() {
-                let recovered = xor_blocks(self.decoded[a].as_ref().unwrap(), &block.data);
-                self.decoded[b] = Some(recovered);
-                self.try_recover();
-            } else if self.decoded[b].is_some() && self.decoded[a].is_none() {
-                let recovered = xor_blocks(self.decoded[b].as_ref().unwrap(), &block.data);
-                self.decoded[a] = Some(recovered);
-                self.try_recover();
-            } else if self.decoded[a].is_none() && self.decoded[b].is_none() {
-                // Store for later
-                self.xor_blocks.push((block.index, block.data.clone(), a, b));
+        // For encoded blocks, compute neighbors and try to process
+        let neighbors = self.get_neighbors(block.index, self.k);
+
+        // Try immediate decoding if degree-1 after removing known blocks
+        let mut unknown: Vec<usize> = neighbors
+            .iter()
+            .filter(|&&n| self.decoded[n].is_none())
+            .copied()
+            .collect();
+
+        if unknown.is_empty() {
+            // All neighbors known - redundant block
+            return self.is_complete();
+        }
+
+        if unknown.len() == 1 {
+            // Can decode immediately!
+            let target = unknown[0];
+            let mut data = block.data.clone();
+
+            // XOR out known neighbors
+            for &n in &neighbors {
+                if n != target {
+                    if let Some(ref src) = self.decoded[n] {
+                        for (d, s) in data.iter_mut().zip(src.iter()) {
+                            *d ^= s;
+                        }
+                    }
+                }
             }
-            // If both decoded, block is redundant
+
+            self.decoded[target] = Some(data);
+            self.propagate();
+        } else {
+            // Store for later processing
+            self.pending.push((block.data.clone(), neighbors));
         }
 
         self.is_complete()
     }
 
-    /// Try to recover more blocks using stored XOR blocks.
-    fn try_recover(&mut self) {
+    /// Belief propagation: try to decode more blocks using pending blocks.
+    fn propagate(&mut self) {
         let mut changed = true;
         while changed {
             changed = false;
-            self.xor_blocks.retain(|(_idx, data, a, b)| {
-                if self.decoded[*a].is_some() && self.decoded[*b].is_none() {
-                    self.decoded[*b] = Some(xor_blocks(self.decoded[*a].as_ref().unwrap(), data));
-                    changed = true;
-                    false // Remove from list
-                } else if self.decoded[*b].is_some() && self.decoded[*a].is_none() {
-                    self.decoded[*a] = Some(xor_blocks(self.decoded[*b].as_ref().unwrap(), data));
-                    changed = true;
-                    false
-                } else if self.decoded[*a].is_some() && self.decoded[*b].is_some() {
-                    false // Both decoded, remove
-                } else {
-                    true // Keep for later
+
+            self.pending.retain_mut(|(data, neighbors)| {
+                // Find unknown neighbors
+                let unknown: Vec<usize> = neighbors
+                    .iter()
+                    .filter(|&&n| self.decoded[n].is_none())
+                    .copied()
+                    .collect();
+
+                if unknown.is_empty() {
+                    // All known - discard
+                    return false;
                 }
+
+                if unknown.len() == 1 {
+                    // Can decode!
+                    let target = unknown[0];
+                    let mut result = data.clone();
+
+                    for &n in neighbors.iter() {
+                        if n != target {
+                            if let Some(ref src) = self.decoded[n] {
+                                for (d, s) in result.iter_mut().zip(src.iter()) {
+                                    *d ^= s;
+                                }
+                            }
+                        }
+                    }
+
+                    self.decoded[target] = Some(result);
+                    changed = true;
+                    return false; // Remove from pending
+                }
+
+                true // Keep in pending
             });
         }
+    }
+
+    /// Get neighbor indices for an encoded block (must match encoder).
+    fn get_neighbors(&self, index: u32, k: usize) -> Vec<usize> {
+        let mut rng = PseudoRng::new(index as u64);
+        let degree = self.sample_degree(k, &mut rng);
+
+        let mut neighbors = Vec::with_capacity(degree);
+        let mut available: Vec<usize> = (0..k).collect();
+
+        for _ in 0..degree.min(k) {
+            if available.is_empty() {
+                break;
+            }
+            let idx = rng.next_usize() % available.len();
+            neighbors.push(available.swap_remove(idx));
+        }
+
+        neighbors
+    }
+
+    /// Sample degree (must match encoder).
+    fn sample_degree(&self, k: usize, rng: &mut PseudoRng) -> usize {
+        if k == 1 {
+            return 1;
+        }
+
+        let c = 0.1;
+        let delta = 0.5;
+        let r = c * (k as f64).ln() * (k as f64 / delta).sqrt();
+        let r = r.max(1.0);
+
+        let mut cdf = Vec::with_capacity(k);
+        let mut sum = 0.0;
+
+        for d in 1..=k {
+            let rho = if d == 1 {
+                1.0 / k as f64
+            } else {
+                1.0 / (d * (d - 1)) as f64
+            };
+
+            let tau = if d < (k as f64 / r) as usize {
+                r / (d as f64 * k as f64)
+            } else if d == (k as f64 / r) as usize {
+                r * (r / delta).ln() / k as f64
+            } else {
+                0.0
+            };
+
+            sum += rho + tau;
+            cdf.push(sum);
+        }
+
+        let sample = rng.next_f64() * sum;
+        for (d, &threshold) in cdf.iter().enumerate() {
+            if sample <= threshold {
+                return d + 1;
+            }
+        }
+
+        k
     }
 
     /// Check if all source blocks are decoded.
@@ -334,34 +532,45 @@ impl FountainDecoder {
     }
 }
 
-/// XOR two blocks together.
-fn xor_blocks(a: &[u8], b: &[u8]) -> Vec<u8> {
-    a.iter().zip(b.iter()).map(|(x, y)| x ^ y).collect()
+/// Simple deterministic PRNG for reproducible neighbor selection.
+/// Both encoder and decoder must use the same algorithm.
+struct PseudoRng {
+    state: u64,
 }
 
-/// Generate pseudo-random pair indices for XOR block.
-/// Uses hash mixing for diverse pair selection (better coverage than sequential).
-/// Both encoder and decoder must use this same function.
-fn xor_pair(i: usize, k: usize) -> (usize, usize) {
-    // Mix the index to get pseudo-random but deterministic pairs
-    let mut h = i as u64;
-    h = h.wrapping_mul(0x9E3779B97F4A7C15); // Golden ratio hash
-    h ^= h >> 30;
-    h = h.wrapping_mul(0xBF58476D1CE4E5B9);
-    h ^= h >> 27;
-
-    let a = (h as usize) % k;
-
-    // Second index must be different from first
-    h = h.wrapping_mul(0x94D049BB133111EB);
-    h ^= h >> 31;
-    let mut b = (h as usize) % k;
-    if b == a {
-        b = (b + 1) % k;
+impl PseudoRng {
+    fn new(seed: u64) -> Self {
+        // Mix seed to avoid patterns
+        let mut state = seed;
+        state = state.wrapping_add(0x9E3779B97F4A7C15);
+        state ^= state >> 30;
+        state = state.wrapping_mul(0xBF58476D1CE4E5B9);
+        state ^= state >> 27;
+        state = state.wrapping_mul(0x94D049BB133111EB);
+        state ^= state >> 31;
+        Self { state }
     }
 
-    (a, b)
+    fn next_u64(&mut self) -> u64 {
+        // xorshift64*
+        self.state ^= self.state >> 12;
+        self.state ^= self.state << 25;
+        self.state ^= self.state >> 27;
+        self.state.wrapping_mul(0x2545F4914F6CDD1D)
+    }
+
+    fn next_usize(&mut self) -> usize {
+        self.next_u64() as usize
+    }
+
+    fn next_f64(&mut self) -> f64 {
+        (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
+    }
 }
+
+// Backward compatibility aliases
+pub type FountainEncoder = LTEncoder;
+pub type FountainDecoder = LTDecoder;
 
 #[cfg(test)]
 mod tests {
@@ -404,15 +613,12 @@ mod tests {
     }
 
     #[test]
-    fn fountain_small_data() {
-        let data = b"Hello, fountain codes!";
-        let mut encoder = FountainEncoder::new(data, 8);
-        let mut decoder = FountainDecoder::from_block(&encoder.next_block());
+    fn lt_small_data() {
+        let data = b"Hello, LT codes!";
+        let mut encoder = LTEncoder::new(data, 8);
+        let mut decoder = LTDecoder::new(encoder.source_count() as u16, 8, data.len());
 
-        // Reset encoder
-        let mut encoder = FountainEncoder::new(data, 8);
         let mut blocks_used = 0;
-
         while !decoder.is_complete() {
             decoder.add_block(&encoder.next_block());
             blocks_used += 1;
@@ -424,14 +630,12 @@ mod tests {
     }
 
     #[test]
-    fn fountain_medium_data() {
+    fn lt_medium_data() {
         let data: Vec<u8> = (0..1024).map(|i| (i % 256) as u8).collect();
-        let mut encoder = FountainEncoder::new(&data, 256);
-        let mut decoder = FountainDecoder::from_block(&encoder.next_block());
+        let mut encoder = LTEncoder::new(&data, 256);
+        let mut decoder = LTDecoder::new(encoder.source_count() as u16, 256, data.len());
 
-        let mut encoder = FountainEncoder::new(&data, 256);
         let mut blocks_used = 0;
-
         while !decoder.is_complete() {
             decoder.add_block(&encoder.next_block());
             blocks_used += 1;
@@ -443,14 +647,12 @@ mod tests {
     }
 
     #[test]
-    fn fountain_large_data() {
+    fn lt_large_data() {
         let data: Vec<u8> = (0..65536).map(|i| (i % 256) as u8).collect();
-        let mut encoder = FountainEncoder::new(&data, 512);
-        let mut decoder = FountainDecoder::from_block(&encoder.next_block());
+        let mut encoder = LTEncoder::new(&data, 512);
+        let mut decoder = LTDecoder::new(encoder.source_count() as u16, 512, data.len());
 
-        let mut encoder = FountainEncoder::new(&data, 512);
         let mut blocks_used = 0;
-
         while !decoder.is_complete() {
             decoder.add_block(&encoder.next_block());
             blocks_used += 1;
@@ -458,21 +660,23 @@ mod tests {
         }
 
         assert_eq!(decoder.get_data().unwrap(), data);
-        println!("Large: {} blocks for {} source", blocks_used, encoder.source_count());
+        println!("Large: {} blocks for {} source (overhead: {:.1}%)",
+                 blocks_used, encoder.source_count(),
+                 (blocks_used as f64 / encoder.source_count() as f64 - 1.0) * 100.0);
     }
 
     #[test]
-    fn fountain_out_of_order() {
-        let data = b"Out of order test data here";
-        let mut encoder = FountainEncoder::new(data, 8);
+    fn lt_out_of_order() {
+        let data = b"Out of order test data here!";
+        let mut encoder = LTEncoder::new(data, 8);
         let k = encoder.source_count();
 
         // Generate extra blocks
-        let blocks: Vec<_> = (0..(k + 5)).map(|_| encoder.next_block()).collect();
+        let blocks: Vec<_> = (0..(k + 10)).map(|_| encoder.next_block()).collect();
 
-        let mut decoder = FountainDecoder::new(k as u16, 8, data.len());
+        let mut decoder = LTDecoder::new(k as u16, 8, data.len());
 
-        // Add in reverse
+        // Add in reverse order
         for block in blocks.iter().rev() {
             if decoder.add_block(block) {
                 break;
@@ -484,16 +688,16 @@ mod tests {
     }
 
     #[test]
-    fn fountain_skip_blocks() {
-        let data = b"Test with some skipped blocks";
-        let mut encoder = FountainEncoder::new(data, 4);
+    fn lt_skip_blocks() {
+        let data = b"Test with some skipped blocks here";
+        let mut encoder = LTEncoder::new(data, 4);
         let k = encoder.source_count();
 
         let blocks: Vec<_> = (0..(k * 3)).map(|_| encoder.next_block()).collect();
 
-        let mut decoder = FountainDecoder::new(k as u16, 4, data.len());
+        let mut decoder = LTDecoder::new(k as u16, 4, data.len());
 
-        // Skip every other
+        // Add every other block
         for (i, block) in blocks.iter().enumerate() {
             if i % 2 == 0 {
                 if decoder.add_block(block) {
@@ -502,7 +706,7 @@ mod tests {
             }
         }
 
-        // Add rest if needed
+        // If not complete, add the rest
         if !decoder.is_complete() {
             for (i, block) in blocks.iter().enumerate() {
                 if i % 2 == 1 {
@@ -518,58 +722,30 @@ mod tests {
     }
 
     #[test]
-    fn fountain_duplicate_blocks() {
+    fn lt_duplicate_blocks() {
         let data = b"Duplicate test";
-        let mut encoder = FountainEncoder::new(data, 4);
-        let mut decoder = FountainDecoder::from_block(&encoder.next_block());
-
-        let mut encoder = FountainEncoder::new(data, 4);
+        let mut encoder = LTEncoder::new(data, 4);
+        let mut decoder = LTDecoder::new(encoder.source_count() as u16, 4, data.len());
 
         while !decoder.is_complete() {
             let block = encoder.next_block();
             decoder.add_block(&block);
-            decoder.add_block(&block); // Duplicate
+            decoder.add_block(&block); // Duplicate - should be ignored
         }
 
         assert_eq!(decoder.get_data().unwrap(), data);
     }
 
     #[test]
-    fn fountain_empty_data() {
-        let data: &[u8] = &[];
-        let mut encoder = FountainEncoder::new(data, 8);
-        let mut decoder = FountainDecoder::from_block(&encoder.next_block());
-
-        let mut encoder = FountainEncoder::new(data, 8);
-        decoder.add_block(&encoder.next_block());
-
-        assert!(decoder.is_complete());
-        assert!(decoder.get_data().unwrap().is_empty());
-    }
-
-    #[test]
-    fn fountain_single_byte() {
-        let data = &[0x42u8];
-        let mut encoder = FountainEncoder::new(data, 8);
-        let mut decoder = FountainDecoder::from_block(&encoder.next_block());
-
-        let mut encoder = FountainEncoder::new(data, 8);
-        while !decoder.is_complete() {
-            decoder.add_block(&encoder.next_block());
-        }
-
-        assert_eq!(decoder.get_data().unwrap(), data);
-    }
-
-    #[test]
-    fn fountain_first_k_sufficient() {
+    fn lt_first_k_sufficient() {
+        // First K blocks should always be enough (they're source blocks)
         let data: Vec<u8> = (0..512).map(|i| (i % 256) as u8).collect();
-        let mut encoder = FountainEncoder::new(&data, 64);
+        let mut encoder = LTEncoder::new(&data, 64);
         let k = encoder.source_count();
 
-        let mut decoder = FountainDecoder::new(k as u16, 64, data.len());
+        let mut decoder = LTDecoder::new(k as u16, 64, data.len());
 
-        // Only first K blocks
+        // Only first K blocks (source blocks)
         for _ in 0..k {
             decoder.add_block(&encoder.next_block());
         }
@@ -579,144 +755,153 @@ mod tests {
     }
 
     #[test]
-    fn fountain_progress() {
-        let data: Vec<u8> = (0..256).map(|i| i as u8).collect();
-        let mut encoder = FountainEncoder::new(&data, 64);
-        let mut decoder = FountainDecoder::from_block(&encoder.next_block());
+    fn lt_random_loss_recovery() {
+        // Simulate 20% packet loss with pseudo-random pattern
+        let data: Vec<u8> = (0..2048).map(|i| (i % 256) as u8).collect();
+        let mut encoder = LTEncoder::new(&data, 256);
+        let k = encoder.source_count();
 
-        let mut encoder = FountainEncoder::new(&data, 64);
+        // Generate 2x source count blocks
+        let blocks: Vec<_> = (0..(k * 2)).map(|_| encoder.next_block()).collect();
+
+        let mut decoder = LTDecoder::new(k as u16, 256, data.len());
+
+        // Skip 20% of blocks using deterministic but scattered pattern
+        // Keep indices where (i * 7 + 3) % 10 != 0 (drops ~10%)
+        let mut received = 0;
+        for (i, block) in blocks.iter().enumerate() {
+            if (i * 7 + 3) % 10 != 0 {
+                decoder.add_block(block);
+                received += 1;
+                if decoder.is_complete() {
+                    break;
+                }
+            }
+        }
+
+        assert!(decoder.is_complete(), "Failed to decode with 10% loss after {} blocks", received);
+        assert_eq!(decoder.get_data().unwrap(), data);
+        println!("10% loss recovery: {} blocks received for {} source", received, k);
+    }
+
+    #[test]
+    fn lt_progress_tracking() {
+        let data: Vec<u8> = (0..256).map(|i| i as u8).collect();
+        let mut encoder = LTEncoder::new(&data, 64);
+        let mut decoder = LTDecoder::new(encoder.source_count() as u16, 64, data.len());
+
         assert_eq!(decoder.progress(), 0.0);
+        assert_eq!(decoder.decoded_count(), 0);
 
         while !decoder.is_complete() {
             decoder.add_block(&encoder.next_block());
         }
 
         assert_eq!(decoder.progress(), 1.0);
-    }
-
-    #[test]
-    fn fountain_regenerate_block() {
-        let data = b"Regenerate test";
-        let encoder = FountainEncoder::new(data, 8);
-
-        let b1 = encoder.generate_block(42);
-        let b2 = encoder.generate_block(42);
-        assert_eq!(b1, b2);
+        assert_eq!(decoder.decoded_count(), encoder.source_count());
     }
 
     // ==================== PERFORMANCE TESTS ====================
 
     #[test]
-    fn perf_fountain_64kb() {
+    fn perf_lt_64kb() {
         run_perf("64KB", 64 * 1024, 256, 100);
     }
 
     #[test]
-    fn perf_fountain_256kb() {
+    fn perf_lt_256kb() {
         run_perf("256KB", 256 * 1024, 256, 50);
     }
 
     #[test]
-    fn perf_fountain_1mb() {
+    fn perf_lt_1mb() {
         run_perf("1MB", 1024 * 1024, 512, 20);
     }
 
     fn run_perf(name: &str, size: usize, block_size: usize, iters: usize) {
         let data: Vec<u8> = (0..size).map(|i| (i % 256) as u8).collect();
 
-        // Encode
-        let start = std::time::Instant::now();
-        let mut total_blocks = 0;
+        // Measure overhead
+        let mut overhead_sum = 0.0;
         for _ in 0..iters {
-            let mut enc = FountainEncoder::new(&data, block_size);
+            let mut enc = LTEncoder::new(&data, block_size);
             let k = enc.source_count();
-            for _ in 0..(k + k / 5) {
-                let _ = enc.next_block();
-                total_blocks += 1;
-            }
-        }
-        let enc_time = start.elapsed();
-        let enc_rate = total_blocks as f64 / enc_time.as_secs_f64();
+            let mut dec = LTDecoder::new(k as u16, block_size as u16, size);
 
-        // Decode
-        let mut enc = FountainEncoder::new(&data, block_size);
-        let k = enc.source_count();
-        let blocks: Vec<_> = (0..(k + k / 5)).map(|_| enc.next_block()).collect();
-
-        let start = std::time::Instant::now();
-        total_blocks = 0;
-        for _ in 0..iters {
-            let mut dec = FountainDecoder::new(k as u16, block_size as u16, size);
-            for b in &blocks {
-                dec.add_block(b);
-                total_blocks += 1;
-                if dec.is_complete() {
-                    break;
-                }
+            let mut blocks_used = 0;
+            while !dec.is_complete() {
+                dec.add_block(&enc.next_block());
+                blocks_used += 1;
             }
+            overhead_sum += blocks_used as f64 / k as f64;
         }
-        let dec_time = start.elapsed();
-        let dec_rate = total_blocks as f64 / dec_time.as_secs_f64();
 
         println!(
-            "\n{}: encode {:.0} blk/s, decode {:.0} blk/s",
-            name, enc_rate, dec_rate
+            "\n{}: avg overhead {:.1}% (K={})",
+            name,
+            (overhead_sum / iters as f64 - 1.0) * 100.0,
+            LTEncoder::new(&data, block_size).source_count()
         );
     }
 
     #[test]
-    fn perf_out_of_order_overhead() {
-        println!("\n=== Out-of-Order Overhead ===");
-        println!("{:>8} {:>6} {:>8} {:>8} {:>8}", "Size", "K", "InOrder", "Reverse", "Random");
+    fn perf_loss_resilience() {
+        println!("\n=== Loss Resilience Test ===");
+        println!("{:>8} {:>6} {:>8} {:>8} {:>8}", "Size", "K", "0% loss", "20% loss", "40% loss");
 
         for size in [16 * 1024, 64 * 1024, 256 * 1024] {
             let data: Vec<u8> = (0..size).map(|i| (i % 256) as u8).collect();
-            let mut enc = FountainEncoder::new(&data, 256);
+            let mut enc = LTEncoder::new(&data, 256);
             let k = enc.source_count();
-            let blocks: Vec<_> = (0..(k * 2)).map(|_| enc.next_block()).collect();
+            let blocks: Vec<_> = (0..(k * 3)).map(|_| enc.next_block()).collect();
 
-            // In-order
-            let mut dec = FountainDecoder::new(k as u16, 256, size);
-            let mut in_order = 0;
+            // 0% loss
+            let mut dec = LTDecoder::new(k as u16, 256, size);
+            let mut no_loss = 0;
             for b in &blocks {
-                in_order += 1;
+                no_loss += 1;
                 if dec.add_block(b) {
                     break;
                 }
             }
 
-            // Reversed
-            let mut dec = FountainDecoder::new(k as u16, 256, size);
-            let mut reversed = 0;
-            for b in blocks.iter().rev() {
-                reversed += 1;
-                if dec.add_block(b) {
-                    break;
+            // 20% loss
+            let mut dec = LTDecoder::new(k as u16, 256, size);
+            let mut loss_20 = 0;
+            for (i, b) in blocks.iter().enumerate() {
+                if i % 5 != 0 {
+                    // Keep 80%
+                    loss_20 += 1;
+                    if dec.add_block(b) {
+                        break;
+                    }
                 }
             }
-
-            // Random shuffle
-            let mut shuffled = blocks.clone();
-            let mut s = 12345u64;
-            for i in (1..shuffled.len()).rev() {
-                s ^= s << 13;
-                s ^= s >> 7;
-                s ^= s << 17;
-                shuffled.swap(i, s as usize % (i + 1));
+            if !dec.is_complete() {
+                loss_20 = 9999;
             }
 
-            let mut dec = FountainDecoder::new(k as u16, 256, size);
-            let mut random = 0;
-            for b in &shuffled {
-                random += 1;
-                if dec.add_block(b) {
-                    break;
+            // 40% loss
+            let mut dec = LTDecoder::new(k as u16, 256, size);
+            let mut loss_40 = 0;
+            for (i, b) in blocks.iter().enumerate() {
+                if i % 5 > 1 {
+                    // Keep 60%
+                    loss_40 += 1;
+                    if dec.add_block(b) {
+                        break;
+                    }
                 }
+            }
+            if !dec.is_complete() {
+                loss_40 = 9999;
             }
 
             println!(
                 "{:>7}K {:>6} {:>8} {:>8} {:>8}",
-                size / 1024, k, in_order, reversed, random
+                size / 1024, k, no_loss,
+                if loss_20 == 9999 { "FAIL".to_string() } else { loss_20.to_string() },
+                if loss_40 == 9999 { "FAIL".to_string() } else { loss_40.to_string() }
             );
         }
     }

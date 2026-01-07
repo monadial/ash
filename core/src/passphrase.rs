@@ -90,11 +90,7 @@ pub fn derive_key(passphrase: &str, frame_index: u16, length: usize) -> Vec<u8> 
 ///
 /// Panics if key length doesn't match data length.
 pub fn xor_bytes(data: &[u8], key: &[u8]) -> Vec<u8> {
-    assert_eq!(
-        data.len(),
-        key.len(),
-        "key length must match data length"
-    );
+    assert_eq!(data.len(), key.len(), "key length must match data length");
 
     data.iter().zip(key.iter()).map(|(d, k)| d ^ k).collect()
 }
@@ -152,7 +148,10 @@ pub fn validate_passphrase(passphrase: &str) -> Result<(), &'static str> {
     }
 
     // Must contain only printable ASCII for verbal communication
-    if !passphrase.chars().all(|c| c.is_ascii() && !c.is_ascii_control()) {
+    if !passphrase
+        .chars()
+        .all(|c| c.is_ascii() && !c.is_ascii_control())
+    {
         return Err("passphrase must contain only printable ASCII characters");
     }
 

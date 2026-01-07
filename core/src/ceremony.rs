@@ -61,7 +61,8 @@ impl NotificationFlags {
     pub const NOTIFY_MESSAGE_READ: u16 = 1 << 9;
 
     /// Default flags: new message + expiring + delivery failed
-    pub const DEFAULT: u16 = Self::NOTIFY_NEW_MESSAGE | Self::NOTIFY_MESSAGE_EXPIRING | Self::NOTIFY_DELIVERY_FAILED;
+    pub const DEFAULT: u16 =
+        Self::NOTIFY_NEW_MESSAGE | Self::NOTIFY_MESSAGE_EXPIRING | Self::NOTIFY_DELIVERY_FAILED;
 
     /// Create from raw u16 value.
     #[inline]
@@ -189,7 +190,11 @@ impl CeremonyMetadata {
     /// # Errors
     ///
     /// Returns error if relay URL is too long.
-    pub fn new(ttl_seconds: u64, disappearing_messages_seconds: u32, relay_url: String) -> Result<Self> {
+    pub fn new(
+        ttl_seconds: u64,
+        disappearing_messages_seconds: u32,
+        relay_url: String,
+    ) -> Result<Self> {
         Self::with_flags(
             ttl_seconds,
             disappearing_messages_seconds,
@@ -295,13 +300,11 @@ impl CeremonyMetadata {
             bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8],
         ]);
 
-        let disappearing_messages_seconds = u32::from_be_bytes([
-            bytes[9], bytes[10], bytes[11], bytes[12],
-        ]);
+        let disappearing_messages_seconds =
+            u32::from_be_bytes([bytes[9], bytes[10], bytes[11], bytes[12]]);
 
-        let notification_flags = NotificationFlags::from_bits(u16::from_be_bytes([
-            bytes[13], bytes[14],
-        ]));
+        let notification_flags =
+            NotificationFlags::from_bits(u16::from_be_bytes([bytes[13], bytes[14]]));
 
         let url_len = u16::from_be_bytes([bytes[15], bytes[16]]) as usize;
 
@@ -396,13 +399,9 @@ mod tests {
         let flags = NotificationFlags::from_bits(
             NotificationFlags::NOTIFY_NEW_MESSAGE | NotificationFlags::NOTIFY_MESSAGE_EXPIRED,
         );
-        let metadata = CeremonyMetadata::with_flags(
-            300,
-            60,
-            flags,
-            "https://relay.ash.app".to_string(),
-        )
-        .unwrap();
+        let metadata =
+            CeremonyMetadata::with_flags(300, 60, flags, "https://relay.ash.app".to_string())
+                .unwrap();
 
         assert!(metadata.notification_flags.notify_new_message());
         assert!(!metadata.notification_flags.notify_message_expiring());
@@ -417,7 +416,8 @@ mod tests {
 
     #[test]
     fn metadata_with_disappearing_messages() {
-        let metadata = CeremonyMetadata::new(300, 1800, "https://relay.ash.app".to_string()).unwrap();
+        let metadata =
+            CeremonyMetadata::new(300, 1800, "https://relay.ash.app".to_string()).unwrap();
 
         assert_eq!(metadata.disappearing_messages_seconds, 1800); // 30 minutes
 
@@ -433,7 +433,10 @@ mod tests {
         assert_eq!(metadata.version, 1);
         assert_eq!(metadata.ttl_seconds, DEFAULT_TTL_SECONDS);
         assert_eq!(metadata.disappearing_messages_seconds, 0); // Off by default
-        assert_eq!(metadata.notification_flags.bits(), NotificationFlags::DEFAULT);
+        assert_eq!(
+            metadata.notification_flags.bits(),
+            NotificationFlags::DEFAULT
+        );
         assert!(metadata.relay_url.is_empty());
     }
 
@@ -468,7 +471,10 @@ mod tests {
         let mut encoded = CeremonyMetadata::default().encode();
         encoded[0] = 99; // Invalid version
         let result = CeremonyMetadata::decode(&encoded);
-        assert!(matches!(result, Err(Error::UnsupportedMetadataVersion { .. })));
+        assert!(matches!(
+            result,
+            Err(Error::UnsupportedMetadataVersion { .. })
+        ));
     }
 
     #[test]

@@ -467,12 +467,8 @@ mod tests {
 
     #[test]
     fn fountain_ceremony_roundtrip() {
-        let metadata = crate::CeremonyMetadata::new(
-            3600,
-            30,
-            "https://relay.ash.test".to_string(),
-        )
-        .unwrap();
+        let metadata =
+            crate::CeremonyMetadata::new(3600, 30, "https://relay.ash.test".to_string()).unwrap();
         let pad: Vec<u8> = (0..=255).cycle().take(5000).collect();
 
         let mut generator = create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();

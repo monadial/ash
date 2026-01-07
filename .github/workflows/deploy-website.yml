@@ -6,6 +6,10 @@ on:
     paths:
       - 'website/**'
       - '.github/workflows/deploy-website.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'website/**'
 
 jobs:
   deploy:
@@ -15,6 +19,7 @@ jobs:
     permissions:
       contents: read
       deployments: write
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -40,4 +45,17 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy website/dist --project-name=ash-website
+          workingDirectory: website
+          command: pages deploy dist --project-name=ash-website --branch=${{ github.head_ref || 'main' }}
+
+      - name: Comment PR with preview URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🚀 Preview deployed to https://${{ github.head_ref }}.ash-website.pages.dev'
+            })

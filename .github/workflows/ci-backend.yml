@@ -178,10 +178,16 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ secrets.SCW_PROJECT_ID }}/${{ env.IMAGE_NAME }}
+          # SCW_REGISTRY_NAMESPACE should be set to your Scaleway registry namespace
+          # e.g., "ash-registry" or "monadial/ash"
+          images: ${{ env.REGISTRY }}/${{ secrets.SCW_REGISTRY_NAMESPACE }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=
-            type=raw,value=latest
+            type=sha,format=short
+            type=sha,format=long
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -193,3 +199,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT_SHA=${{ github.sha }}

@@ -1,0 +1,18 @@
+# Cloudflare Pages configuration
+# https://developers.cloudflare.com/pages/functions/wrangler-configuration/
+
+name = "ash-website"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+# Development settings
+[dev]
+port = 8788
+
+# Production environment
+[env.production]
+name = "ash-website"
+
+# Preview environment (for PRs)
+[env.preview]
+name = "ash-website-preview"

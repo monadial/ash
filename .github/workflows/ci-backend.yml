@@ -158,7 +158,10 @@ jobs:
     environment: prod
 
     env:
-      REGISTRY: rg.fr-par.scw.cloud
+      # Scaleway Amsterdam region registry
+      REGISTRY: rg.nl-ams.scw.cloud
+      # Registry namespace (created in Scaleway console)
+      NAMESPACE: ash-backend
       IMAGE_NAME: ash-backend
 
     steps:
@@ -178,9 +181,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          # SCW_REGISTRY_NAMESPACE should be set to your Scaleway registry namespace
-          # e.g., "ash-registry" or "monadial/ash"
-          images: ${{ env.REGISTRY }}/${{ secrets.SCW_REGISTRY_NAMESPACE }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,format=short
             type=sha,format=long

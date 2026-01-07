@@ -37,7 +37,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_15.4.app
 
       - name: Install Rust
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim
 

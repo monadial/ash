@@ -1,0 +1,36 @@
+# =============================================================================
+# Scaleway Terraform Variables
+# =============================================================================
+#
+# Copy this file to terraform.tfvars and fill in your values:
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# Required environment variables:
+#   export SCW_ACCESS_KEY="your-access-key"
+#   export SCW_SECRET_KEY="your-secret-key"
+#   export SCW_DEFAULT_PROJECT_ID="your-project-id"
+#
+# =============================================================================
+
+# Region and zone
+region = "fr-par"
+zone   = "fr-par-1"
+
+# Project
+project_name = "ash"
+environment  = "prod"
+
+# Container scaling
+container_min_scale    = 0     # Scale to zero when idle (cost saving)
+container_max_scale    = 5     # Max instances under load
+container_cpu_limit    = 1000  # 1 vCPU
+container_memory_limit = 512   # 512 MB
+
+# Custom domain (optional)
+# domain = "relay.ashprotocol.app"
+
+# APNS Configuration (optional - for push notifications)
+# apns_team_id   = "ABC123DEF4"
+# apns_key_id    = "KEYID12345"
+# apns_bundle_id = "com.monadial.ash"
+# apns_sandbox   = false

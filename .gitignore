@@ -5,6 +5,7 @@
 Cargo.lock
 !core/Cargo.lock
 !bindings/Cargo.lock
+!backend/Cargo.lock
 
 # ===== Generated iOS artifacts =====
 apps/ios/AshCore/lib/

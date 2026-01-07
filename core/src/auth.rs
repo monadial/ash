@@ -200,10 +200,12 @@ fn mix_bytes(input: &[u8], domain: u8) -> [u8; TOKEN_SIZE] {
 /// Encode bytes as lowercase hex string.
 fn hex_encode(bytes: &[u8]) -> String {
     use std::fmt::Write;
-    bytes.iter().fold(String::with_capacity(bytes.len() * 2), |mut s, b| {
-        let _ = write!(s, "{:02x}", b);
-        s
-    })
+    bytes
+        .iter()
+        .fold(String::with_capacity(bytes.len() * 2), |mut s, b| {
+            let _ = write!(s, "{:02x}", b);
+            s
+        })
 }
 
 /// Decode hex string to bytes.
@@ -342,7 +344,10 @@ mod tests {
         let output2 = mix_bytes(&input2, DOMAIN_AUTH);
 
         // Outputs should be different
-        assert_ne!(output1, output2, "Different inputs should produce different outputs");
+        assert_ne!(
+            output1, output2,
+            "Different inputs should produce different outputs"
+        );
 
         // At least some bytes should differ
         let diff_count = output1

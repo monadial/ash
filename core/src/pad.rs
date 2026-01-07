@@ -171,7 +171,11 @@ impl Pad {
     /// Create a pad with pre-existing consumption state.
     ///
     /// Used when restoring a pad from persistent storage.
-    pub fn from_bytes_with_state(bytes: Vec<u8>, consumed_front: usize, consumed_back: usize) -> Self {
+    pub fn from_bytes_with_state(
+        bytes: Vec<u8>,
+        consumed_front: usize,
+        consumed_back: usize,
+    ) -> Self {
         Self {
             bytes,
             consumed_front,
@@ -428,11 +432,11 @@ mod tests {
 
     #[test]
     fn pad_size_bytes() {
-        assert_eq!(PadSize::Tiny.bytes(), 32768);     // 32 KB
-        assert_eq!(PadSize::Small.bytes(), 65536);    // 64 KB
-        assert_eq!(PadSize::Medium.bytes(), 262144);  // 256 KB
-        assert_eq!(PadSize::Large.bytes(), 524288);   // 512 KB
-        assert_eq!(PadSize::Huge.bytes(), 1048576);   // 1 MB
+        assert_eq!(PadSize::Tiny.bytes(), 32768); // 32 KB
+        assert_eq!(PadSize::Small.bytes(), 65536); // 64 KB
+        assert_eq!(PadSize::Medium.bytes(), 262144); // 256 KB
+        assert_eq!(PadSize::Large.bytes(), 524288); // 512 KB
+        assert_eq!(PadSize::Huge.bytes(), 1048576); // 1 MB
     }
 
     #[test]
@@ -685,7 +689,7 @@ mod tests {
         let bob_bytes = pad.consume(800, Role::Responder).unwrap();
         assert_eq!(bob_bytes.len(), 800);
         // Verify Bob got bytes 200-999 (from the end)
-        assert_eq!(bob_bytes[0], 200);  // First byte Bob gets is at index 200
+        assert_eq!(bob_bytes[0], 200); // First byte Bob gets is at index 200
         assert_eq!(bob_bytes[799], (999 % 256) as u8); // Last byte is index 999 mod 256 = 231
 
         // Pad is now exhausted
@@ -830,7 +834,10 @@ mod tests {
         let alice_set: std::collections::HashSet<u8> = alice_bytes.iter().copied().collect();
         let bob_set: std::collections::HashSet<u8> = bob_bytes.iter().copied().collect();
         let intersection: Vec<_> = alice_set.intersection(&bob_set).collect();
-        assert!(intersection.is_empty(), "Alice and Bob bytes should never overlap");
+        assert!(
+            intersection.is_empty(),
+            "Alice and Bob bytes should never overlap"
+        );
 
         // Alice got 0-29, Bob got 40-99
         assert_eq!(alice_bytes, (0..30).collect::<Vec<u8>>());

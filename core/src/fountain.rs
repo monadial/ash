@@ -243,6 +243,7 @@ impl LTEncoder {
             };
 
             // Robust Soliton addition (spike)
+            #[allow(clippy::comparison_chain)]
             let tau = if d < (k as f64 / r) as usize {
                 r / (d as f64 * k as f64)
             } else if d == (k as f64 / r) as usize {
@@ -309,7 +310,11 @@ pub struct LTDecoder {
 impl LTDecoder {
     /// Create decoder from first received block.
     pub fn from_block(block: &EncodedBlock) -> Self {
-        Self::new(block.source_count, block.block_size, block.original_len as usize)
+        Self::new(
+            block.source_count,
+            block.block_size,
+            block.original_len as usize,
+        )
     }
 
     /// Create decoder with known parameters.
@@ -351,7 +356,7 @@ impl LTDecoder {
         let neighbors = self.get_neighbors(block.index, self.k);
 
         // Try immediate decoding if degree-1 after removing known blocks
-        let mut unknown: Vec<usize> = neighbors
+        let unknown: Vec<usize> = neighbors
             .iter()
             .filter(|&&n| self.decoded[n].is_none())
             .copied()
@@ -472,6 +477,7 @@ impl LTDecoder {
                 1.0 / (d * (d - 1)) as f64
             };
 
+            #[allow(clippy::comparison_chain)]
             let tau = if d < (k as f64 / r) as usize {
                 r / (d as f64 * k as f64)
             } else if d == (k as f64 / r) as usize {
@@ -568,8 +574,9 @@ impl PseudoRng {
     }
 }
 
-// Backward compatibility aliases
+/// Backward compatibility alias for [`LTEncoder`].
 pub type FountainEncoder = LTEncoder;
+/// Backward compatibility alias for [`LTDecoder`].
 pub type FountainDecoder = LTDecoder;
 
 #[cfg(test)]
@@ -626,7 +633,11 @@ mod tests {
         }
 
         assert_eq!(decoder.get_data().unwrap(), data);
-        println!("Small: {} blocks for {} source", blocks_used, encoder.source_count());
+        println!(
+            "Small: {} blocks for {} source",
+            blocks_used,
+            encoder.source_count()
+        );
     }
 
     #[test]
@@ -643,7 +654,11 @@ mod tests {
         }
 
         assert_eq!(decoder.get_data().unwrap(), data);
-        println!("Medium: {} blocks for {} source", blocks_used, encoder.source_count());
+        println!(
+            "Medium: {} blocks for {} source",
+            blocks_used,
+            encoder.source_count()
+        );
     }
 
     #[test]
@@ -660,9 +675,12 @@ mod tests {
         }
 
         assert_eq!(decoder.get_data().unwrap(), data);
-        println!("Large: {} blocks for {} source (overhead: {:.1}%)",
-                 blocks_used, encoder.source_count(),
-                 (blocks_used as f64 / encoder.source_count() as f64 - 1.0) * 100.0);
+        println!(
+            "Large: {} blocks for {} source (overhead: {:.1}%)",
+            blocks_used,
+            encoder.source_count(),
+            (blocks_used as f64 / encoder.source_count() as f64 - 1.0) * 100.0
+        );
     }
 
     #[test]
@@ -779,9 +797,16 @@ mod tests {
             }
         }
 
-        assert!(decoder.is_complete(), "Failed to decode with 10% loss after {} blocks", received);
+        assert!(
+            decoder.is_complete(),
+            "Failed to decode with 10% loss after {} blocks",
+            received
+        );
         assert_eq!(decoder.get_data().unwrap(), data);
-        println!("10% loss recovery: {} blocks received for {} source", received, k);
+        println!(
+            "10% loss recovery: {} blocks received for {} source",
+            received, k
+        );
     }
 
     #[test]
@@ -847,7 +872,10 @@ mod tests {
     #[test]
     fn perf_loss_resilience() {
         println!("\n=== Loss Resilience Test ===");
-        println!("{:>8} {:>6} {:>8} {:>8} {:>8}", "Size", "K", "0% loss", "20% loss", "40% loss");
+        println!(
+            "{:>8} {:>6} {:>8} {:>8} {:>8}",
+            "Size", "K", "0% loss", "20% loss", "40% loss"
+        );
 
         for size in [16 * 1024, 64 * 1024, 256 * 1024] {
             let data: Vec<u8> = (0..size).map(|i| (i % 256) as u8).collect();
@@ -899,9 +927,19 @@ mod tests {
 
             println!(
                 "{:>7}K {:>6} {:>8} {:>8} {:>8}",
-                size / 1024, k, no_loss,
-                if loss_20 == 9999 { "FAIL".to_string() } else { loss_20.to_string() },
-                if loss_40 == 9999 { "FAIL".to_string() } else { loss_40.to_string() }
+                size / 1024,
+                k,
+                no_loss,
+                if loss_20 == 9999 {
+                    "FAIL".to_string()
+                } else {
+                    loss_20.to_string()
+                },
+                if loss_40 == 9999 {
+                    "FAIL".to_string()
+                } else {
+                    loss_40.to_string()
+                }
             );
         }
     }

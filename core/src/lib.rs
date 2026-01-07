@@ -123,13 +123,9 @@ mod tests {
 
         // === Initiator creates fountain frames ===
         let metadata = CeremonyMetadata::default();
-        let mut generator = frame::create_fountain_ceremony(
-            &metadata,
-            initiator_pad.as_bytes(),
-            256,
-            None,
-        )
-        .unwrap();
+        let mut generator =
+            frame::create_fountain_ceremony(&metadata, initiator_pad.as_bytes(), 256, None)
+                .unwrap();
 
         // === Initiator generates mnemonic ===
         let initiator_mnemonic = mnemonic::generate_default(initiator_pad.as_bytes());
@@ -160,21 +156,29 @@ mod tests {
 
         // Initiator sends a message (consumes from start)
         let plaintext1 = b"Hello from initiator!";
-        let init_key = initiator.consume(plaintext1.len(), Role::Initiator).unwrap();
+        let init_key = initiator
+            .consume(plaintext1.len(), Role::Initiator)
+            .unwrap();
         let ciphertext1 = otp::encrypt(&init_key, plaintext1).unwrap();
 
         // Responder decrypts (using Initiator role because that's where the bytes came from)
-        let resp_decrypt_key = responder.consume(ciphertext1.len(), Role::Initiator).unwrap();
+        let resp_decrypt_key = responder
+            .consume(ciphertext1.len(), Role::Initiator)
+            .unwrap();
         let decrypted1 = otp::decrypt(&resp_decrypt_key, &ciphertext1).unwrap();
         assert_eq!(decrypted1, plaintext1);
 
         // Responder sends a message (consumes from end)
         let plaintext2 = b"Hello from responder!";
-        let resp_key = responder.consume(plaintext2.len(), Role::Responder).unwrap();
+        let resp_key = responder
+            .consume(plaintext2.len(), Role::Responder)
+            .unwrap();
         let ciphertext2 = otp::encrypt(&resp_key, plaintext2).unwrap();
 
         // Initiator decrypts (using Responder role because that's where the bytes came from)
-        let init_decrypt_key = initiator.consume(ciphertext2.len(), Role::Responder).unwrap();
+        let init_decrypt_key = initiator
+            .consume(ciphertext2.len(), Role::Responder)
+            .unwrap();
         let decrypted2 = otp::decrypt(&init_decrypt_key, &ciphertext2).unwrap();
         assert_eq!(decrypted2, plaintext2);
     }
@@ -198,8 +202,7 @@ mod tests {
     fn fountain_corruption_detected() {
         let metadata = CeremonyMetadata::default();
         let pad = vec![0u8; 1000];
-        let mut generator =
-            frame::create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
+        let mut generator = frame::create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
 
         let mut frame = generator.next_frame();
 

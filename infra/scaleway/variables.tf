@@ -63,7 +63,7 @@ variable "container_memory_limit" {
 # =============================================================================
 
 variable "domain" {
-  description = "Custom domain for the relay (e.g., relay.ash.monadial.com)"
+  description = "Custom domain for the relay (e.g., relay.ashprotocol.app)"
   type        = string
   default     = ""
 }

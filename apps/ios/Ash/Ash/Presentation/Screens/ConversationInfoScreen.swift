@@ -618,7 +618,7 @@ private struct InfoRow: View {
             role: .initiator,
             sendOffset: 30_000,
             peerConsumed: 26_000,
-            relayURL: "https://relay.ash.monadial.com",
+            relayURL: "https://relay.ashprotocol.app",
             disappearingMessages: .fiveMinutes,
             accentColor: .purple,
             persistenceConsent: true,

@@ -50,7 +50,7 @@ final class SettingsService: SettingsServiceProtocol, @unchecked Sendable {
             return plistURL
         }
         // Fallback to hardcoded default
-        return "https://relay.ash.monadial.com"
+        return "https://relay.ashprotocol.app"
     }
 
     var relayServerURL: String {

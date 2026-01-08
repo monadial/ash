@@ -73,14 +73,14 @@ To use a custom domain:
 
 1. Set `domain` variable in `terraform.tfvars`:
    ```hcl
-   domain = "relay.ash.monadial.com"
+   domain = "relay.ashprotocol.app"
    ```
 
 2. Apply terraform changes
 
 3. Add CNAME record in your DNS:
    ```
-   relay.ash.monadial.com -> <container-endpoint>
+   relay.ashprotocol.app -> <container-endpoint>
    ```
 
 ## Cost Optimization

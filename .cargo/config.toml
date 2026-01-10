@@ -1,0 +1,15 @@
+[target.aarch64-linux-android]
+ar = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar"
+linker = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android24-clang"
+
+[target.armv7-linux-androideabi]
+ar = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar"
+linker = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/armv7a-linux-androideabi24-clang"
+
+[target.x86_64-linux-android]
+ar = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar"
+linker = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/x86_64-linux-android24-clang"
+
+[target.i686-linux-android]
+ar = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar"
+linker = "/Users/tomas/Library/Android/sdk/ndk/29.0.14206865/toolchains/llvm/prebuilt/darwin-x86_64/bin/i686-linux-android24-clang"

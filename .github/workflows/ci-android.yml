@@ -1,0 +1,202 @@
+name: CI Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/android/**'
+      - 'bindings/**'
+      - 'core/**'
+      - 'scripts/build-android.sh'
+      - '.github/workflows/ci-android.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/android/**'
+      - 'bindings/**'
+      - 'core/**'
+      - 'scripts/build-android.sh'
+      - '.github/workflows/ci-android.yml'
+
+jobs:
+  build:
+    name: Build Android App
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          echo "y" | sdkmanager "ndk;27.0.12077973"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            core/target/
+            bindings/target/
+          key: ${{ runner.os }}-cargo-android-${{ hashFiles('core/Cargo.lock', 'bindings/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-android-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            apps/android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/android/**/*.gradle*', 'apps/android/**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build Android Native Libraries
+        run: ./scripts/build-android.sh
+
+      - name: Make gradlew executable
+        working-directory: apps/android
+        run: chmod +x gradlew
+
+      - name: Build Android App (Debug)
+        working-directory: apps/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Run Unit Tests
+        working-directory: apps/android
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: apps/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+  lint:
+    name: Lint & Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          echo "y" | sdkmanager "ndk;27.0.12077973"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            bindings/target/
+          key: ${{ runner.os }}-cargo-android-lint-${{ hashFiles('bindings/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-android-lint-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            apps/android/.gradle
+          key: ${{ runner.os }}-gradle-lint-${{ hashFiles('apps/android/**/*.gradle*', 'apps/android/**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-lint-
+
+      - name: Build minimal native library for lint
+        run: |
+          cd bindings
+          mkdir -p "$GITHUB_WORKSPACE/.cargo"
+          cat > "$GITHUB_WORKSPACE/.cargo/config.toml" << EOF
+          [target.aarch64-linux-android]
+          ar = "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar"
+          linker = "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+          EOF
+          cargo build --release --target aarch64-linux-android
+          mkdir -p ../apps/android/app/src/main/jniLibs/arm64-v8a
+          cp target/aarch64-linux-android/release/libash_bindings.so ../apps/android/app/src/main/jniLibs/arm64-v8a/
+          cargo run --features=bindgen --bin uniffi-bindgen generate \
+            --library target/aarch64-linux-android/release/libash_bindings.so \
+            --language kotlin \
+            --out-dir ../apps/android/app/src/main/java/com/monadial/ash/core
+
+      - name: Make gradlew executable
+        working-directory: apps/android
+        run: chmod +x gradlew
+
+      - name: Run Android Lint
+        working-directory: apps/android
+        run: ./gradlew lintDebug --no-daemon || true
+
+      - name: Upload Lint Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: apps/android/app/build/reports/lint-results-debug.html
+          retention-days: 7
+
+  test-bindings:
+    name: Test Bindings (Android)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            bindings/target/
+          key: ${{ runner.os }}-cargo-bindings-${{ hashFiles('bindings/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-bindings-
+
+      - name: Run bindings tests
+        working-directory: bindings
+        run: cargo test --verbose
+
+      - name: Clippy bindings
+        working-directory: bindings
+        run: cargo clippy --lib -- -D warnings

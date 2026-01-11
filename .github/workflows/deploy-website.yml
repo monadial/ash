@@ -119,4 +119,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: website
-          command: pages deploy dist --project-name=ash-website --branch=main
+          command: pages deploy dist --project-name=ash --branch=main

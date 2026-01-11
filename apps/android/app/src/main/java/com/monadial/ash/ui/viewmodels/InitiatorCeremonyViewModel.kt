@@ -4,12 +4,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.monadial.ash.core.services.AshCoreService
-import com.monadial.ash.core.services.ConversationStorageService
-import com.monadial.ash.core.services.PadManager
-import com.monadial.ash.core.services.QRCodeService
-import com.monadial.ash.core.services.RelayService
-import com.monadial.ash.core.services.SettingsService
+import com.monadial.ash.domain.services.QRCodeService
 import com.monadial.ash.domain.entities.CeremonyError
 import com.monadial.ash.domain.entities.CeremonyPhase
 import com.monadial.ash.domain.entities.ConsentState
@@ -19,6 +14,14 @@ import com.monadial.ash.domain.entities.ConversationRole
 import com.monadial.ash.domain.entities.DisappearingMessages
 import com.monadial.ash.domain.entities.MessageRetention
 import com.monadial.ash.domain.entities.PadSize
+import com.monadial.ash.domain.repositories.ConversationRepository
+import com.monadial.ash.domain.repositories.PadRepository
+import com.monadial.ash.domain.repositories.SettingsRepository
+import com.monadial.ash.domain.services.CryptoService
+import com.monadial.ash.domain.services.RelayService
+import com.monadial.ash.domain.usecases.conversation.RegisterConversationUseCase
+import com.monadial.ash.ui.state.ConnectionTestResult
+import com.monadial.ash.ui.state.InitiatorCeremonyUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.security.SecureRandom
 import javax.inject.Inject
@@ -28,212 +31,171 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.ash.CeremonyMetadata
 import uniffi.ash.FountainFrameGenerator
 
+/**
+ * ViewModel for the initiator (sender) ceremony flow.
+ *
+ * Follows Clean Architecture and MVVM patterns:
+ * - Single UiState for all screen state (reduces compose recomposition)
+ * - Repositories for data access
+ * - Domain Services for crypto operations
+ * - Use Cases for business logic
+ */
 @HiltViewModel
 class InitiatorCeremonyViewModel @Inject constructor(
-    private val settingsService: SettingsService,
+    private val settingsRepository: SettingsRepository,
     private val qrCodeService: QRCodeService,
-    private val conversationStorage: ConversationStorageService,
+    private val conversationRepository: ConversationRepository,
     private val relayService: RelayService,
-    private val ashCoreService: AshCoreService,
-    private val padManager: PadManager
+    private val cryptoService: CryptoService,
+    private val padRepository: PadRepository,
+    private val registerConversationUseCase: RegisterConversationUseCase
 ) : ViewModel() {
-    // Note: relayService is already injected, used for connection testing and conversation registration
 
     companion object {
         private const val TAG = "InitiatorCeremonyVM"
-
-        // Block size for fountain encoding (1500 bytes + 16 header, base64 ~2021 chars, fits Version 23-24 QR)
-        // Must match iOS: apps/ios/Ash/Ash/Presentation/ViewModels/InitiatorCeremonyViewModel.swift
         private const val FOUNTAIN_BLOCK_SIZE = 1500u
-
-        // QR code size in pixels (larger for better scanning)
         private const val QR_CODE_SIZE = 600
+        private const val ENTROPY_TARGET_BYTES = 750
+        private const val DEFAULT_FPS = 7
     }
 
-    // State
-    private val _phase = MutableStateFlow<CeremonyPhase>(CeremonyPhase.SelectingPadSize)
-    val phase: StateFlow<CeremonyPhase> = _phase.asStateFlow()
+    // Single consolidated UI state
+    private val _uiState = MutableStateFlow(InitiatorCeremonyUiState())
+    val uiState: StateFlow<InitiatorCeremonyUiState> = _uiState.asStateFlow()
 
-    private val _selectedPadSize = MutableStateFlow(PadSize.MEDIUM)
-    val selectedPadSize: StateFlow<PadSize> = _selectedPadSize.asStateFlow()
-
-    private val _selectedColor = MutableStateFlow(ConversationColor.INDIGO)
-    val selectedColor: StateFlow<ConversationColor> = _selectedColor.asStateFlow()
-
-    private val _conversationName = MutableStateFlow("")
-    val conversationName: StateFlow<String> = _conversationName.asStateFlow()
-
-    private val _relayUrl = MutableStateFlow("")
-    val relayUrl: StateFlow<String> = _relayUrl.asStateFlow()
-
-    private val _serverRetention = MutableStateFlow(MessageRetention.ONE_DAY)
-    val serverRetention: StateFlow<MessageRetention> = _serverRetention.asStateFlow()
-
-    private val _disappearingMessages = MutableStateFlow(DisappearingMessages.OFF)
-    val disappearingMessages: StateFlow<DisappearingMessages> = _disappearingMessages.asStateFlow()
-
-    private val _consent = MutableStateFlow(ConsentState())
-    val consent: StateFlow<ConsentState> = _consent.asStateFlow()
-
-    private val _entropyProgress = MutableStateFlow(0f)
-    val entropyProgress: StateFlow<Float> = _entropyProgress.asStateFlow()
-
-    private val _currentQRBitmap = MutableStateFlow<Bitmap?>(null)
-    val currentQRBitmap: StateFlow<Bitmap?> = _currentQRBitmap.asStateFlow()
-
-    private val _currentFrameIndex = MutableStateFlow(0)
-    val currentFrameIndex: StateFlow<Int> = _currentFrameIndex.asStateFlow()
-
-    private val _totalFrames = MutableStateFlow(0)
-    val totalFrames: StateFlow<Int> = _totalFrames.asStateFlow()
-
-    private val _connectionTestResult = MutableStateFlow<ConnectionTestResult?>(null)
-    val connectionTestResult: StateFlow<ConnectionTestResult?> = _connectionTestResult.asStateFlow()
-
-    private val _isTestingConnection = MutableStateFlow(false)
-    val isTestingConnection: StateFlow<Boolean> = _isTestingConnection.asStateFlow()
-
-    // Passphrase protection
-    private val _passphraseEnabled = MutableStateFlow(false)
-    val passphraseEnabled: StateFlow<Boolean> = _passphraseEnabled.asStateFlow()
-
-    private val _passphrase = MutableStateFlow("")
-    val passphrase: StateFlow<String> = _passphrase.asStateFlow()
-
-    // Playback controls
-    private val _isPaused = MutableStateFlow(false)
-    val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
-
-    private val _fps = MutableStateFlow(7) // Default ~7 FPS (150ms interval, matches iOS)
-    val fps: StateFlow<Int> = _fps.asStateFlow()
-
-    // Private state
+    // Internal state (not exposed to UI)
     private val collectedEntropy = mutableListOf<Byte>()
     private var generatedPadBytes: ByteArray? = null
     private var preGeneratedQRImages: List<Bitmap> = emptyList()
     private var displayJob: Job? = null
     private var mnemonic: List<String> = emptyList()
     private var fountainGenerator: FountainFrameGenerator? = null
-    private var isGeneratingPad: Boolean = false // Guard against multiple generatePad() calls
-
-    sealed class ConnectionTestResult {
-        data class Success(val version: String) : ConnectionTestResult()
-
-        data class Failure(val error: String) : ConnectionTestResult()
-    }
+    private var isGeneratingPad: Boolean = false
 
     init {
+        loadInitialSettings()
+    }
+
+    private fun loadInitialSettings() {
         viewModelScope.launch {
-            _relayUrl.value = settingsService.getRelayUrl()
+            val relayUrl = settingsRepository.relayServerUrl.first()
+            _uiState.update { it.copy(relayUrl = relayUrl) }
         }
     }
 
     // MARK: - Pad Size Selection
 
     fun selectPadSize(size: PadSize) {
-        _selectedPadSize.value = size
+        _uiState.update { it.copy(selectedPadSize = size) }
     }
 
     fun setPassphraseEnabled(enabled: Boolean) {
-        _passphraseEnabled.value = enabled
-        if (!enabled) {
-            _passphrase.value = ""
+        _uiState.update {
+            it.copy(
+                passphraseEnabled = enabled,
+                passphrase = if (!enabled) "" else it.passphrase
+            )
         }
     }
 
     fun setPassphrase(value: String) {
-        _passphrase.value = value
+        _uiState.update { it.copy(passphrase = value) }
     }
 
     fun proceedToOptions() {
-        _phase.value = CeremonyPhase.ConfiguringOptions
+        _uiState.update { it.copy(phase = CeremonyPhase.ConfiguringOptions) }
     }
 
     // MARK: - Options Configuration
 
     fun setConversationName(name: String) {
-        _conversationName.value = name
+        _uiState.update { it.copy(conversationName = name) }
     }
 
     fun setRelayUrl(url: String) {
-        _relayUrl.value = url
-        _connectionTestResult.value = null
+        _uiState.update {
+            it.copy(
+                relayUrl = url,
+                connectionTestResult = null
+            )
+        }
     }
 
     fun setSelectedColor(color: ConversationColor) {
-        _selectedColor.value = color
+        _uiState.update { it.copy(selectedColor = color) }
     }
 
     fun setServerRetention(retention: MessageRetention) {
-        _serverRetention.value = retention
+        _uiState.update { it.copy(serverRetention = retention) }
     }
 
     fun setDisappearingMessages(setting: DisappearingMessages) {
-        _disappearingMessages.value = setting
+        _uiState.update { it.copy(disappearingMessages = setting) }
     }
 
     fun testRelayConnection() {
         viewModelScope.launch {
-            _isTestingConnection.value = true
-            _connectionTestResult.value = null
+            _uiState.update { it.copy(isTestingConnection = true, connectionTestResult = null) }
             try {
-                val result = relayService.testConnection(_relayUrl.value)
-                _connectionTestResult.value =
-                    if (result.success) {
-                        ConnectionTestResult.Success(result.version ?: "OK")
-                    } else {
-                        ConnectionTestResult.Failure(result.error ?: "Connection failed")
-                    }
+                val result = relayService.testConnection(_uiState.value.relayUrl)
+                val testResult = if (result.success) {
+                    ConnectionTestResult.Success(result.version ?: "OK")
+                } else {
+                    ConnectionTestResult.Failure(result.error ?: "Connection failed")
+                }
+                _uiState.update { it.copy(connectionTestResult = testResult) }
             } catch (e: Exception) {
-                _connectionTestResult.value = ConnectionTestResult.Failure(e.message ?: "Unknown error")
+                _uiState.update {
+                    it.copy(connectionTestResult = ConnectionTestResult.Failure(e.message ?: "Unknown error"))
+                }
             } finally {
-                _isTestingConnection.value = false
+                _uiState.update { it.copy(isTestingConnection = false) }
             }
         }
     }
 
     fun proceedToConsent() {
-        _phase.value = CeremonyPhase.ConfirmingConsent
+        _uiState.update { it.copy(phase = CeremonyPhase.ConfirmingConsent) }
     }
 
     // MARK: - Consent
 
     fun updateConsent(consent: ConsentState) {
-        _consent.value = consent
+        _uiState.update { it.copy(consent = consent) }
     }
 
     fun confirmConsent() {
-        if (_consent.value.allConfirmed) {
-            _phase.value = CeremonyPhase.CollectingEntropy
+        if (_uiState.value.canConfirmConsent) {
+            _uiState.update { it.copy(phase = CeremonyPhase.CollectingEntropy) }
         }
     }
 
     // MARK: - Entropy Collection
 
     fun addEntropy(x: Float, y: Float) {
-        // Don't collect more entropy once we've started generating the pad
         if (isGeneratingPad) return
 
         val timestamp = System.currentTimeMillis()
         val nanoTime = System.nanoTime()
 
-        // Collect more data per touch point for stronger entropy
         collectedEntropy.add((x * 256).toInt().toByte())
         collectedEntropy.add((y * 256).toInt().toByte())
         collectedEntropy.add((timestamp and 0xFF).toByte())
         collectedEntropy.add(((timestamp shr 8) and 0xFF).toByte())
         collectedEntropy.add((nanoTime and 0xFF).toByte())
 
-        // Require 750 bytes of entropy (~150 touch points with 5 bytes each)
-        _entropyProgress.value = minOf(1f, collectedEntropy.size / 750f)
+        val progress = minOf(1f, collectedEntropy.size / ENTROPY_TARGET_BYTES.toFloat())
+        _uiState.update { it.copy(entropyProgress = progress) }
 
-        if (_entropyProgress.value >= 1f && !isGeneratingPad) {
+        if (progress >= 1f && !isGeneratingPad) {
             isGeneratingPad = true
             generatePad()
         }
@@ -242,163 +204,136 @@ class InitiatorCeremonyViewModel @Inject constructor(
     // MARK: - Pad Generation
 
     private fun generatePad() {
-        // Take a snapshot of entropy immediately to avoid ConcurrentModificationException
         val entropySnapshot = collectedEntropy.toList()
-        val padSize = _selectedPadSize.value.bytes.toInt()
+        val padSize = _uiState.value.selectedPadSize.bytes.toInt()
 
         viewModelScope.launch {
-            _phase.value = CeremonyPhase.GeneratingPad
+            _uiState.update { it.copy(phase = CeremonyPhase.GeneratingPad) }
 
             try {
-                val padBytes =
-                    withContext(Dispatchers.Default) {
-                        generatePadBytes(
-                            entropy = entropySnapshot.toByteArray(),
-                            sizeBytes = padSize
-                        )
-                    }
+                val padBytes = withContext(Dispatchers.Default) {
+                    generatePadBytes(entropySnapshot.toByteArray(), padSize)
+                }
                 generatedPadBytes = padBytes
 
                 Log.d(TAG, "Generated pad: ${padBytes.size} bytes")
+                logPadDebugInfo(padBytes)
 
-                // Log first and last 16 bytes for debugging cross-platform
-                val firstBytes = padBytes.take(16).joinToString("") { String.format("%02X", it) }
-                val lastBytes = padBytes.takeLast(16).joinToString("") { String.format("%02X", it) }
-                Log.d(TAG, "Pad first 16 bytes: $firstBytes")
-                Log.d(TAG, "Pad last 16 bytes: $lastBytes")
-
-                // Generate mnemonic from pad using FFI
-                mnemonic = ashCoreService.generateMnemonic(padBytes)
+                mnemonic = cryptoService.generateMnemonic(padBytes)
                 Log.d(TAG, "Generated mnemonic: ${mnemonic.joinToString(" ")}")
 
-                // Derive tokens for debugging
-                try {
-                    val tokens = ashCoreService.deriveAllTokens(padBytes)
-                    Log.d(TAG, "Derived conversation ID: ${tokens.conversationId}")
-                    Log.d(TAG, "Derived auth token: ${tokens.authToken.take(16)}...")
-                } catch (e: Exception) {
-                    Log.w(TAG, "Could not derive tokens for debug: ${e.message}")
-                }
-
-                // Generate QR codes using FFI fountain codes
                 preGenerateQRCodes(padBytes)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to generate pad: ${e.message}", e)
-                _phase.value = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)
+                _uiState.update { it.copy(phase = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)) }
             }
         }
     }
 
     private fun generatePadBytes(entropy: ByteArray, sizeBytes: Int): ByteArray {
-        // Mix user entropy with secure random for additional security
         val secureRandom = SecureRandom()
         val systemEntropy = ByteArray(32)
         secureRandom.nextBytes(systemEntropy)
 
-        // Combine entropies
         val combinedEntropy = entropy + systemEntropy
-
-        // Generate pad bytes - use simple secure random with combined entropy as seed
-        // The Rust Pad.fromEntropy expects exactly padSize bytes of entropy
-        // So we generate padSize bytes using seeded SecureRandom
         val seededRandom = SecureRandom(combinedEntropy)
-        val pad = ByteArray(sizeBytes)
-        seededRandom.nextBytes(pad)
-        return pad
+        return ByteArray(sizeBytes).also { seededRandom.nextBytes(it) }
     }
 
-    private suspend fun preGenerateQRCodes(padBytes: ByteArray) {
+    private fun logPadDebugInfo(padBytes: ByteArray) {
+        val firstBytes = padBytes.take(16).joinToString("") { String.format("%02X", it) }
+        val lastBytes = padBytes.takeLast(16).joinToString("") { String.format("%02X", it) }
+        Log.d(TAG, "Pad first 16 bytes: $firstBytes")
+        Log.d(TAG, "Pad last 16 bytes: $lastBytes")
+
         try {
-            // Build ceremony metadata using FFI struct
-            val metadata =
-                CeremonyMetadata(
-                    version = 1u,
-                    ttlSeconds = _serverRetention.value.seconds.toULong(),
-                    disappearingMessagesSeconds = (_disappearingMessages.value.seconds ?: 0).toUInt(),
-                    notificationFlags = buildNotificationFlags(),
-                    relayUrl = _relayUrl.value
-                )
-
-            // Use passphrase if enabled, otherwise null
-            val passphraseToUse = if (_passphraseEnabled.value) _passphrase.value.ifEmpty { null } else null
-
-            Log.d(
-                TAG,
-                "Creating fountain generator: blockSize=$FOUNTAIN_BLOCK_SIZE, " +
-                    "passphraseEnabled=${_passphraseEnabled.value}"
-            )
-
-            // Create fountain generator using FFI
-            val generator =
-                withContext(Dispatchers.Default) {
-                    ashCoreService.createFountainGenerator(
-                        metadata = metadata,
-                        padBytes = padBytes,
-                        blockSize = FOUNTAIN_BLOCK_SIZE,
-                        passphrase = passphraseToUse
-                    )
-                }
-            fountainGenerator = generator
-
-            val sourceCount = generator.sourceCount().toInt()
-            _totalFrames.value = sourceCount
-
-            Log.d(
-                TAG,
-                "Fountain generator created: sourceCount=$sourceCount, " +
-                    "blockSize=${generator.blockSize()}, totalSize=${generator.totalSize()}"
-            )
-
-            val images = mutableListOf<Bitmap>()
-
-            withContext(Dispatchers.Default) {
-                for (index in 0 until sourceCount) {
-                    _phase.value =
-                        CeremonyPhase.GeneratingQRCodes(
-                            progress = (index + 1).toFloat() / sourceCount,
-                            total = sourceCount
-                        )
-
-                    // Generate frame using FFI
-                    val frameBytes =
-                        with(ashCoreService) {
-                            generator.generateFrameBytes(index.toUInt())
-                        }
-
-                    Log.d(TAG, "Frame $index: ${frameBytes.size} bytes")
-
-                    val bitmap = qrCodeService.generate(frameBytes, QR_CODE_SIZE)
-                    if (bitmap != null) {
-                        images.add(bitmap)
-                    } else {
-                        Log.e(TAG, "Failed to generate QR code for frame $index")
-                        withContext(Dispatchers.Main) {
-                            _phase.value = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)
-                        }
-                        return@withContext
-                    }
-                }
-            }
-
-            Log.d(TAG, "Successfully generated ${images.size} QR codes")
-            preGeneratedQRImages = images
-            _phase.value = CeremonyPhase.Transferring(currentFrame = 0, totalFrames = sourceCount)
-            startDisplayCycling()
+            val tokens = cryptoService.deriveAllTokens(padBytes)
+            Log.d(TAG, "Derived conversation ID: ${tokens.conversationId}")
+            Log.d(TAG, "Derived auth token: ${tokens.authToken.take(16)}...")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to generate QR codes: ${e.message}", e)
-            _phase.value = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)
+            Log.w(TAG, "Could not derive tokens for debug: ${e.message}")
         }
     }
 
-    private fun buildNotificationFlags(): UShort {
-        // Notification flags bitfield:
-        // Bit 0: NOTIFY_NEW_MESSAGE (0x0001)
-        // Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002)
-        // Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004)
-        // Bit 8: NOTIFY_DELIVERY_FAILED (0x0100)
-        // Bits 12-15: Color encoding
-        val colorIndex = _selectedColor.value.ordinal
-        val flags = (colorIndex shl 12) or 0x0103 // Default: new message + expiring + delivery failed
+    private suspend fun preGenerateQRCodes(padBytes: ByteArray) {
+        val state = _uiState.value
+
+        try {
+            val metadata = CeremonyMetadata(
+                version = 1u,
+                ttlSeconds = state.serverRetention.seconds.toULong(),
+                disappearingMessagesSeconds = (state.disappearingMessages.seconds ?: 0).toUInt(),
+                notificationFlags = buildNotificationFlags(state.selectedColor),
+                relayUrl = state.relayUrl
+            )
+
+            val passphraseToUse = if (state.passphraseEnabled) {
+                state.passphrase.ifEmpty { null }
+            } else null
+
+            Log.d(TAG, "Creating fountain generator: blockSize=$FOUNTAIN_BLOCK_SIZE, passphraseEnabled=${state.passphraseEnabled}")
+
+            val generator = withContext(Dispatchers.Default) {
+                cryptoService.createFountainGenerator(metadata, padBytes, FOUNTAIN_BLOCK_SIZE, passphraseToUse)
+            }
+            fountainGenerator = generator
+
+            val sourceCount = generator.sourceCount().toInt()
+            _uiState.update { it.copy(totalFrames = sourceCount) }
+
+            Log.d(TAG, "Fountain generator created: sourceCount=$sourceCount")
+
+            val images = generateQRImages(generator, sourceCount)
+
+            if (images.size == sourceCount) {
+                Log.d(TAG, "Successfully generated ${images.size} QR codes")
+                preGeneratedQRImages = images
+                _uiState.update {
+                    it.copy(phase = CeremonyPhase.Transferring(currentFrame = 0, totalFrames = sourceCount))
+                }
+                startDisplayCycling()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to generate QR codes: ${e.message}", e)
+            _uiState.update { it.copy(phase = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)) }
+        }
+    }
+
+    private suspend fun generateQRImages(generator: FountainFrameGenerator, sourceCount: Int): List<Bitmap> {
+        val images = mutableListOf<Bitmap>()
+
+        withContext(Dispatchers.Default) {
+            for (index in 0 until sourceCount) {
+                _uiState.update {
+                    it.copy(
+                        phase = CeremonyPhase.GeneratingQRCodes(
+                            progress = (index + 1).toFloat() / sourceCount,
+                            total = sourceCount
+                        )
+                    )
+                }
+
+                val frameBytes = cryptoService.generateFrameBytes(generator, index.toUInt())
+                val bitmap = qrCodeService.generate(frameBytes, QR_CODE_SIZE)
+
+                if (bitmap != null) {
+                    images.add(bitmap)
+                } else {
+                    Log.e(TAG, "Failed to generate QR code for frame $index")
+                    withContext(Dispatchers.Main) {
+                        _uiState.update { it.copy(phase = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)) }
+                    }
+                    return@withContext
+                }
+            }
+        }
+
+        return images
+    }
+
+    private fun buildNotificationFlags(color: ConversationColor): UShort {
+        val colorIndex = color.ordinal
+        val flags = (colorIndex shl 12) or 0x0103
         return flags.toUShort()
     }
 
@@ -406,31 +341,42 @@ class InitiatorCeremonyViewModel @Inject constructor(
 
     private fun startDisplayCycling() {
         displayJob?.cancel()
-        _currentFrameIndex.value = 0
-        _isPaused.value = false
-        _currentQRBitmap.value = preGeneratedQRImages.firstOrNull()
+        _uiState.update {
+            it.copy(
+                currentFrameIndex = 0,
+                isPaused = false,
+                currentQRBitmap = preGeneratedQRImages.firstOrNull()
+            )
+        }
 
-        displayJob =
-            viewModelScope.launch {
-                while (isActive && preGeneratedQRImages.isNotEmpty()) {
-                    val delayMs = 1000L / _fps.value
-                    delay(delayMs)
+        displayJob = viewModelScope.launch {
+            while (isActive && preGeneratedQRImages.isNotEmpty()) {
+                val delayMs = 1000L / _uiState.value.fps
+                delay(delayMs)
 
-                    if (!_isPaused.value) {
-                        val nextIndex = (_currentFrameIndex.value + 1) % preGeneratedQRImages.size
-                        _currentFrameIndex.value = nextIndex
-                        _currentQRBitmap.value = preGeneratedQRImages[nextIndex]
-
-                        if (_phase.value is CeremonyPhase.Transferring) {
-                            _phase.value =
-                                CeremonyPhase.Transferring(
-                                    currentFrame = nextIndex % _totalFrames.value,
-                                    totalFrames = _totalFrames.value
-                                )
-                        }
-                    }
+                if (!_uiState.value.isPaused) {
+                    advanceFrame()
                 }
             }
+        }
+    }
+
+    private fun advanceFrame() {
+        val nextIndex = (_uiState.value.currentFrameIndex + 1) % preGeneratedQRImages.size
+        updateFrame(nextIndex)
+    }
+
+    private fun updateFrame(index: Int) {
+        val totalFrames = _uiState.value.totalFrames
+        _uiState.update {
+            it.copy(
+                currentFrameIndex = index,
+                currentQRBitmap = preGeneratedQRImages.getOrNull(index),
+                phase = if (it.phase is CeremonyPhase.Transferring) {
+                    CeremonyPhase.Transferring(currentFrame = index % totalFrames, totalFrames = totalFrames)
+                } else it.phase
+            )
+        }
     }
 
     fun stopDisplayCycling() {
@@ -441,183 +387,121 @@ class InitiatorCeremonyViewModel @Inject constructor(
     // MARK: - Playback Controls
 
     fun togglePause() {
-        _isPaused.value = !_isPaused.value
+        _uiState.update { it.copy(isPaused = !it.isPaused) }
     }
 
     fun setFps(newFps: Int) {
-        _fps.value = newFps.coerceIn(1, 10)
+        _uiState.update { it.copy(fps = newFps.coerceIn(1, 10)) }
     }
 
     fun previousFrame() {
         if (preGeneratedQRImages.isEmpty()) return
-        val prevIndex =
-            if (_currentFrameIndex.value > 0) {
-                _currentFrameIndex.value - 1
-            } else {
-                preGeneratedQRImages.size - 1
-            }
-        _currentFrameIndex.value = prevIndex
-        _currentQRBitmap.value = preGeneratedQRImages[prevIndex]
-        updateTransferringPhase(prevIndex)
+        val current = _uiState.value.currentFrameIndex
+        val prevIndex = if (current > 0) current - 1 else preGeneratedQRImages.size - 1
+        updateFrame(prevIndex)
     }
 
     fun nextFrame() {
         if (preGeneratedQRImages.isEmpty()) return
-        val nextIndex = (_currentFrameIndex.value + 1) % preGeneratedQRImages.size
-        _currentFrameIndex.value = nextIndex
-        _currentQRBitmap.value = preGeneratedQRImages[nextIndex]
-        updateTransferringPhase(nextIndex)
+        val nextIndex = (_uiState.value.currentFrameIndex + 1) % preGeneratedQRImages.size
+        updateFrame(nextIndex)
     }
 
     fun firstFrame() {
         if (preGeneratedQRImages.isEmpty()) return
-        _currentFrameIndex.value = 0
-        _currentQRBitmap.value = preGeneratedQRImages.first()
-        updateTransferringPhase(0)
+        updateFrame(0)
     }
 
     fun lastFrame() {
         if (preGeneratedQRImages.isEmpty()) return
-        val lastIndex = preGeneratedQRImages.size - 1
-        _currentFrameIndex.value = lastIndex
-        _currentQRBitmap.value = preGeneratedQRImages[lastIndex]
-        updateTransferringPhase(lastIndex)
+        updateFrame(preGeneratedQRImages.size - 1)
     }
 
     fun resetFrames() {
-        _currentFrameIndex.value = 0
-        _currentQRBitmap.value = preGeneratedQRImages.firstOrNull()
-        _isPaused.value = false
-        updateTransferringPhase(0)
-    }
-
-    private fun updateTransferringPhase(frameIndex: Int) {
-        if (_phase.value is CeremonyPhase.Transferring) {
-            _phase.value =
-                CeremonyPhase.Transferring(
-                    currentFrame = frameIndex % _totalFrames.value,
-                    totalFrames = _totalFrames.value
-                )
-        }
+        _uiState.update { it.copy(isPaused = false) }
+        updateFrame(0)
     }
 
     // MARK: - Verification
 
     fun finishSending() {
         stopDisplayCycling()
-        _phase.value = CeremonyPhase.Verifying(mnemonic = mnemonic)
+        _uiState.update { it.copy(phase = CeremonyPhase.Verifying(mnemonic = mnemonic)) }
     }
 
     fun confirmVerification(): Conversation? {
         val padBytes = generatedPadBytes ?: return null
+        val state = _uiState.value
 
         try {
-            // Derive all tokens using FFI
-            val tokens = ashCoreService.deriveAllTokens(padBytes)
+            val tokens = cryptoService.deriveAllTokens(padBytes)
 
-            val conversation =
-                Conversation(
-                    id = tokens.conversationId,
-                    name = _conversationName.value.ifBlank { null },
-                    relayUrl = _relayUrl.value,
-                    authToken = tokens.authToken,
-                    burnToken = tokens.burnToken,
-                    role = ConversationRole.INITIATOR,
-                    color = _selectedColor.value,
-                    createdAt = System.currentTimeMillis(),
-                    padTotalSize = padBytes.size.toLong(),
-                    mnemonic = mnemonic,
-                    messageRetention = _serverRetention.value,
-                    disappearingMessages = _disappearingMessages.value
-                )
+            val conversation = Conversation(
+                id = tokens.conversationId,
+                name = state.conversationName.ifBlank { null },
+                relayUrl = state.relayUrl,
+                authToken = tokens.authToken,
+                burnToken = tokens.burnToken,
+                role = ConversationRole.INITIATOR,
+                color = state.selectedColor,
+                createdAt = System.currentTimeMillis(),
+                padTotalSize = padBytes.size.toLong(),
+                mnemonic = mnemonic,
+                messageRetention = state.serverRetention,
+                disappearingMessages = state.disappearingMessages
+            )
 
             viewModelScope.launch {
-                conversationStorage.saveConversation(conversation)
-                padManager.storePad(padBytes, conversation.id)
-
-                // Register conversation with relay (fire-and-forget)
-                registerConversationWithRelay(conversation)
+                conversationRepository.saveConversation(conversation)
+                padRepository.storePad(conversation.id, padBytes)
+                registerConversationUseCase(conversation)
             }
 
-            _phase.value = CeremonyPhase.Completed(conversation)
+            _uiState.update { it.copy(phase = CeremonyPhase.Completed(conversation)) }
             return conversation
         } catch (e: Exception) {
             Log.e(TAG, "Failed to confirm verification: ${e.message}", e)
-            _phase.value = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)
+            _uiState.update { it.copy(phase = CeremonyPhase.Failed(CeremonyError.QR_GENERATION_FAILED)) }
             return null
         }
     }
 
-    private suspend fun registerConversationWithRelay(conversation: Conversation) {
-        try {
-            val authTokenHash = relayService.hashToken(conversation.authToken)
-            val burnTokenHash = relayService.hashToken(conversation.burnToken)
-            val result =
-                relayService.registerConversation(
-                    conversationId = conversation.id,
-                    authTokenHash = authTokenHash,
-                    burnTokenHash = burnTokenHash,
-                    relayUrl = conversation.relayUrl
-                )
-            if (result.isSuccess) {
-                Log.d(TAG, "Conversation registered with relay")
-            } else {
-                Log.w(TAG, "Failed to register conversation with relay: ${result.exceptionOrNull()?.message}")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to register conversation with relay: ${e.message}")
-        }
-    }
-
     fun rejectVerification() {
-        _phase.value = CeremonyPhase.Failed(CeremonyError.CHECKSUM_MISMATCH)
+        _uiState.update { it.copy(phase = CeremonyPhase.Failed(CeremonyError.CHECKSUM_MISMATCH)) }
     }
 
     // MARK: - Reset & Cancel
 
     fun reset() {
         stopDisplayCycling()
-        fountainGenerator?.close()
-        fountainGenerator = null
+        cleanupResources()
 
-        _phase.value = CeremonyPhase.SelectingPadSize
-        _selectedPadSize.value = PadSize.MEDIUM
-        _selectedColor.value = ConversationColor.INDIGO
-        _conversationName.value = ""
-        _serverRetention.value = MessageRetention.ONE_DAY
-        _disappearingMessages.value = DisappearingMessages.OFF
-        _consent.value = ConsentState()
-        _entropyProgress.value = 0f
-        _currentQRBitmap.value = null
-        _currentFrameIndex.value = 0
-        _totalFrames.value = 0
-        _connectionTestResult.value = null
-        _passphraseEnabled.value = false
-        _passphrase.value = ""
-        _isPaused.value = false
-        _fps.value = 7 // Reset to default ~7 FPS
+        viewModelScope.launch {
+            val relayUrl = settingsRepository.relayServerUrl.first()
+            _uiState.value = InitiatorCeremonyUiState(relayUrl = relayUrl)
+        }
+
         collectedEntropy.clear()
         generatedPadBytes = null
         preGeneratedQRImages = emptyList()
         mnemonic = emptyList()
         isGeneratingPad = false
-
-        viewModelScope.launch {
-            _relayUrl.value = settingsService.getRelayUrl()
-        }
     }
 
     fun cancel() {
         stopDisplayCycling()
+        cleanupResources()
+        _uiState.update { it.copy(phase = CeremonyPhase.Failed(CeremonyError.CANCELLED)) }
+    }
+
+    private fun cleanupResources() {
         fountainGenerator?.close()
         fountainGenerator = null
-        _phase.value = CeremonyPhase.Failed(CeremonyError.CANCELLED)
     }
 
     override fun onCleared() {
         super.onCleared()
         stopDisplayCycling()
-        fountainGenerator?.close()
-        fountainGenerator = null
+        cleanupResources()
     }
 }

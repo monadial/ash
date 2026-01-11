@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Base64
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -49,7 +50,7 @@ class QRCodeService @Inject constructor() {
                 mapOf(
                     EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
                     EncodeHintType.MARGIN to 1,
-                    EncodeHintType.CHARACTER_SET to "ISO-8859-1" // Binary-safe encoding
+                    EncodeHintType.CHARACTER_SET to "ISO-8859-1"
                 )
 
             val bitMatrix = writer.encode(base64, BarcodeFormat.QR_CODE, size, size, hints)
@@ -67,7 +68,7 @@ class QRCodeService @Inject constructor() {
             }
 
             // Use ARGB_8888 for better quality
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val bitmap = createBitmap(width, height, Bitmap.Config.ARGB_8888)
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 
             Log.d(TAG, "QR code generated: ${width}x$height pixels")
@@ -112,7 +113,7 @@ class QRCodeService @Inject constructor() {
                 }
             }
 
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+            val bitmap = createBitmap(width, height, Bitmap.Config.RGB_565)
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
             bitmap
         } catch (e: Exception) {

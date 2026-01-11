@@ -211,23 +211,19 @@ class AshCoreService @Inject constructor() {
     /**
      * Convert a FountainFrameGenerator frame to ByteArray.
      */
-    fun FountainFrameGenerator.generateFrameBytes(index: UInt): ByteArray {
-        return this.generateFrame(index).map { it.toByte() }.toByteArray()
-    }
+    fun FountainFrameGenerator.generateFrameBytes(index: UInt): ByteArray =
+        this.generateFrame(index).map { it.toByte() }.toByteArray()
 
     /**
      * Convert a FountainFrameGenerator frame to ByteArray (next frame).
      */
-    fun FountainFrameGenerator.nextFrameBytes(): ByteArray {
-        return this.nextFrame().map { it.toByte() }.toByteArray()
-    }
+    fun FountainFrameGenerator.nextFrameBytes(): ByteArray = this.nextFrame().map { it.toByte() }.toByteArray()
 
     /**
      * Add a frame to the receiver from ByteArray.
      */
-    fun FountainFrameReceiver.addFrameBytes(frameBytes: ByteArray): Boolean {
-        return this.addFrame(frameBytes.map { it.toUByte() })
-    }
+    fun FountainFrameReceiver.addFrameBytes(frameBytes: ByteArray): Boolean =
+        this.addFrame(frameBytes.map { it.toUByte() })
 
     /**
      * Get the decoded pad bytes from a ceremony result.

@@ -46,21 +46,17 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideBiometricService(@ApplicationContext context: Context): BiometricService {
-        return BiometricService(context)
-    }
+    fun provideBiometricService(@ApplicationContext context: Context): BiometricService = BiometricService(context)
 
     @Provides
     @Singleton
-    fun provideRelayService(httpClient: HttpClient, settingsService: SettingsService): RelayService {
-        return RelayService(httpClient, settingsService)
-    }
+    fun provideRelayService(httpClient: HttpClient, settingsService: SettingsService): RelayService =
+        RelayService(httpClient, settingsService)
 
     @Provides
     @Singleton
-    fun provideConversationStorageService(@ApplicationContext context: Context): ConversationStorageService {
-        return ConversationStorageService(context)
-    }
+    fun provideConversationStorageService(@ApplicationContext context: Context): ConversationStorageService =
+        ConversationStorageService(context)
 
     @Provides
     @Singleton

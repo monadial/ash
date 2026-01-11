@@ -155,7 +155,7 @@ class SSEService @Inject constructor() {
                 return // Don't retry automatically - let caller handle registration
             }
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                throw Exception("SSE connection failed with code: $responseCode")
+                throw java.io.IOException("SSE connection failed with code: $responseCode")
             }
 
             _connectionState.value = SSEConnectionState.CONNECTED

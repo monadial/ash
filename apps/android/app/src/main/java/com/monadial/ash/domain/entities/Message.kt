@@ -20,8 +20,7 @@ data class Message(
     val expiresAt: Long? = null,
     /** Server TTL (for sent messages awaiting delivery) */
     val serverExpiresAt: Long? = null,
-    /** Message expired, show placeholder */
-    val isContentWiped: Boolean = false,
+    val isContentWiped: Boolean = false
 ) {
     // Computed properties
     val isExpired: Boolean

@@ -49,7 +49,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -178,7 +177,6 @@ fun ConversationsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableConversationCard(conversation: Conversation, onClick: () -> Unit, onBurn: () -> Unit) {
-    val scope = rememberCoroutineScope()
     val dismissState =
         rememberSwipeToDismissBoxState(
             confirmValueChange = { value ->
@@ -264,7 +262,8 @@ private fun EmptyConversationsView(modifier: Modifier = Modifier, onNewConversat
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Start a secure conversation by meeting with someone in person and performing a key exchange ceremony.",
+            text = "Start a secure conversation by meeting with someone in person " +
+                "and performing a key exchange ceremony.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center

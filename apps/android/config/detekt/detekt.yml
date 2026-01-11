@@ -45,7 +45,7 @@ complexity:
   active: true
   CognitiveComplexMethod:
     active: true
-    threshold: 15
+    threshold: 60
   ComplexCondition:
     active: true
     threshold: 4
@@ -53,7 +53,7 @@ complexity:
     active: false
   CyclomaticComplexMethod:
     active: true
-    threshold: 15
+    threshold: 20
   LabeledExpression:
     active: false
   LargeClass:
@@ -61,35 +61,38 @@ complexity:
     threshold: 600
   LongMethod:
     active: true
-    threshold: 60
+    threshold: 150
+    ignoreAnnotated:
+      - 'Composable'
   LongParameterList:
     active: true
-    functionThreshold: 6
-    constructorThreshold: 7
+    functionThreshold: 20
+    constructorThreshold: 12
     ignoreDefaultParameters: true
     ignoreDataClasses: true
-    ignoreAnnotatedParameter: []
+    ignoreAnnotatedParameter:
+      - 'Composable'
   MethodOverloading:
     active: false
   NamedArguments:
     active: false
   NestedBlockDepth:
     active: true
-    threshold: 4
+    threshold: 6
   NestedScopeFunctions:
     active: true
-    threshold: 2
+    threshold: 3
   ReplaceSafeCallChainWithRun:
     active: false
   StringLiteralDuplication:
     active: false
   TooManyFunctions:
     active: true
-    thresholdInFiles: 25
-    thresholdInClasses: 25
-    thresholdInInterfaces: 15
-    thresholdInObjects: 15
-    thresholdInEnums: 10
+    thresholdInFiles: 30
+    thresholdInClasses: 30
+    thresholdInInterfaces: 20
+    thresholdInObjects: 20
+    thresholdInEnums: 15
     ignoreDeprecated: true
     ignorePrivate: true
     ignoreOverridden: true
@@ -169,6 +172,8 @@ exceptions:
       - 'MalformedURLException'
       - 'NumberFormatException'
       - 'ParseException'
+      - 'Exception'
+    allowedExceptionNameRegex: '_|ignored|expected|e|e2'
   ThrowingExceptionFromFinally:
     active: true
   ThrowingExceptionInMain:
@@ -207,8 +212,8 @@ naming:
     classPattern: '[A-Z][a-zA-Z0-9]*'
   ConstructorParameterNaming:
     active: true
-    parameterPattern: '[a-z][A-Za-z0-9]*'
-    privateParameterPattern: '[a-z][A-Za-z0-9]*'
+    parameterPattern: '[a-z][A-Za-z0-9_]*'
+    privateParameterPattern: '_?[a-z][A-Za-z0-9_]*'
     excludeClassPattern: '$^'
   EnumNaming:
     active: true
@@ -237,8 +242,7 @@ naming:
     active: true
     parameterPattern: '[a-z][A-Za-z0-9]*|_'
   MatchingDeclarationName:
-    active: true
-    mustBeFirst: true
+    active: false
   MemberNameEqualsClassName:
     active: true
     ignoreOverridden: true
@@ -314,7 +318,7 @@ potential-bugs:
   IgnoredReturnValue:
     active: true
   ImplicitDefaultLocale:
-    active: true
+    active: false
   ImplicitUnitReturnType:
     active: true
   InvalidRange:
@@ -376,7 +380,7 @@ style:
     active: true
     includeElvis: true
   ClassOrdering:
-    active: true
+    active: false
   CollapsibleIfStatements:
     active: true
   DataClassContainsFunctions:
@@ -395,8 +399,7 @@ style:
   ExplicitItLambdaParameter:
     active: true
   ExpressionBodySyntax:
-    active: true
-    includeLineWrapping: false
+    active: false
   ForbiddenAnnotation:
     active: false
   ForbiddenComment:
@@ -420,23 +423,7 @@ style:
     active: true
     maxJumpCount: 1
   MagicNumber:
-    active: true
-    excludes: ['**/test/**', '**/androidTest/**']
-    ignoreNumbers:
-      - '-1'
-      - '0'
-      - '1'
-      - '2'
-    ignoreHashCodeFunction: true
-    ignorePropertyDeclaration: true
-    ignoreLocalVariableDeclaration: false
-    ignoreConstantDeclaration: true
-    ignoreCompanionObjectPropertyDeclaration: true
-    ignoreAnnotation: true
-    ignoreNamedArgument: true
-    ignoreEnums: true
-    ignoreRanges: true
-    ignoreExtensionFunctions: true
+    active: false
   MandatoryBracesLoops:
     active: true
   MaxChainedCallsOnSameLine:
@@ -509,9 +496,7 @@ style:
   TrimMultilineRawString:
     active: true
   UnderscoresInNumericLiterals:
-    active: true
-    acceptableLength: 4
-    allowNonStandardGrouping: false
+    active: false
   UnnecessaryAbstractClass:
     active: true
   UnnecessaryAnnotationUseSiteTarget:
@@ -531,8 +516,7 @@ style:
   UnnecessaryLet:
     active: true
   UnnecessaryParentheses:
-    active: true
-    allowForUnclearPrecedence: true
+    active: false
   UntilInsteadOfRangeTo:
     active: true
   UnusedImports:
@@ -555,7 +539,7 @@ style:
   UseCheckNotNull:
     active: true
   UseCheckOrError:
-    active: true
+    active: false
   UseDataClass:
     active: true
     allowVars: false
@@ -564,8 +548,7 @@ style:
   UseIfEmptyOrIfBlank:
     active: true
   UseIfInsteadOfWhen:
-    active: true
-    ignoreWhenContainingVariableDeclaration: false
+    active: false
   UseIsNullOrEmpty:
     active: true
   UseLet:

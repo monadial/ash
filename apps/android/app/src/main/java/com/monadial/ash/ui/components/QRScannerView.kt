@@ -1,3 +1,5 @@
+@file:OptIn(androidx.camera.core.ExperimentalGetImage::class)
+
 package com.monadial.ash.ui.components
 
 import android.Manifest
@@ -218,7 +220,6 @@ private fun setupCamera(
                 .build()
                 .also { analysis ->
                     analysis.setAnalyzer(analysisExecutor) { imageProxy ->
-                        @androidx.camera.core.ExperimentalGetImage
                         val mediaImage = imageProxy.image
                         if (mediaImage != null) {
                             val image =

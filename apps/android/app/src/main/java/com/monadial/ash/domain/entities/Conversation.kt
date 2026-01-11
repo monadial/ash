@@ -15,27 +15,20 @@ data class Conversation(
     val lastMessageAt: Long? = null,
     val lastMessagePreview: String? = null,
     val unreadCount: Int = 0,
-    // Pad state - bidirectional consumption
-    val padConsumedFront: Long = 0, // Bytes consumed by initiator (from start)
-    val padConsumedBack: Long = 0, // Bytes consumed by responder (from end)
+    val padConsumedFront: Long = 0,
+    val padConsumedBack: Long = 0,
     val padTotalSize: Long = 0,
     val mnemonic: List<String> = emptyList(),
-    // Message settings
     val messageRetention: MessageRetention = MessageRetention.FIVE_MINUTES,
     val disappearingMessages: DisappearingMessages = DisappearingMessages.OFF,
-    // Notification preferences (encoded in ceremony)
     val notifyNewMessage: Boolean = true,
     val notifyMessageExpiring: Boolean = false,
     val notifyMessageExpired: Boolean = false,
     val notifyDeliveryFailed: Boolean = true,
-    // Persistence
     val persistenceConsent: Boolean = false,
-    // Relay state
     val relayCursor: String? = null,
     val activitySequence: Long = 0,
-    // Burn state
     val peerBurnedAt: Long? = null,
-    // Deduplication - track processed incoming sequences
     val processedIncomingSequences: Set<Long> = emptySet()
 ) {
     // Computed properties
@@ -89,9 +82,17 @@ data class Conversation(
             val displayText = displayName
             val words = displayText.split(" ")
             return when {
-                words.size >= 2 -> "${words[0].firstOrNull()?.uppercase() ?: ""}${words[1].firstOrNull()?.uppercase() ?: ""}"
-                displayText.length >= 2 -> displayText.take(2).uppercase()
-                else -> displayText.uppercase()
+                words.size >= 2 -> {
+                    val first = words[0].firstOrNull()?.uppercase() ?: ""
+                    val second = words[1].firstOrNull()?.uppercase() ?: ""
+                    "$first$second"
+                }
+                displayText.length >= 2 -> {
+                    displayText.take(2).uppercase()
+                }
+                else -> {
+                    displayText.uppercase()
+                }
             }
         }
 
@@ -114,9 +115,8 @@ data class Conversation(
 
     fun withCursor(cursor: String?): Conversation = copy(relayCursor = cursor)
 
-    fun withProcessedSequence(sequence: Long): Conversation = copy(
-        processedIncomingSequences = processedIncomingSequences + sequence
-    )
+    fun withProcessedSequence(sequence: Long): Conversation =
+        copy(processedIncomingSequences = processedIncomingSequences + sequence)
 
     fun afterSending(bytes: Long): Conversation {
         return if (role == ConversationRole.INITIATOR) {

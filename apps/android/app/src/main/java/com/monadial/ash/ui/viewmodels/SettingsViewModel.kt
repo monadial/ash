@@ -2,6 +2,7 @@ package com.monadial.ash.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monadial.ash.BuildConfig
 import com.monadial.ash.core.services.ConnectionTestResult
 import com.monadial.ash.core.services.ConversationStorageService
 import com.monadial.ash.core.services.RelayService
@@ -10,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,8 +28,17 @@ class SettingsViewModel @Inject constructor(
     private val _lockOnBackground = MutableStateFlow(true)
     val lockOnBackground: StateFlow<Boolean> = _lockOnBackground.asStateFlow()
 
+    // Saved relay URL (from settings)
     private val _relayUrl = MutableStateFlow("")
     val relayUrl: StateFlow<String> = _relayUrl.asStateFlow()
+
+    // Edited relay URL (for UI editing)
+    private val _editedRelayUrl = MutableStateFlow("")
+    val editedRelayUrl: StateFlow<String> = _editedRelayUrl.asStateFlow()
+
+    // Track if there are unsaved changes
+    private val _hasUnsavedChanges = MutableStateFlow(false)
+    val hasUnsavedChanges: StateFlow<Boolean> = _hasUnsavedChanges.asStateFlow()
 
     private val _isTestingConnection = MutableStateFlow(false)
     val isTestingConnection: StateFlow<Boolean> = _isTestingConnection.asStateFlow()
@@ -45,10 +56,44 @@ class SettingsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            settingsService.relayServerUrl.collect {
-                _relayUrl.value = it
+            settingsService.relayServerUrl.collect { url ->
+                _relayUrl.value = url
+                // Only update edited URL if there are no unsaved changes
+                if (!_hasUnsavedChanges.value) {
+                    _editedRelayUrl.value = url
+                }
             }
         }
+        // Track unsaved changes
+        viewModelScope.launch {
+            combine(_relayUrl, _editedRelayUrl) { saved, edited ->
+                saved != edited
+            }.collect {
+                _hasUnsavedChanges.value = it
+            }
+        }
+    }
+
+    fun setEditedRelayUrl(url: String) {
+        _editedRelayUrl.value = url
+        // Clear test result when URL changes
+        _connectionTestResult.value = null
+    }
+
+    fun saveRelayUrl() {
+        viewModelScope.launch {
+            settingsService.setRelayServerUrl(_editedRelayUrl.value)
+        }
+    }
+
+    fun resetRelayUrl() {
+        _editedRelayUrl.value = BuildConfig.DEFAULT_RELAY_URL
+        _connectionTestResult.value = null
+    }
+
+    fun discardChanges() {
+        _editedRelayUrl.value = _relayUrl.value
+        _connectionTestResult.value = null
     }
 
     fun setBiometricEnabled(enabled: Boolean) {
@@ -68,7 +113,8 @@ class SettingsViewModel @Inject constructor(
             _isTestingConnection.value = true
             _connectionTestResult.value = null
             try {
-                val url = settingsService.relayServerUrl.first()
+                // Use the edited URL for testing (allows testing before saving)
+                val url = _editedRelayUrl.value
                 val result = relayService.testConnection(url)
                 _connectionTestResult.value = result
             } catch (e: Exception) {

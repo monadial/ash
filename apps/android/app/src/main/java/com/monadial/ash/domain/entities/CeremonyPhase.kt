@@ -30,35 +30,53 @@ enum class CeremonyError {
     INVALID_FRAME
 }
 
-enum class PadSize(val bytes: Long, val displayName: String, val subtitle: String) {
-    SMALL(64 * 1024L, "64 KB", "100+ messages"),
-    MEDIUM(256 * 1024L, "256 KB", "500+ messages"),
-    LARGE(1024 * 1024L, "1 MB", "2000+ messages");
+enum class PadSize(
+    val bytes: Long,
+    val displayName: String,
+    val messageEstimate: Int,
+    val frameCount: Int
+) {
+    TINY(32 * 1024L, "Tiny", 50, 38),
+    SMALL(64 * 1024L, "Small", 100, 75),
+    MEDIUM(256 * 1024L, "Medium", 500, 296),
+    LARGE(512 * 1024L, "Large", 1000, 591),
+    HUGE(1024 * 1024L, "Huge", 2000, 1180);
 
-    val messageEstimate: Int
-        get() = when (this) {
-            SMALL -> 100
-            MEDIUM -> 500
-            LARGE -> 2000
-        }
+    val subtitle: String
+        get() = "~$messageEstimate messages"
 
     val transferTime: String
         get() = when (this) {
+            TINY -> "~10 seconds"
             SMALL -> "~15 seconds"
             MEDIUM -> "~45 seconds"
-            LARGE -> "~2 minutes"
+            LARGE -> "~1.5 minutes"
+            HUGE -> "~3 minutes"
         }
 }
 
 data class ConsentState(
-    val secureEnvironment: Boolean = false,
-    val noSurveillance: Boolean = false,
-    val ethicsReviewed: Boolean = false,
-    val keyLossUnderstood: Boolean = false,
-    val relayWarningUnderstood: Boolean = false,
-    val dataLossAccepted: Boolean = false,
-    val burnUnderstood: Boolean = false
+    // Environment
+    val noOneWatching: Boolean = false,
+    val notUnderSurveillance: Boolean = false,
+    // Responsibilities
+    val ethicsUnderstood: Boolean = false,
+    val keysNotRecoverable: Boolean = false,
+    // Limitations
+    val relayMayBeUnavailable: Boolean = false,
+    val relayDataNotPersisted: Boolean = false,
+    val burnDestroysAll: Boolean = false
 ) {
-    val allConfirmed: Boolean get() = secureEnvironment && noSurveillance && ethicsReviewed &&
-            keyLossUnderstood && relayWarningUnderstood && dataLossAccepted && burnUnderstood
+    val environmentConfirmed: Boolean get() = noOneWatching && notUnderSurveillance
+    val responsibilitiesConfirmed: Boolean get() = ethicsUnderstood && keysNotRecoverable
+    val limitationsConfirmed: Boolean get() = relayMayBeUnavailable && relayDataNotPersisted && burnDestroysAll
+    val allConfirmed: Boolean get() = environmentConfirmed && responsibilitiesConfirmed && limitationsConfirmed
+
+    val confirmedCount: Int get() = listOf(
+        noOneWatching, notUnderSurveillance,
+        ethicsUnderstood, keysNotRecoverable,
+        relayMayBeUnavailable, relayDataNotPersisted, burnDestroysAll
+    ).count { it }
+
+    val totalCount: Int get() = 7
 }

@@ -105,6 +105,7 @@ data class PollMessagesResponse(
 data class ConnectionTestResult(
     val success: Boolean,
     val version: String? = null,
+    val latencyMs: Long? = null,
     val error: String? = null
 )
 
@@ -167,10 +168,12 @@ class RelayService @Inject constructor(
 
     suspend fun testConnection(relayUrl: String): ConnectionTestResult {
         return try {
+            val startTime = System.currentTimeMillis()
             val response: HttpResponse = httpClient.get("$relayUrl/health")
+            val latencyMs = System.currentTimeMillis() - startTime
             if (response.status.isSuccess()) {
                 val health: HealthResponse = response.body()
-                ConnectionTestResult(success = true, version = health.version)
+                ConnectionTestResult(success = true, version = health.version, latencyMs = latencyMs)
             } else {
                 ConnectionTestResult(success = false, error = "Status: ${response.status}")
             }

@@ -1,5 +1,6 @@
 package com.monadial.ash.ui.screens
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,8 +14,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -27,6 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -54,7 +63,8 @@ fun SettingsScreen(
 ) {
     val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
     val lockOnBackground by viewModel.lockOnBackground.collectAsState()
-    val relayUrl by viewModel.relayUrl.collectAsState()
+    val editedRelayUrl by viewModel.editedRelayUrl.collectAsState()
+    val hasUnsavedChanges by viewModel.hasUnsavedChanges.collectAsState()
     val isTestingConnection by viewModel.isTestingConnection.collectAsState()
     val connectionTestResult by viewModel.connectionTestResult.collectAsState()
     val isBurningAll by viewModel.isBurningAll.collectAsState()
@@ -81,11 +91,9 @@ fun SettingsScreen(
                 .padding(16.dp)
         ) {
             // Security Section
-            Text(
-                text = "Security",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
+            SectionHeader(
+                title = "Security",
+                icon = Icons.Default.Shield
             )
 
             Card(
@@ -115,11 +123,9 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Relay Section
-            Text(
-                text = "Relay Server",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
+            SectionHeader(
+                title = "Network",
+                icon = Icons.Default.Cloud
             )
 
             Card(
@@ -129,53 +135,107 @@ fun SettingsScreen(
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Default Relay URL",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = relayUrl,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    OutlinedButton(
-                        onClick = { viewModel.testConnection() },
-                        enabled = !isTestingConnection,
-                        modifier = Modifier.fillMaxWidth()
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (isTestingConnection) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp
+                        Text(
+                            text = "Relay Server URL",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (hasUnsavedChanges) {
+                            Text(
+                                text = "Modified",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        } else {
-                            Icon(
-                                Icons.Default.Wifi,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
                         }
-                        Text(if (isTestingConnection) "Testing..." else "Test Connection")
                     }
 
-                    connectionTestResult?.let { result ->
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = if (result.success) {
-                                "Connected! Version: ${result.version ?: "unknown"}"
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = editedRelayUrl,
+                        onValueChange = { viewModel.setEditedRelayUrl(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("https://relay.example.com") }
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Action buttons row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Test button
+                        OutlinedButton(
+                            onClick = { viewModel.testConnection() },
+                            enabled = !isTestingConnection && editedRelayUrl.isNotBlank(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (isTestingConnection) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Testing...")
                             } else {
-                                "Failed: ${result.error ?: "Unknown error"}"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (result.success) Color(0xFF34C759) else Color(0xFFFF3B30)
-                        )
+                                Icon(
+                                    Icons.Default.Wifi,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Test")
+                            }
+                        }
+
+                        // Save button
+                        Button(
+                            onClick = { viewModel.saveRelayUrl() },
+                            enabled = hasUnsavedChanges && editedRelayUrl.isNotBlank()
+                        ) {
+                            Text("Save")
+                        }
+
+                        // Reset button
+                        TextButton(
+                            onClick = { viewModel.resetRelayUrl() }
+                        ) {
+                            Text("Reset")
+                        }
+                    }
+
+                    // Connection test result
+                    connectionTestResult?.let { result ->
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = if (result.success) Icons.Default.Wifi else Icons.Default.Warning,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (result.success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (result.success) {
+                                    val latency = result.latencyMs?.let { "${it}ms" } ?: ""
+                                    val version = result.version ?: "OK"
+                                    "Connected ($version) $latency"
+                                } else {
+                                    "Failed: ${result.error ?: "Unknown error"}"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (result.success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }
@@ -183,11 +243,9 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // About Section
-            Text(
-                text = "About",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 8.dp)
+            SectionHeader(
+                title = "About",
+                icon = Icons.Default.Info
             )
 
             Card(
@@ -219,30 +277,30 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Danger Zone
-            Text(
-                text = "Danger Zone",
-                style = MaterialTheme.typography.titleSmall,
-                color = Color(0xFFFF3B30),
-                modifier = Modifier.padding(bottom = 8.dp)
+            SectionHeader(
+                title = "Danger Zone",
+                icon = Icons.Default.Warning,
+                color = MaterialTheme.colorScheme.error
             )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFFF3B30).copy(alpha = 0.1f)
+                    containerColor = MaterialTheme.colorScheme.errorContainer
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Burn All Conversations",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Permanently destroy all encryption pads and messages. This cannot be undone.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -251,14 +309,14 @@ fun SettingsScreen(
                         enabled = !isBurningAll,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFFF3B30)
+                            containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
                         if (isBurningAll) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onError
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                         } else {
@@ -286,7 +344,7 @@ fun SettingsScreen(
                 Icon(
                     Icons.Default.LocalFireDepartment,
                     contentDescription = null,
-                    tint = Color(0xFFFF3B30),
+                    tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(32.dp)
                 )
             },
@@ -304,7 +362,7 @@ fun SettingsScreen(
                         viewModel.burnAllConversations()
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF3B30)
+                        containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
                     Text("Burn All")
@@ -315,6 +373,32 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    Row(
+        modifier = Modifier.padding(bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = color,
+            fontWeight = FontWeight.Medium
         )
     }
 }

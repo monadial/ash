@@ -23,26 +23,33 @@ class QRCodeService @Inject constructor() {
      * Uses L error correction level (7%) for maximum capacity.
      * Fountain codes provide their own redundancy.
      *
+     * Block size 1500 bytes + 16 byte header = 1516 bytes
+     * Base64 encoded: ~2021 characters
+     * This fits in QR Version 23-24 with L error correction
+     *
      * @param data Raw bytes to encode
-     * @param size Target size in pixels
+     * @param size Target size in pixels (default 600 for larger QR codes)
      * @return QR code bitmap or null on failure
      */
-    fun generate(data: ByteArray, size: Int = 400): Bitmap? {
+    fun generate(data: ByteArray, size: Int = 600): Bitmap? {
         return try {
             // Base64 encode for compatibility with QR string parsing
             val base64 = Base64.encodeToString(data, Base64.NO_WRAP)
 
-            // Check if data is within QR code limits (roughly 2953 chars for L level)
+            // Check if data is within QR code limits
+            // Version 40 L can hold ~2953 chars, Version 24 L can hold ~2181 chars
             if (base64.length > 2900) {
                 Log.e(TAG, "Data too large for QR code: ${base64.length} chars")
                 return null
             }
 
+            Log.d(TAG, "Generating QR code: ${data.size} bytes -> ${base64.length} chars base64, target size: $size px")
+
             val writer = QRCodeWriter()
             val hints = mapOf(
                 EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
                 EncodeHintType.MARGIN to 1,
-                EncodeHintType.CHARACTER_SET to "UTF-8"
+                EncodeHintType.CHARACTER_SET to "ISO-8859-1"  // Binary-safe encoding
             )
 
             val bitMatrix = writer.encode(base64, BarcodeFormat.QR_CODE, size, size, hints)
@@ -59,8 +66,11 @@ class QRCodeService @Inject constructor() {
                 }
             }
 
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
+            // Use ARGB_8888 for better quality
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+
+            Log.d(TAG, "QR code generated: ${width}x${height} pixels")
             bitmap
         } catch (e: Exception) {
             Log.e(TAG, "Failed to generate QR code: ${e.message}", e)

@@ -1,5 +1,6 @@
 package com.monadial.ash.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -25,6 +26,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "MessagingViewModel"
 
 @HiltViewModel
 class MessagingViewModel @Inject constructor(
@@ -66,6 +69,14 @@ class MessagingViewModel @Inject constructor(
     private var sseJob: Job? = null
     private var pollingJob: Job? = null
     private var hasAttemptedRegistration: Boolean = false
+
+    // Track sent messages to filter out own message echoes from SSE (matching iOS)
+    private val sentSequences = mutableSetOf<Long>()
+    private val sentBlobIds = mutableSetOf<String>()
+    private val processedBlobIds = mutableSetOf<String>()
+
+    // Short ID for logging (first 8 chars)
+    private val logId: String get() = conversationId.take(8)
 
     init {
         loadConversation()
@@ -126,7 +137,31 @@ class MessagingViewModel @Inject constructor(
 
             sseService.events.collect { event ->
                 when (event) {
+                    is SSEEvent.Connected -> {
+                        Log.i(TAG, "[$logId] SSE connected")
+                    }
                     is SSEEvent.MessageReceived -> {
+                        Log.d(TAG, "[$logId] SSE raw: ${event.ciphertext.size} bytes, seq=${event.sequence}, blobId=${event.id.take(8)}")
+                        Log.d(TAG, "[$logId] sentSequences=$sentSequences, sentBlobIds=${sentBlobIds.map { it.take(8) }}")
+
+                        // Filter out own messages (matching iOS: sentBlobIds.contains || sentSequences.contains)
+                        if (sentBlobIds.contains(event.id)) {
+                            Log.d(TAG, "[$logId] Skipping own message (blobId match)")
+                            return@collect
+                        }
+                        if (event.sequence != null && sentSequences.contains(event.sequence)) {
+                            Log.d(TAG, "[$logId] Skipping own message (sequence match: ${event.sequence})")
+                            sentBlobIds.add(event.id)
+                            return@collect
+                        }
+                        // Filter duplicates
+                        if (processedBlobIds.contains(event.id)) {
+                            Log.d(TAG, "[$logId] Skipping duplicate message")
+                            return@collect
+                        }
+
+                        Log.d(TAG, "[$logId] SSE processing: ${event.ciphertext.size} bytes, seq=${event.sequence}")
+
                         handleReceivedMessage(
                             ReceivedMessage(
                                 id = event.id,
@@ -135,16 +170,20 @@ class MessagingViewModel @Inject constructor(
                                 receivedAt = event.receivedAt
                             )
                         )
+                        processedBlobIds.add(event.id)
                     }
                     is SSEEvent.DeliveryConfirmed -> {
+                        Log.i(TAG, "[$logId] Delivery confirmed for ${event.blobIds.size} messages")
                         event.blobIds.forEach { blobId ->
                             handleDeliveryConfirmation(blobId)
                         }
                     }
                     is SSEEvent.BurnSignal -> {
+                        Log.w(TAG, "[$logId] Peer burned conversation")
                         handlePeerBurn()
                     }
                     is SSEEvent.NotFound -> {
+                        Log.w(TAG, "[$logId] Conversation not found on relay")
                         // Conversation not found on relay - try to register and reconnect
                         if (!hasAttemptedRegistration) {
                             hasAttemptedRegistration = true
@@ -154,7 +193,10 @@ class MessagingViewModel @Inject constructor(
                             }
                         }
                     }
-                    else -> { /* Ignore ping, connected, disconnected, error */ }
+                    is SSEEvent.Error -> {
+                        Log.e(TAG, "[$logId] SSE error: ${event.message}")
+                    }
+                    else -> { /* Ignore ping, disconnected */ }
                 }
             }
         }
@@ -183,28 +225,55 @@ class MessagingViewModel @Inject constructor(
 
         // Check for duplicates using blob ID
         if (_messages.value.any { it.blobId == received.id }) {
+            Log.d(TAG, "[$logId] Skipping duplicate (already in messages list)")
             return
         }
 
         // sequence is the sender's consumption offset, not absolute pad position
-        val senderOffset = received.sequence ?: return
+        val senderOffset = received.sequence ?: run {
+            Log.w(TAG, "[$logId] Received message without sequence, skipping")
+            return
+        }
+
+        // Check if this is our OWN sent message (matching iOS processReceivedMessage)
+        // We must skip these to avoid corrupting peerConsumed state
+        val isOwnMessage = when (conv.role) {
+            ConversationRole.INITIATOR -> {
+                // Initiator sends from [0, sendOffset) - messages in this range are ours
+                senderOffset < conv.sendOffset
+            }
+            ConversationRole.RESPONDER -> {
+                // Responder sends from [totalBytes - sendOffset, totalBytes) - messages in this range are ours
+                senderOffset >= conv.padTotalSize - conv.sendOffset
+            }
+        }
+
+        if (isOwnMessage) {
+            Log.d(TAG, "[$logId] Skipping own sent message seq=$senderOffset (sendOffset=${conv.sendOffset})")
+            return
+        }
+
+        // Check if we already processed this sequence (stored with conversation)
+        if (conv.hasProcessedIncomingSequence(senderOffset)) {
+            Log.d(TAG, "[$logId] Skipping already-processed message seq=$senderOffset")
+            return
+        }
+
+        Log.d(TAG, "[$logId] Processing received message: ${received.ciphertext.size} bytes, seq=$senderOffset")
 
         try {
-            // Calculate absolute pad position based on peer's role
-            // Initiator encrypts from front: absolute = senderOffset
-            // Responder encrypts from back: absolute = padSize - senderOffset - length
-            val absoluteOffset: Long
-            val peerRole: Role
-
-            if (conv.role == ConversationRole.INITIATOR) {
-                // I'm initiator, peer is responder (encrypts from back)
-                peerRole = Role.RESPONDER
-                absoluteOffset = conv.padTotalSize - senderOffset - received.ciphertext.size
+            // The sequence IS the absolute pad offset where the key starts
+            // Matching iOS ReceiveMessageUseCase.swift:64-68: uses offset directly
+            // - Initiator sends sequence = nextSendOffset() = absolute position from front
+            // - Responder sends sequence = totalBytes - consumedBack - length = absolute position from back
+            val absoluteOffset = senderOffset
+            val peerRole: Role = if (conv.role == ConversationRole.INITIATOR) {
+                Role.RESPONDER
             } else {
-                // I'm responder, peer is initiator (encrypts from front)
-                peerRole = Role.INITIATOR
-                absoluteOffset = senderOffset
+                Role.INITIATOR
             }
+
+            Log.d(TAG, "[$logId] Decrypting: peerRole=$peerRole, absoluteOffset=$absoluteOffset")
 
             // Get key bytes from pad at the absolute position
             val keyBytes = padManager.getBytesForDecryption(
@@ -217,6 +286,12 @@ class MessagingViewModel @Inject constructor(
             val plaintext = ashCoreService.decrypt(keyBytes, received.ciphertext)
 
             val content = MessageContent.fromBytes(plaintext)
+            val contentType = when (content) {
+                is MessageContent.Text -> "text"
+                is MessageContent.Location -> "location"
+            }
+            Log.i(TAG, "[$logId] Decrypted $contentType message, seq=$senderOffset")
+
             val disappearingSeconds = conv.disappearingMessages.seconds?.toLong()
 
             val message = Message.incoming(
@@ -229,14 +304,31 @@ class MessagingViewModel @Inject constructor(
 
             _messages.value = _messages.value + message
 
-            // Update peer consumption tracking using PadManager
-            val consumedAmount = senderOffset + received.ciphertext.size
+            // Update peer consumption tracking using PadManager (Rust Pad state)
+            // Calculation must match iOS's calculatePeerConsumed:
+            // - If I'm initiator (peer is responder): peerConsumed = totalBytes - sequence
+            // - If I'm responder (peer is initiator): peerConsumed = sequence + length
+            val consumedAmount = if (conv.role == ConversationRole.INITIATOR) {
+                // Peer is responder (consumes backward from end)
+                conv.padTotalSize - senderOffset
+            } else {
+                // Peer is initiator (consumes forward from start)
+                senderOffset + received.ciphertext.size
+            }
+            Log.d(TAG, "[$logId] Updating peer consumption: peerRole=$peerRole, consumed=$consumedAmount")
             padManager.updatePeerConsumption(peerRole, consumedAmount, conversationId)
+
+            // Update conversation state (Kotlin entity) and persist to storage
+            // This matches iOS's: conversation.afterReceiving + conversationRepository.save
+            val updatedConv = conv.afterReceiving(senderOffset, received.ciphertext.size.toLong())
+            conversationStorage.saveConversation(updatedConv)
+            _conversation.value = updatedConv
+            Log.d(TAG, "[$logId] Conversation state saved. Remaining=${updatedConv.remainingBytes}")
 
             // Send ACK
             sendAck(received.id)
         } catch (e: Exception) {
-            // Decryption failed
+            Log.e(TAG, "[$logId] Failed to process message: ${e.message}", e)
         }
     }
 
@@ -328,14 +420,29 @@ class MessagingViewModel @Inject constructor(
                 val plaintext = MessageContent.toBytes(content)
                 val myRole = if (conv.role == ConversationRole.INITIATOR) Role.INITIATOR else Role.RESPONDER
 
-                // Get the next send offset from PadManager
-                val currentOffset = padManager.nextSendOffset(myRole, conversationId)
+                // Calculate sequence (offset where key material STARTS)
+                // Matching iOS SendMessageUseCase.swift:68-74
+                // - Initiator: key starts at consumed_front (use nextSendOffset)
+                // - Responder: key starts at total_size - consumed_back - message_size
+                val sequence: Long = if (myRole == Role.RESPONDER) {
+                    val padState = padManager.getPadState(conversationId)
+                    padState.totalBytes - padState.consumedBack - plaintext.size
+                } else {
+                    padManager.nextSendOffset(myRole, conversationId)
+                }
+
+                Log.i(TAG, "[$logId] Sending message: ${plaintext.size} bytes, seq=$sequence, remaining=${conv.remainingBytes}")
 
                 // Check if we can send
                 if (!padManager.canSend(plaintext.size, myRole, conversationId)) {
+                    Log.w(TAG, "[$logId] Pad exhausted - cannot send")
                     _error.value = "Pad exhausted - cannot send message"
                     return@launch
                 }
+
+                // Track sent sequence BEFORE sending to filter out SSE echoes (matching iOS)
+                sentSequences.add(sequence)
+                Log.d(TAG, "[$logId] Tracked sent sequence: $sequence, sentSequences now: $sentSequences")
 
                 // Consume pad bytes for encryption (this updates state in PadManager)
                 val keyBytes = padManager.consumeForSending(plaintext.size, myRole, conversationId)
@@ -343,13 +450,21 @@ class MessagingViewModel @Inject constructor(
                 // Encrypt using FFI
                 val ciphertext = ashCoreService.encrypt(keyBytes, plaintext)
 
+                Log.d(TAG, "[$logId] Encrypted: ${plaintext.size} → ${ciphertext.size} bytes")
+
+                // Update conversation state after sending and persist to storage
+                // This matches iOS's: conversation.afterSending + conversationRepository.save
+                val updatedConv = conv.afterSending(plaintext.size.toLong())
+                conversationStorage.saveConversation(updatedConv)
+                _conversation.value = updatedConv
+
                 // Create message
                 val message = Message(
                     conversationId = conversationId,
                     content = content,
                     direction = MessageDirection.SENT,
                     status = DeliveryStatus.SENDING,
-                    sequence = currentOffset,
+                    sequence = sequence,
                     serverExpiresAt = System.currentTimeMillis() + (conv.messageRetention.seconds * 1000L)
                 )
 
@@ -361,18 +476,22 @@ class MessagingViewModel @Inject constructor(
                     conversationId = conversationId,
                     authToken = conv.authToken,
                     ciphertext = ciphertext,
-                    sequence = currentOffset,
+                    sequence = sequence,
                     ttlSeconds = conv.messageRetention.seconds,
                     relayUrl = conv.relayUrl
                 )
 
                 if (sendResult.success && sendResult.blobId != null) {
+                    // Track sent blob ID to filter out SSE echoes (matching iOS)
+                    sentBlobIds.add(sendResult.blobId)
+
                     // Update message with blob ID and status
                     _messages.value = _messages.value.map {
                         if (it.id == message.id) {
                             it.withBlobId(sendResult.blobId).withDeliveryStatus(DeliveryStatus.SENT)
                         } else it
                     }
+                    Log.i(TAG, "[$logId] Message sent: blobId=${sendResult.blobId.take(8)}")
                 } else {
                     // Mark as failed
                     _messages.value = _messages.value.map {
@@ -381,9 +500,11 @@ class MessagingViewModel @Inject constructor(
                         } else it
                     }
                     _error.value = sendResult.error ?: "Failed to send message"
+                    Log.e(TAG, "[$logId] Send failed: ${sendResult.error}")
                 }
             } catch (e: Exception) {
                 _error.value = "Failed to send message: ${e.message}"
+                Log.e(TAG, "[$logId] Send exception: ${e.message}", e)
             } finally {
                 _isSending.value = false
             }

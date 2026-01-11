@@ -26,24 +26,25 @@ import androidx.compose.ui.unit.dp
 fun QRCodeView(
     bitmap: Bitmap?,
     modifier: Modifier = Modifier,
-    size: Dp = 280.dp
+    size: Dp = 320.dp
 ) {
     Box(
         modifier = modifier
             .size(size)
-            .shadow(16.dp, RoundedCornerShape(16.dp))
-            .clip(RoundedCornerShape(16.dp))
+            .shadow(8.dp, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
         when {
             bitmap != null -> {
+                // Minimal padding - QR codes have built-in quiet zone
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = "QR Code",
                     modifier = Modifier
-                        .padding(10.dp)
-                        .size(size - 20.dp),
+                        .padding(4.dp)
+                        .size(size - 8.dp),
                     contentScale = ContentScale.Fit,
                     filterQuality = FilterQuality.None
                 )

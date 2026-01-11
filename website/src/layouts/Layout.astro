@@ -1,16 +1,18 @@
 ---
 import '../styles/global.css'
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
 
 interface Props {
   title: string
   description?: string
-  showNav?: boolean
+  fullWidth?: boolean
 }
 
 const {
   title,
-  description = 'A One-Time Pad messaging protocol for information-theoretic security.',
-  showNav = true
+  description = 'Secure ephemeral messaging with information-theoretic security.',
+  fullWidth = false
 } = Astro.props
 ---
 
@@ -24,29 +26,15 @@ const {
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <title>{title} | ASH Protocol</title>
+    <title>{title} | ASH</title>
   </head>
-  <body>
-    {showNav && (
-      <header class="paper-header">
-        <nav class="paper-nav">
-          <a href="/">ASH</a>
-          <div class="flex gap-6">
-            <a href="/docs">Docs</a>
-            <a href="/security">Security</a>
-            <a href="/ethics">Ethics</a>
-          </div>
-        </nav>
-      </header>
-    )}
+  <body class="min-h-screen">
+    <Header />
 
-    <main class="paper">
+    <main class={`pt-16 ${fullWidth ? '' : 'max-w-4xl mx-auto px-6'}`}>
       <slot />
     </main>
 
-    <footer class="paper-footer">
-      <p>ASH Protocol</p>
-      <p class="mt-1">No analytics. No tracking. Open source.</p>
-    </footer>
+    <Footer />
   </body>
 </html>

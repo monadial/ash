@@ -1,565 +1,726 @@
 ---
 import Layout from '../layouts/Layout.astro'
+import Button from '../components/Button.astro'
+import Section from '../components/Section.astro'
+import FeatureCard from '../components/FeatureCard.astro'
+import PhoneMockup from '../components/PhoneMockup.astro'
 ---
 
-<Layout title="Secure Messaging with Perfect Secrecy" description="ASH is a secure messaging app using One-Time Pad encryption. Mathematically unbreakable. No servers can read your messages. Ever.">
-  <!-- Hero Section -->
-  <section class="hero">
-    <div class="hero-badge">One-Time Pad Encryption</div>
-    <h1 class="hero-title">
-      Messages that<br/>
-      <span class="hero-highlight">cannot be broken.</span>
-    </h1>
-    <p class="hero-subtitle">
-      ASH uses the only encryption mathematically proven to be unbreakable.
-      Not today. Not with quantum computers. Not ever.
-    </p>
-    <div class="hero-cta">
-      <a href="#" class="btn-primary">Download for iOS</a>
-      <a href="/docs" class="btn-secondary">Read the Paper</a>
-    </div>
-  </section>
-
-  <!-- Problem Section -->
-  <section class="content-section">
-    <h2 class="section-title">The Problem with Modern Encryption</h2>
-    <p class="section-intro">
-      Every messaging app you use relies on encryption that could be broken
-      tomorrow. Mathematical assumptions. Computational hardness. Quantum
-      vulnerability. Your most sensitive conversations deserve better.
-    </p>
-
-    <div class="comparison-grid">
-      <div class="comparison-card comparison-bad">
-        <div class="comparison-icon">Other Apps</div>
-        <ul>
-          <li>Security based on math problems that <em>might</em> be hard</li>
-          <li>Vulnerable to quantum computers</li>
-          <li>Keys generated remotely</li>
-          <li>Trust the server infrastructure</li>
-          <li>"Secure enough" for most people</li>
-        </ul>
+<Layout title="Secure Messaging" description="ASH is a secure messaging app using One-Time Pad encryption. Mathematically unbreakable." fullWidth={true}>
+  <!-- Hero -->
+  <section class="min-h-[calc(100vh-4rem)] flex items-center">
+    <div class="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-16 items-center">
+      <div class="animate-fade-in">
+        <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
+          One-Time Pad Encryption
+        </span>
+        <h1 class="text-5xl lg:text-6xl font-bold leading-tight mb-6">
+          The only encryption that's
+          <span class="text-transparent bg-clip-text bg-linear-to-r from-brand-light to-brand">truly unbreakable</span>
+        </h1>
+        <p class="text-xl text-text-secondary mb-6 max-w-lg">
+          Perfect secrecy proven by mathematics. Not vulnerable to quantum computers. Not now. Not ever.
+        </p>
+        <p class="text-text-muted mb-10 max-w-lg">
+          ASH uses the One-Time Pad cipher — the only encryption method with mathematically proven security. Unlike modern cryptography that relies on computational hardness, OTP provides information-theoretic security that no amount of computing power can break.
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <Button href="#" variant="primary" size="lg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            Download for iOS
+          </Button>
+          <Button href="https://github.com/monadial/ash" variant="secondary" size="lg" external>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            View on GitHub
+          </Button>
+        </div>
       </div>
-      <div class="comparison-card comparison-good">
-        <div class="comparison-icon">ASH</div>
-        <ul>
-          <li>Security <em>proven</em> mathematically (Shannon, 1949)</li>
-          <li>Immune to quantum attacks</li>
-          <li>Keys exchanged in person</li>
-          <li>Server sees only encrypted noise</li>
-          <li>Perfect secrecy, no compromises</li>
-        </ul>
+
+      <!-- Phone Mockups -->
+      <div class="relative h-125 lg:h-150 animate-fade-in delay-2 hidden lg:block">
+        <div class="absolute top-8 right-8 transform rotate-6 opacity-60 scale-90">
+          <PhoneMockup label="Messages" />
+        </div>
+        <div class="absolute top-16 left-4 z-10">
+          <PhoneMockup label="Conversations" />
+        </div>
       </div>
     </div>
   </section>
 
   <!-- How It Works -->
-  <section class="content-section">
-    <h2 class="section-title">How ASH Works</h2>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-number">1</div>
-        <div class="step-content">
-          <h3>Meet in Person</h3>
-          <p>
-            You and your contact meet face-to-face. This is the only way to
-            establish trust without relying on servers or networks that could
-            be compromised.
-          </p>
-        </div>
+  <section class="py-24 bg-bg-subtle border-y border-border">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">How It Works</span>
+        <h2 class="text-4xl font-bold mt-4">Four steps to perfect secrecy</h2>
+        <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
+          ASH takes a fundamentally different approach to secure messaging. Instead of relying on complex mathematical problems that might one day be solved, ASH uses a simple but provably unbreakable method.
+        </p>
       </div>
 
-      <div class="step">
-        <div class="step-number">2</div>
-        <div class="step-content">
-          <h3>Exchange the Pad</h3>
-          <p>
-            Your phone generates a random encryption pad. You transfer it via
-            QR codes. Six spoken words confirm success. No internet involved.
+      <div class="grid md:grid-cols-4 gap-8">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">1</div>
+          <h3 class="font-semibold text-lg mb-3">Meet in Person</h3>
+          <p class="text-text-secondary text-sm">
+            Meet your contact face-to-face. This is the foundation of trust — no servers, no third parties, just two people who can verify each other's identity directly.
           </p>
         </div>
-      </div>
-
-      <div class="step">
-        <div class="step-number">3</div>
-        <div class="step-content">
-          <h3>Message Securely</h3>
-          <p>
-            Each message consumes part of the pad and is destroyed after use.
-            Even if someone records everything, they get nothing but random noise.
+        <div class="text-center">
+          <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">2</div>
+          <h3 class="font-semibold text-lg mb-3">Exchange Keys</h3>
+          <p class="text-text-secondary text-sm">
+            Scan QR codes to share a unique encryption pad. This happens completely offline — the key material never touches the internet, making interception impossible.
           </p>
         </div>
-      </div>
-
-      <div class="step">
-        <div class="step-number">4</div>
-        <div class="step-content">
-          <h3>Burn When Done</h3>
-          <p>
-            When you're finished, burn the conversation. All key material is
-            destroyed. Past messages become permanently unrecoverable.
+        <div class="text-center">
+          <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">3</div>
+          <h3 class="font-semibold text-lg mb-3">Message Securely</h3>
+          <p class="text-text-secondary text-sm">
+            Each message consumes unique bytes from your shared pad. Once used, those bytes are permanently destroyed — providing perfect forward secrecy for every message.
+          </p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 bg-danger rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">4</div>
+          <h3 class="font-semibold text-lg mb-3">Burn When Done</h3>
+          <p class="text-text-secondary text-sm">
+            When your conversation is complete, burn the remaining key material. All evidence of the conversation is permanently destroyed — messages become mathematically unrecoverable.
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Features -->
-  <section class="content-section">
-    <h2 class="section-title">Security Properties</h2>
-
-    <div class="features-grid">
-      <div class="feature">
-        <div class="feature-title">Perfect Secrecy</div>
-        <p>
-          Ciphertext reveals zero information about plaintext.
-          Proven by Claude Shannon in 1949.
+  <!-- Interactive Protocol Demo -->
+  <section class="py-24" id="demo">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Interactive Demo</span>
+        <h2 class="text-4xl font-bold mt-4">See the ASH protocol in action</h2>
+        <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
+          Watch how ASH uses a shared One-Time Pad for secure bidirectional communication. Alice and Bob each consume key bytes from opposite ends — ensuring their messages never collide.
         </p>
       </div>
 
-      <div class="feature">
-        <div class="feature-title">Forward Secrecy</div>
-        <p>
-          Key material is destroyed after each message.
-          Compromise later reveals nothing.
-        </p>
-      </div>
+      <div class="bg-bg-card border border-border rounded-2xl p-6 lg:p-8">
+        <!-- Pad Visualization Header -->
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h3 class="font-semibold text-lg">Shared One-Time Pad</h3>
+            <p class="text-text-muted text-sm">64 bytes shown (actual pads are 32KB–1MB)</p>
+          </div>
+          <button id="reset-demo" class="text-xs text-brand hover:text-brand-light transition-colors flex items-center gap-1.5 px-3 py-1.5 border border-brand/30 rounded-lg hover:bg-brand-subtle">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reset Demo
+          </button>
+        </div>
 
-      <div class="feature">
-        <div class="feature-title">Quantum Immune</div>
-        <p>
-          No algorithm, including quantum, can break OTP.
-          Your messages stay secure forever.
-        </p>
-      </div>
+        <!-- Pad Grid -->
+        <div class="bg-bg-elevated rounded-xl p-4 mb-8 overflow-x-auto">
+          <div id="pad-grid" class="grid gap-1" style="grid-template-columns: repeat(16, minmax(0, 1fr));">
+            <!-- Filled by JS -->
+          </div>
+          <div class="flex justify-between mt-4 text-xs text-text-muted">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded bg-brand"></div>
+              <span>Alice (from start)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded bg-bg-hover border border-border"></div>
+              <span>Available</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded bg-success"></div>
+              <span>Bob (from end)</span>
+            </div>
+          </div>
+        </div>
 
-      <div class="feature">
-        <div class="feature-title">Zero Trust Infrastructure</div>
-        <p>
-          Servers never see keys or plaintext.
-          Full compromise reveals only noise.
-        </p>
-      </div>
+        <!-- Two-column conversation -->
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+          <!-- Alice's Side -->
+          <div class="bg-bg-subtle border border-border rounded-xl p-5">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-full bg-brand flex items-center justify-center text-white font-bold">A</div>
+              <div>
+                <h4 class="font-semibold">Alice (Initiator)</h4>
+                <p class="text-text-muted text-xs">Encrypts from pad start →</p>
+              </div>
+            </div>
+            <div class="mb-4">
+              <label for="alice-input" class="block text-xs text-text-muted mb-2">Send a message</label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="alice-input"
+                  maxlength="16"
+                  placeholder="Type message..."
+                  class="flex-1 bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-brand"
+                />
+                <button id="alice-send" class="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-light transition-colors">
+                  Send
+                </button>
+              </div>
+            </div>
+            <div id="alice-messages" class="space-y-3 max-h-48 overflow-y-auto">
+              <!-- Messages appear here -->
+            </div>
+          </div>
 
-      <div class="feature">
-        <div class="feature-title">No Key Recovery</div>
-        <p>
-          No backdoors. No escrow. No master keys.
-          Only you and your contact can decrypt.
-        </p>
-      </div>
+          <!-- Bob's Side -->
+          <div class="bg-bg-subtle border border-border rounded-xl p-5">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-full bg-success flex items-center justify-center text-white font-bold">B</div>
+              <div>
+                <h4 class="font-semibold">Bob (Responder)</h4>
+                <p class="text-text-muted text-xs">← Encrypts from pad end</p>
+              </div>
+            </div>
+            <div class="mb-4">
+              <label for="bob-input" class="block text-xs text-text-muted mb-2">Send a message</label>
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="bob-input"
+                  maxlength="16"
+                  placeholder="Type message..."
+                  class="flex-1 bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-brand"
+                />
+                <button id="bob-send" class="px-4 py-2 bg-success text-white text-sm font-medium rounded-lg hover:brightness-110 transition-all">
+                  Send
+                </button>
+              </div>
+            </div>
+            <div id="bob-messages" class="space-y-3 max-h-48 overflow-y-auto">
+              <!-- Messages appear here -->
+            </div>
+          </div>
+        </div>
 
-      <div class="feature">
-        <div class="feature-title">Open Source</div>
-        <p>
-          Core cryptographic library is public.
-          Zero external dependencies. Audit it yourself.
-        </p>
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div class="bg-bg-subtle rounded-lg p-3">
+            <div class="text-2xl font-bold text-brand" id="alice-used">0</div>
+            <div class="text-xs text-text-muted">Alice used</div>
+          </div>
+          <div class="bg-bg-subtle rounded-lg p-3">
+            <div class="text-2xl font-bold text-white" id="pad-remaining">64</div>
+            <div class="text-xs text-text-muted">Bytes remaining</div>
+          </div>
+          <div class="bg-bg-subtle rounded-lg p-3">
+            <div class="text-2xl font-bold text-success" id="bob-used">0</div>
+            <div class="text-xs text-text-muted">Bob used</div>
+          </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="mt-8 pt-6 border-t border-border">
+          <h4 class="font-semibold mb-4">How bidirectional encryption works</h4>
+          <div class="grid md:grid-cols-3 gap-6 text-sm text-text-secondary">
+            <div>
+              <div class="w-8 h-8 rounded-lg bg-brand-subtle flex items-center justify-center mb-2">
+                <span class="text-brand font-bold">1</span>
+              </div>
+              <p><strong class="text-white">Shared secret.</strong> During an in-person ceremony, Alice and Bob exchange an identical One-Time Pad via QR codes. This pad is their shared secret — never transmitted over any network.</p>
+            </div>
+            <div>
+              <div class="w-8 h-8 rounded-lg bg-brand-subtle flex items-center justify-center mb-2">
+                <span class="text-brand font-bold">2</span>
+              </div>
+              <p><strong class="text-white">Opposite consumption.</strong> Alice encrypts using bytes from the start of the pad. Bob encrypts using bytes from the end. This ensures they never use the same bytes — critical for OTP security.</p>
+            </div>
+            <div>
+              <div class="w-8 h-8 rounded-lg bg-brand-subtle flex items-center justify-center mb-2">
+                <span class="text-brand font-bold">3</span>
+              </div>
+              <p><strong class="text-white">One-time use.</strong> Each byte is used exactly once, then destroyed. Even if the pad is later compromised, already-sent messages cannot be decrypted — perfect forward secrecy.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Who Is This For -->
-  <section class="content-section">
-    <h2 class="section-title">Who Is ASH For?</h2>
-    <p class="section-intro">
-      ASH is not a replacement for Signal or WhatsApp. It's a specialized tool
-      for situations where the cost of compromise is extremely high.
-    </p>
+  <!-- App Screenshots -->
+  <section class="py-24 bg-bg-subtle border-y border-border">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">The App</span>
+        <h2 class="text-4xl font-bold mt-4">Simple, focused, secure</h2>
+        <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
+          ASH is designed with one purpose: private conversations that stay private. Every feature serves security, every screen is intentional. No bloat, no distractions — just bulletproof communication.
+        </p>
+      </div>
 
-    <div class="use-cases">
-      <div class="use-case">
-        <h3>Journalists</h3>
-        <p>Protect sources who risk everything to share information with you.</p>
-      </div>
-      <div class="use-case">
-        <h3>Whistleblowers</h3>
-        <p>Communicate with trusted parties without leaving cryptographic traces.</p>
-      </div>
-      <div class="use-case">
-        <h3>Human Rights Workers</h3>
-        <p>Document and coordinate in environments where surveillance is life-threatening.</p>
-      </div>
-      <div class="use-case">
-        <h3>Anyone with High-Stakes Privacy Needs</h3>
-        <p>When "probably secure" isn't good enough.</p>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+        <!-- Conversations -->
+        <div class="flex flex-col">
+          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
+            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
+              <div class="text-center p-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
+                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <p class="text-text-muted text-sm">Screenshot placeholder</p>
+              </div>
+            </div>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Conversation List</h3>
+          <p class="text-text-secondary text-sm">
+            Your secure conversations at a glance. See remaining pad capacity, last activity, and quickly access any conversation. Color-coded for easy identification.
+          </p>
+        </div>
+
+        <!-- Ceremony -->
+        <div class="flex flex-col">
+          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
+            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
+              <div class="text-center p-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
+                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                </div>
+                <p class="text-text-muted text-sm">Screenshot placeholder</p>
+              </div>
+            </div>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">QR Ceremony</h3>
+          <p class="text-text-secondary text-sm">
+            Exchange encryption keys face-to-face via QR codes. The ceremony is completely offline — your shared secret never touches the internet. Verify with a 6-word mnemonic.
+          </p>
+        </div>
+
+        <!-- Chat -->
+        <div class="flex flex-col">
+          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
+            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
+              <div class="text-center p-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
+                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <p class="text-text-muted text-sm">Screenshot placeholder</p>
+              </div>
+            </div>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Secure Chat</h3>
+          <p class="text-text-secondary text-sm">
+            Messages encrypted with your One-Time Pad. Each message consumes unique key bytes that are destroyed after use. See your remaining capacity and message status.
+          </p>
+        </div>
+
+        <!-- Entropy -->
+        <div class="flex flex-col">
+          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
+            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
+              <div class="text-center p-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
+                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  </svg>
+                </div>
+                <p class="text-text-muted text-sm">Screenshot placeholder</p>
+              </div>
+            </div>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Entropy Collection</h3>
+          <p class="text-text-secondary text-sm">
+            Generate truly random keys by drawing on screen. Your gestures combine with system randomness to create unpredictable encryption keys. Watch entropy accumulate visually.
+          </p>
+        </div>
+
+        <!-- Verification -->
+        <div class="flex flex-col">
+          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
+            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
+              <div class="text-center p-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-success/20 flex items-center justify-center">
+                  <svg class="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <p class="text-text-muted text-sm">Screenshot placeholder</p>
+              </div>
+            </div>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Mnemonic Verification</h3>
+          <p class="text-text-secondary text-sm">
+            Verify your key exchange with a human-readable 6-word checksum. Both parties see the same words — speak them aloud to confirm your shared secret matches perfectly.
+          </p>
+        </div>
+
+        <!-- Burn -->
+        <div class="flex flex-col">
+          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
+            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
+              <div class="text-center p-6">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-danger/20 flex items-center justify-center">
+                  <svg class="w-8 h-8 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
+                  </svg>
+                </div>
+                <p class="text-text-muted text-sm">Screenshot placeholder</p>
+              </div>
+            </div>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Burn Everything</h3>
+          <p class="text-text-secondary text-sm">
+            Permanently destroy your conversation with one tap. All key material is wiped, making past messages mathematically unrecoverable. Both parties are notified instantly.
+          </p>
+        </div>
       </div>
     </div>
   </section>
+
+  <!-- Security -->
+  <Section>
+    <div class="text-center mb-16">
+      <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Security</span>
+      <h2 class="text-4xl font-bold mt-4">What makes ASH different</h2>
+      <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
+        Most "secure" messaging apps rely on computational security — problems that are hard but not impossible to solve. ASH is fundamentally different. Here's what that means for you.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <FeatureCard title="Perfect Secrecy">
+        Ciphertext reveals zero information about your message. This isn't a claim — it's a mathematical proof by Claude Shannon in 1949. The gold standard of cryptography.
+      </FeatureCard>
+      <FeatureCard title="Forward Secrecy">
+        Key bytes are destroyed after each message. Even if someone compromises your device tomorrow, they cannot decrypt messages you sent today. Every message is protected independently.
+      </FeatureCard>
+      <FeatureCard title="Quantum Immune">
+        Quantum computers will break RSA, ECC, and most modern encryption. OTP is immune because it doesn't rely on mathematical hardness — it's information-theoretic security.
+      </FeatureCard>
+      <FeatureCard title="Zero Trust Backend">
+        Our servers never see your keys or plaintext. They relay encrypted blobs and nothing more. Even if we're compromised, hacked, or compelled — we have nothing to give.
+      </FeatureCard>
+      <FeatureCard title="No Backdoors">
+        No key recovery. No escrow. No master keys. No "lawful access" capabilities. The math doesn't allow it, and we wouldn't build it if it did. Only you can decrypt your messages.
+      </FeatureCard>
+      <FeatureCard title="Open Source">
+        The core cryptographic library is public on GitHub. Zero external dependencies. Every line of security-critical code is auditable. Trust, but verify.
+      </FeatureCard>
+    </div>
+  </Section>
+
+  <!-- Comparison -->
+  <section class="py-24 bg-bg-subtle border-y border-border">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Comparison</span>
+        <h2 class="text-4xl font-bold mt-4">Why not Signal or WhatsApp?</h2>
+        <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
+          Signal and WhatsApp are excellent apps with strong security for everyday use. But they rely on computational assumptions that may not hold forever. ASH is for when "probably secure" isn't enough.
+        </p>
+      </div>
+
+      <div class="bg-bg-card border border-border rounded-2xl overflow-hidden">
+        <div class="grid grid-cols-3 border-b border-border text-sm">
+          <div class="p-4 text-text-muted font-medium"></div>
+          <div class="p-4 text-text-muted font-medium text-center">Signal / WhatsApp</div>
+          <div class="p-4 text-brand-light font-medium text-center bg-brand-subtle">ASH</div>
+        </div>
+        {[
+          ['Security basis', 'Computational hardness', 'Mathematical proof'],
+          ['Quantum resistant', 'Vulnerable to Shor\'s algorithm', 'Completely immune'],
+          ['Key exchange', 'Remote via servers', 'In-person via QR codes'],
+          ['Server trust', 'Servers see metadata', 'Servers see only noise'],
+          ['Future security', 'Depends on unsolved problems', 'Guaranteed by information theory']
+        ].map(([label, other, ash]) => (
+          <div class="grid grid-cols-3 border-b border-border last:border-0 text-sm">
+            <div class="p-4 font-medium">{label}</div>
+            <div class="p-4 text-text-muted text-center">{other}</div>
+            <div class="p-4 text-center bg-brand-subtle">{ash}</div>
+          </div>
+        ))}
+      </div>
+
+      <p class="text-text-muted text-sm text-center mt-6">
+        This isn't about Signal being bad — it's excellent. ASH serves a different threat model for people who need absolute guarantees.
+      </p>
+    </div>
+  </section>
+
+  <!-- Use Cases -->
+  <Section>
+    <div class="text-center mb-16">
+      <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Who It's For</span>
+      <h2 class="text-4xl font-bold mt-4">When "probably secure" isn't enough</h2>
+      <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
+        ASH isn't for everyone. It requires meeting in person and has limited message capacity. But for certain situations, these trade-offs are more than worth it.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <FeatureCard title="Journalists">
+        Protect sources who risk their careers, freedom, or lives to share information. When source protection is paramount, mathematical certainty matters.
+      </FeatureCard>
+      <FeatureCard title="Whistleblowers">
+        Communicate with trusted parties while minimizing digital footprints. When exposing wrongdoing, you need encryption that can't be broken even years later.
+      </FeatureCard>
+      <FeatureCard title="Human Rights Workers">
+        Coordinate safely in environments where surveillance is pervasive and life-threatening. When the stakes are highest, settle for nothing less than proven security.
+      </FeatureCard>
+      <FeatureCard title="High-Stakes Business">
+        Negotiate deals, discuss strategy, or share sensitive information when the cost of compromise is catastrophic. Perfect secrecy for perfect discretion.
+      </FeatureCard>
+    </div>
+  </Section>
 
   <!-- Trade-offs -->
-  <section class="content-section">
-    <h2 class="section-title">Honest Trade-offs</h2>
-    <p class="section-intro">
-      Perfect security requires real constraints. ASH is intentionally limited.
-    </p>
+  <section class="py-24 bg-bg-subtle border-y border-border">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Trade-offs</span>
+        <h2 class="text-4xl font-bold mt-4">Honest about constraints</h2>
+        <p class="text-text-secondary mt-4">
+          Perfect security requires real limitations. We believe in being upfront about them. These aren't bugs — they're features that make the security guarantees possible.
+        </p>
+      </div>
 
-    <div class="tradeoffs">
-      <div class="tradeoff">
-        <div class="tradeoff-label">Limitation</div>
-        <div class="tradeoff-value">Physical meeting required</div>
-        <div class="tradeoff-reason">Secure key exchange without trusting networks</div>
-      </div>
-      <div class="tradeoff">
-        <div class="tradeoff-label">Limitation</div>
-        <div class="tradeoff-value">Finite message capacity</div>
-        <div class="tradeoff-reason">OTP requires key material equal to message length</div>
-      </div>
-      <div class="tradeoff">
-        <div class="tradeoff-label">Limitation</div>
-        <div class="tradeoff-value">Two people only</div>
-        <div class="tradeoff-reason">Groups would require exponential key material</div>
-      </div>
-      <div class="tradeoff">
-        <div class="tradeoff-label">Limitation</div>
-        <div class="tradeoff-value">Text and location only</div>
-        <div class="tradeoff-reason">Media would exhaust the pad rapidly</div>
+      <div class="bg-bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
+        {[
+          ['Physical meeting required', 'Key exchange happens offline via QR codes. This prevents any network-based attack on key distribution — the foundation of OTP security.'],
+          ['Finite message capacity', 'OTP requires one key byte per message byte. Choose pad sizes from 32KB (~25 messages) to 1MB (~800 messages) during the ceremony.'],
+          ['Two people only', 'Group encryption would require sharing keys with multiple parties, exponentially increasing attack surface. ASH is strictly one-to-one.'],
+          ['Text and location only', 'Photos and videos would exhaust your pad quickly. ASH focuses on what matters most: secure text communication and emergency location sharing.']
+        ].map(([constraint, reason]) => (
+          <div class="p-5">
+            <h4 class="font-medium mb-2">{constraint}</h4>
+            <p class="text-text-muted text-sm">{reason}</p>
+          </div>
+        ))}
       </div>
     </div>
   </section>
 
-  <!-- CTA Section -->
-  <section class="cta-section">
-    <h2>Ready for Perfect Secrecy?</h2>
-    <p>
-      Download ASH for iOS and establish your first secure conversation.
-    </p>
-    <div class="hero-cta">
-      <a href="#" class="btn-primary">Download for iOS</a>
-      <a href="/docs" class="btn-secondary">Technical Documentation</a>
+  <!-- CTA -->
+  <section class="py-24">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+      <h2 class="text-4xl font-bold mb-4">Ready for perfect secrecy?</h2>
+      <p class="text-xl text-text-secondary mb-10">
+        Download ASH and establish your first mathematically unbreakable conversation.
+      </p>
+      <div class="flex flex-wrap justify-center gap-4">
+        <Button href="#" variant="primary" size="lg">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Download for iOS
+        </Button>
+        <Button href="/whitepaper" variant="secondary" size="lg">
+          Read the Whitepaper
+        </Button>
+      </div>
     </div>
   </section>
 </Layout>
 
+<script>
+  // Protocol Demo - Bidirectional Pad Consumption
+  const PAD_SIZE = 64;
+
+  // State
+  let padBytes: number[] = [];
+  let aliceConsumed = 0;
+  let bobConsumed = 0;
+
+  // Elements
+  const padGrid = document.getElementById('pad-grid')!;
+  const aliceInput = document.getElementById('alice-input') as HTMLInputElement;
+  const bobInput = document.getElementById('bob-input') as HTMLInputElement;
+  const aliceSend = document.getElementById('alice-send')!;
+  const bobSend = document.getElementById('bob-send')!;
+  const aliceMessages = document.getElementById('alice-messages')!;
+  const bobMessages = document.getElementById('bob-messages')!;
+  const aliceUsedEl = document.getElementById('alice-used')!;
+  const bobUsedEl = document.getElementById('bob-used')!;
+  const padRemainingEl = document.getElementById('pad-remaining')!;
+  const resetBtn = document.getElementById('reset-demo')!;
+
+  function generatePad(): number[] {
+    const bytes: number[] = [];
+    for (let i = 0; i < PAD_SIZE; i++) {
+      bytes.push(Math.floor(Math.random() * 256));
+    }
+    return bytes;
+  }
+
+  function toHex(byte: number): string {
+    return byte.toString(16).toUpperCase().padStart(2, '0');
+  }
+
+  function renderPad() {
+    padGrid.innerHTML = '';
+
+    for (let i = 0; i < PAD_SIZE; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'aspect-square rounded text-[10px] sm:text-xs font-mono flex items-center justify-center transition-all duration-300';
+
+      if (i < aliceConsumed) {
+        // Alice consumed (from start)
+        cell.className += ' bg-brand text-white opacity-60';
+      } else if (i >= PAD_SIZE - bobConsumed) {
+        // Bob consumed (from end)
+        cell.className += ' bg-success text-white opacity-60';
+      } else {
+        // Available
+        cell.className += ' bg-bg-hover border border-border text-text-muted';
+      }
+
+      cell.textContent = toHex(padBytes[i]);
+      padGrid.appendChild(cell);
+    }
+  }
+
+  function updateStats() {
+    aliceUsedEl.textContent = String(aliceConsumed);
+    bobUsedEl.textContent = String(bobConsumed);
+    padRemainingEl.textContent = String(PAD_SIZE - aliceConsumed - bobConsumed);
+  }
+
+  function encrypt(plaintext: string, keyBytes: number[]): string {
+    let result = '';
+    for (let i = 0; i < plaintext.length; i++) {
+      const encrypted = plaintext.charCodeAt(i) ^ keyBytes[i];
+      result += toHex(encrypted);
+    }
+    return result;
+  }
+
+  function createMessageEl(plaintext: string, ciphertext: string, sender: 'alice' | 'bob', bytesUsed: number): HTMLDivElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'text-xs msg-animate';
+
+    const msgDiv = document.createElement('div');
+    msgDiv.className = sender === 'alice' ? 'bg-brand/20 rounded-lg p-2' : 'bg-success/20 rounded-lg p-2';
+
+    const textSpan = document.createElement('div');
+    textSpan.className = 'text-white mb-1';
+    textSpan.textContent = `"${plaintext}"`;
+
+    const cipherSpan = document.createElement('div');
+    cipherSpan.className = 'font-mono text-text-muted text-[10px] break-all';
+    cipherSpan.textContent = `→ ${ciphertext}`;
+
+    const metaSpan = document.createElement('div');
+    metaSpan.className = 'text-text-muted text-[10px] mt-1';
+    metaSpan.textContent = `${bytesUsed} bytes consumed`;
+
+    msgDiv.appendChild(textSpan);
+    msgDiv.appendChild(cipherSpan);
+    msgDiv.appendChild(metaSpan);
+    wrapper.appendChild(msgDiv);
+
+    return wrapper;
+  }
+
+  function sendAliceMessage() {
+    const text = aliceInput.value.trim();
+    if (!text) return;
+
+    const bytesNeeded = text.length;
+    const remaining = PAD_SIZE - aliceConsumed - bobConsumed;
+
+    if (bytesNeeded > remaining) {
+      alert(`Not enough pad bytes! Need ${bytesNeeded}, only ${remaining} remaining.`);
+      return;
+    }
+
+    // Get key bytes from Alice's side (start of pad)
+    const keyBytes = padBytes.slice(aliceConsumed, aliceConsumed + bytesNeeded);
+    const ciphertext = encrypt(text, keyBytes);
+
+    // Update state
+    aliceConsumed += bytesNeeded;
+
+    // Add message
+    const msgEl = createMessageEl(text, ciphertext, 'alice', bytesNeeded);
+    aliceMessages.appendChild(msgEl);
+    aliceMessages.scrollTop = aliceMessages.scrollHeight;
+
+    // Clear input
+    aliceInput.value = '';
+
+    // Update display
+    renderPad();
+    updateStats();
+  }
+
+  function sendBobMessage() {
+    const text = bobInput.value.trim();
+    if (!text) return;
+
+    const bytesNeeded = text.length;
+    const remaining = PAD_SIZE - aliceConsumed - bobConsumed;
+
+    if (bytesNeeded > remaining) {
+      alert(`Not enough pad bytes! Need ${bytesNeeded}, only ${remaining} remaining.`);
+      return;
+    }
+
+    // Get key bytes from Bob's side (end of pad)
+    const keyStart = PAD_SIZE - bobConsumed - bytesNeeded;
+    const keyBytes = padBytes.slice(keyStart, keyStart + bytesNeeded);
+    const ciphertext = encrypt(text, keyBytes);
+
+    // Update state
+    bobConsumed += bytesNeeded;
+
+    // Add message
+    const msgEl = createMessageEl(text, ciphertext, 'bob', bytesNeeded);
+    bobMessages.appendChild(msgEl);
+    bobMessages.scrollTop = bobMessages.scrollHeight;
+
+    // Clear input
+    bobInput.value = '';
+
+    // Update display
+    renderPad();
+    updateStats();
+  }
+
+  function resetDemo() {
+    padBytes = generatePad();
+    aliceConsumed = 0;
+    bobConsumed = 0;
+    aliceMessages.innerHTML = '';
+    bobMessages.innerHTML = '';
+    aliceInput.value = '';
+    bobInput.value = '';
+    renderPad();
+    updateStats();
+  }
+
+  // Initialize
+  resetDemo();
+
+  // Event listeners
+  aliceSend.addEventListener('click', sendAliceMessage);
+  bobSend.addEventListener('click', sendBobMessage);
+  resetBtn.addEventListener('click', resetDemo);
+
+  aliceInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendAliceMessage();
+  });
+
+  bobInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendBobMessage();
+  });
+</script>
+
 <style>
-  /* Hero */
-  .hero {
-    text-align: center;
-    padding: 4rem 0 3rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 3rem;
+  @keyframes msg-fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-
-  .hero-badge {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--accent);
-    background: rgba(37, 99, 235, 0.1);
-    padding: 0.5rem 1rem;
-    border-radius: 2rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .hero-title {
-    font-family: var(--font-serif);
-    font-size: 3rem;
-    font-weight: 700;
-    line-height: 1.1;
-    margin-bottom: 1.5rem;
-    color: var(--text);
-  }
-
-  .hero-highlight {
-    color: var(--accent);
-  }
-
-  .hero-subtitle {
-    font-size: 1.25rem;
-    color: var(--text-muted);
-    max-width: 600px;
-    margin: 0 auto 2rem;
-    line-height: 1.6;
-  }
-
-  .hero-cta {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .btn-primary {
-    display: inline-block;
-    background: var(--accent);
-    color: white;
-    padding: 0.875rem 2rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background 0.2s;
-  }
-
-  .btn-primary:hover {
-    background: #1d4ed8;
-  }
-
-  .btn-secondary {
-    display: inline-block;
-    background: transparent;
-    color: var(--text);
-    padding: 0.875rem 2rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    text-decoration: none;
-    border: 1px solid var(--border);
-    transition: border-color 0.2s;
-  }
-
-  .btn-secondary:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  /* Content Sections */
-  .content-section {
-    padding: 3rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .section-title {
-    font-family: var(--font-serif);
-    font-size: 1.75rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    text-align: center;
-  }
-
-  .section-intro {
-    font-size: 1.1rem;
-    color: var(--text-muted);
-    text-align: center;
-    max-width: 700px;
-    margin: 0 auto 2.5rem;
-    line-height: 1.6;
-  }
-
-  /* Comparison Grid */
-  .comparison-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-  }
-
-  .comparison-card {
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--border);
-  }
-
-  .comparison-bad {
-    background: rgba(239, 68, 68, 0.05);
-    border-color: rgba(239, 68, 68, 0.2);
-  }
-
-  .comparison-good {
-    background: rgba(34, 197, 94, 0.05);
-    border-color: rgba(34, 197, 94, 0.2);
-  }
-
-  .comparison-icon {
-    font-weight: 700;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 1rem;
-    color: var(--text);
-  }
-
-  .comparison-card ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .comparison-card li {
-    padding: 0.5rem 0;
-    padding-left: 1.5rem;
-    position: relative;
-    font-size: 0.95rem;
-    color: var(--text-muted);
-  }
-
-  .comparison-bad li::before {
-    content: "×";
-    position: absolute;
-    left: 0;
-    color: #ef4444;
-    font-weight: bold;
-  }
-
-  .comparison-good li::before {
-    content: "✓";
-    position: absolute;
-    left: 0;
-    color: #22c55e;
-    font-weight: bold;
-  }
-
-  /* Steps */
-  .steps {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .step {
-    display: flex;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-  }
-
-  .step:last-child {
-    margin-bottom: 0;
-  }
-
-  .step-number {
-    flex-shrink: 0;
-    width: 2.5rem;
-    height: 2.5rem;
-    background: var(--accent);
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1rem;
-  }
-
-  .step-content h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-
-  .step-content p {
-    color: var(--text-muted);
-    margin: 0;
-    line-height: 1.6;
-  }
-
-  /* Features Grid */
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .feature {
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-  }
-
-  .feature-title {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text);
-  }
-
-  .feature p {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  /* Use Cases */
-  .use-cases {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .use-case {
-    text-align: center;
-    padding: 1.5rem;
-  }
-
-  .use-case h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-  }
-
-  .use-case p {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin: 0;
-  }
-
-  /* Trade-offs */
-  .tradeoffs {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .tradeoff {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 0.5rem 1rem;
-    padding: 1rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .tradeoff:last-child {
-    border-bottom: none;
-  }
-
-  .tradeoff-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-  }
-
-  .tradeoff-value {
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .tradeoff-reason {
-    grid-column: 2;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-  }
-
-  /* CTA Section */
-  .cta-section {
-    text-align: center;
-    padding: 4rem 0 2rem;
-  }
-
-  .cta-section h2 {
-    font-family: var(--font-serif);
-    font-size: 2rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-  }
-
-  .cta-section p {
-    color: var(--text-muted);
-    margin-bottom: 2rem;
-  }
-
-  /* Responsive */
-  @media (max-width: 640px) {
-    .hero-title {
-      font-size: 2rem;
-    }
-
-    .hero-subtitle {
-      font-size: 1.1rem;
-    }
-
-    .step {
-      flex-direction: column;
-      gap: 1rem;
-    }
+  .msg-animate {
+    animation: msg-fade-in 0.2s ease-out forwards;
   }
 </style>

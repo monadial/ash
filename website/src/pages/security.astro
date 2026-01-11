@@ -1,293 +1,392 @@
 ---
 import Layout from '../layouts/Layout.astro'
+import InfoBox from '../components/InfoBox.astro'
+import Diagram from '../components/Diagram.astro'
 ---
 
-<Layout title="Security Model" description="Explicit threat model, security guarantees, and limitations of the ASH protocol.">
-  <!-- Title Block -->
-  <header class="mb-8">
-    <h1 class="paper-title">
-      Security Model
-    </h1>
-    <p class="paper-subtitle">
-      Threat model, guarantees, and limitations
-    </p>
-  </header>
-
-  <!-- Introduction -->
-  <section>
-    <p>
-      This document describes the security properties of the ASH protocol.
-      ASH is designed to reduce risk, not eliminate it. Understanding what
-      ASH protects against—and what it does not—is essential for appropriate use.
-    </p>
-
-    <div class="abstract">
-      <div class="abstract-title">Design Philosophy</div>
-      <p class="mb-0">
-        ASH assumes that humans make mistakes, software is fallible, and infrastructure
-        should not be trusted. Security properties must be understandable by users,
-        not hidden in cryptographic black boxes. The system favors explicit user
-        actions over automatic background operations.
+<Layout title="Security Model" description="Threat model, security guarantees, and limitations of the ASH protocol.">
+  <div class="py-16 sm:py-24">
+    <!-- Header -->
+    <div class="text-center mb-16">
+      <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
+        Security Model
+      </span>
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">Threat Model & Guarantees</h1>
+      <p class="text-text-secondary text-lg max-w-2xl mx-auto">
+        What ASH protects against, what it doesn't, and why. Security is not a promise — it is a set of clearly defined limits.
       </p>
     </div>
-  </section>
 
-  <!-- Threat Model -->
-  <section>
-    <h2 id="threat-model" class="section-heading">1. Threat Model</h2>
+    <!-- Design Philosophy -->
+    <InfoBox class="mb-12">
+      <h3 class="text-white font-semibold mb-2">Design Philosophy</h3>
+      <p class="text-sm">
+        ASH assumes humans make mistakes, software is fallible, and infrastructure cannot be trusted. Security properties must be understandable by users, not hidden in cryptographic black boxes.
+      </p>
+    </InfoBox>
 
-    <p>
-      ASH is designed to protect against the following adversaries:
-    </p>
+    <!-- Threat Model -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Threat Model</h2>
 
-    <h3 class="subsection-heading">1.1 Network Observers</h3>
-    <p>
-      An adversary who can observe, record, and analyze all network traffic between
-      clients and the relay server. This includes ISPs, nation-state surveillance
-      programs, and compromised network infrastructure.
-    </p>
-    <p>
-      <strong>Protection:</strong> All message content is encrypted with OTP before
-      transmission. Network observers see only encrypted blobs and metadata (timing,
-      message sizes).
-    </p>
+      <p class="text-text-secondary mb-6">
+        ASH is designed to protect against the following adversaries:
+      </p>
 
-    <h3 class="subsection-heading">1.2 Compromised Relay Server</h3>
-    <p>
-      An adversary who has complete control of the relay server, including access
-      to all stored data, logs, and the ability to modify server behavior.
-    </p>
-    <p>
-      <strong>Protection:</strong> The relay never possesses key material. Compromise
-      reveals only encrypted blobs, conversation identifiers, and timing metadata.
-      The relay cannot decrypt messages or forge valid encrypted content.
-    </p>
+      <div class="grid md:grid-cols-3 gap-4 mb-6">
+        <!-- Network Observer -->
+        <div class="bg-bg-card border border-success/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Network Observer</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-3">ISPs, surveillance programs, wiretaps, packet sniffing, compromised infrastructure</p>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+            <p class="text-xs text-text-muted">All content is OTP-encrypted before transmission</p>
+          </div>
+        </div>
 
-    <h3 class="subsection-heading">1.3 Future Cryptanalysis</h3>
-    <p>
-      Adversaries with access to quantum computers or future mathematical breakthroughs
-      that render current computational cryptography insecure.
-    </p>
-    <p>
-      <strong>Protection:</strong> OTP provides information-theoretic security.
-      Perfect secrecy is proven mathematically, not assumed based on computational
-      hardness. No future advances in computing can break OTP-encrypted messages.
-    </p>
-  </section>
+        <!-- Compromised Relay -->
+        <div class="bg-bg-card border border-success/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Compromised Relay</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-3">Full server control, access to storage, logs, ability to modify behavior</p>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+            <p class="text-xs text-text-muted">Relay never possesses key material. Cannot decrypt or forge.</p>
+          </div>
+        </div>
 
-  <!-- Security Guarantees -->
-  <section>
-    <h2 id="guarantees" class="section-heading">2. Security Guarantees</h2>
+        <!-- Future Adversary -->
+        <div class="bg-bg-card border border-success/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Future Adversary</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-3">Quantum computers, mathematical breakthroughs, new cryptanalysis techniques</p>
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+            <p class="text-xs text-text-muted">OTP provides information-theoretic security. Proven mathematically.</p>
+          </div>
+        </div>
+      </div>
 
-    <p>
-      When used correctly, ASH provides the following security properties:
-    </p>
+      <!-- Result Banner -->
+      <div class="bg-success/10 border border-success/30 rounded-xl p-6 text-center">
+        <div class="flex justify-center mb-3">
+          <div class="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center">
+            <svg class="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        </div>
+        <h3 class="text-lg font-bold text-success mb-2">All See Only Encrypted Noise</h3>
+        <p class="text-text-secondary text-sm max-w-xl mx-auto">
+          No keys. No plaintext. No patterns. No metadata leaks. Every adversary — past, present, or future — sees only random bytes indistinguishable from noise.
+        </p>
+      </div>
+    </section>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Property</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Perfect Secrecy</td>
-          <td>Ciphertext reveals no information about plaintext without the pad</td>
-        </tr>
-        <tr>
-          <td>Forward Secrecy</td>
-          <td>Compromise after message sent cannot reveal that message's content</td>
-        </tr>
-        <tr>
-          <td>Future Secrecy</td>
-          <td>No computational advances can break past encrypted messages</td>
-        </tr>
-        <tr>
-          <td>Pad Non-Reuse</td>
-          <td>Core library enforces strict single-use semantics for all pad bytes</td>
-        </tr>
-        <tr>
-          <td>Integrity Detection</td>
-          <td>Frame checksums detect accidental corruption during transfer</td>
-        </tr>
-        <tr>
-          <td>Human Verification</td>
-          <td>Mnemonic checksums allow users to verify ceremony success verbally</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+    <!-- Security Guarantees -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Security Guarantees</h2>
 
-  <!-- Non-Guarantees -->
-  <section>
-    <h2 id="non-guarantees" class="section-heading">3. Non-Guarantees</h2>
+      <p class="text-text-secondary mb-6">
+        When used correctly, ASH provides the following security properties:
+      </p>
 
-    <p>
-      ASH explicitly does not protect against the following threats. These
-      limitations are intentional design decisions, not implementation flaws.
-    </p>
+      <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border bg-bg-elevated">
+              <th class="text-left p-4 text-text-muted font-medium">Property</th>
+              <th class="text-left p-4 text-text-muted font-medium">Description</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr>
+              <td class="p-4 font-medium">Perfect Secrecy</td>
+              <td class="p-4 text-text-secondary">Ciphertext reveals no information about plaintext without the pad</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Forward Secrecy</td>
+              <td class="p-4 text-text-secondary">Compromise after message sent cannot reveal that message's content</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Future Secrecy</td>
+              <td class="p-4 text-text-secondary">No computational advances can break past encrypted messages</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Pad Non-Reuse</td>
+              <td class="p-4 text-text-secondary">Core library enforces strict single-use semantics for all pad bytes</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Integrity Detection</td>
+              <td class="p-4 text-text-secondary">Frame checksums detect accidental corruption during transfer</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Human Verification</td>
+              <td class="p-4 text-text-secondary">Mnemonic checksums allow users to verify ceremony success verbally</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-    <h3 class="subsection-heading">3.1 Compromised Device</h3>
-    <p>
-      If the user's device is compromised by malware, the operating system, or
-      hardware-level attacks, ASH cannot provide protection. A compromised device
-      can read messages before encryption or after decryption, capture screen
-      contents, or exfiltrate the pad.
-    </p>
+    <!-- What ASH Does NOT Protect Against -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">What ASH Does NOT Protect Against</h2>
 
-    <h3 class="subsection-heading">3.2 Malicious Participant</h3>
-    <p>
-      If the person you are communicating with intends to betray you, they can
-      screenshot messages, record conversations, or share content with third
-      parties. ASH requires trust between participants.
-    </p>
+      <p class="text-text-secondary mb-6">
+        These limitations are <strong class="text-white">intentional design decisions</strong>, not implementation flaws.
+      </p>
 
-    <h3 class="subsection-heading">3.3 Visual Observation</h3>
-    <p>
-      If an adversary can observe the QR codes during the ceremony (through
-      cameras, mirrors, or direct observation), they can capture the pad.
-      The ceremony must be performed in a location where visual observation
-      is not possible.
-    </p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <!-- Compromised Device -->
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Compromised Device</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-2">Malware, OS exploits, keyloggers, hardware implants</p>
+          <p class="text-text-muted text-xs">A compromised device can read messages before encryption or after decryption.</p>
+        </div>
 
-    <h3 class="subsection-heading">3.4 Forensic Analysis</h3>
-    <p>
-      ASH performs best-effort memory wiping using volatile writes, but cannot
-      guarantee forensic irrecoverability. Physical device seizure may allow
-      recovery of data through advanced forensic techniques.
-    </p>
+        <!-- Malicious Partner -->
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Malicious Partner</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-2">Screenshots, betrayal, recording, sharing content</p>
+          <p class="text-text-muted text-xs">ASH requires trust between participants. Your partner can always betray you.</p>
+        </div>
 
-    <h3 class="subsection-heading">3.5 Traffic Analysis</h3>
-    <p>
-      ASH does not provide anonymity or hide network metadata. Adversaries can
-      determine that ASH is being used, observe communication timing patterns,
-      and correlate activity between users based on timing.
-    </p>
+        <!-- Visual Observer -->
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Visual Observer</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-2">Cameras, shoulder surfing, mirrors, direct observation</p>
+          <p class="text-text-muted text-xs">QR codes during ceremony can be captured. Perform ceremony privately.</p>
+        </div>
 
-    <h3 class="subsection-heading">3.6 Coercion</h3>
-    <p>
-      While the pad exists, users can be compelled to decrypt messages. ASH
-      provides no deniability features. The burn function destroys data but
-      cannot be performed if the device is seized.
-    </p>
-  </section>
+        <!-- Forensic Analysis -->
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Forensic Analysis</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-2">RAM dumps, disk forensics, cold boot attacks</p>
+          <p class="text-text-muted text-xs">Best-effort memory wiping cannot guarantee forensic irrecoverability.</p>
+        </div>
 
-  <!-- Trust Boundaries -->
-  <section>
-    <h2 id="trust-boundaries" class="section-heading">4. Trust Boundaries</h2>
+        <!-- Traffic Analysis -->
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Traffic Analysis</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-2">Timing patterns, metadata, correlation attacks</p>
+          <p class="text-text-muted text-xs">ASH does not provide anonymity or hide that you're using ASH.</p>
+        </div>
 
-    <p>
-      ASH defines explicit trust levels for each component:
-    </p>
+        <!-- Physical Coercion -->
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            </div>
+            <h3 class="font-semibold">Physical Coercion</h3>
+          </div>
+          <p class="text-text-secondary text-sm mb-2">Forced decryption, legal demands, rubber-hose cryptanalysis</p>
+          <p class="text-text-muted text-xs">While pad exists, you can be compelled to decrypt. No deniability features.</p>
+        </div>
+      </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Component</th>
-          <th>Trust Level</th>
-          <th>Rationale</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Core Library</td>
-          <td>Trusted</td>
-          <td>Cryptographic authority; small, auditable, zero dependencies</td>
-        </tr>
-        <tr>
-          <td>Mobile Application</td>
-          <td>Partial</td>
-          <td>Orchestration only; cannot modify cryptographic operations</td>
-        </tr>
-        <tr>
-          <td>Relay Server</td>
-          <td>Untrusted</td>
-          <td>Never sees plaintext or key material; assumed compromised</td>
-        </tr>
-        <tr>
-          <td>Network</td>
-          <td>Untrusted</td>
-          <td>Assumed hostile; all traffic is OTP-encrypted</td>
-        </tr>
-        <tr>
-          <td>Operating System</td>
-          <td>Trusted</td>
-          <td>Must trust OS for entropy, memory protection, secure storage</td>
-        </tr>
-        <tr>
-          <td>Conversation Partner</td>
-          <td>User Decision</td>
-          <td>ASH cannot protect against malicious participants</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+      <InfoBox variant="warning">
+        <p class="text-sm">
+          <strong class="text-white">Important:</strong> These are fundamental limitations of any messaging system, not flaws in ASH. No technology can protect against a compromised device or a betraying partner. ASH is transparent about these boundaries.
+        </p>
+      </InfoBox>
+    </section>
 
-  <!-- User Responsibilities -->
-  <section>
-    <h2 id="responsibilities" class="section-heading">5. User Responsibilities</h2>
+    <!-- Trust Boundaries -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Trust Boundaries</h2>
 
-    <p>
-      Security in ASH is a shared responsibility. Users must:
-    </p>
+      <p class="text-text-secondary mb-6">
+        ASH defines explicit trust levels for each component:
+      </p>
 
-    <ol>
-      <li>
-        <strong>Perform the ceremony carefully.</strong> Do not rush. Scan all
-        frames. Verify the mnemonic checksum verbally with your partner.
-      </li>
-      <li>
-        <strong>Choose a private location.</strong> The ceremony must be performed
-        where visual observation is not possible—no cameras, mirrors, or observers.
-      </li>
-      <li>
-        <strong>Trust your conversation partner.</strong> ASH cannot prevent
-        screenshots or betrayal. Only communicate with people you trust.
-      </li>
-      <li>
-        <strong>Maintain device security.</strong> Keep your device updated,
-        avoid installing untrusted software, and use device encryption.
-      </li>
-      <li>
-        <strong>Understand the limitations.</strong> Read this document. Know
-        what ASH protects against and what it does not.
-      </li>
-    </ol>
-  </section>
+      <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-border bg-bg-elevated">
+              <th class="text-left p-4 text-text-muted font-medium">Component</th>
+              <th class="text-left p-4 text-text-muted font-medium">Trust Level</th>
+              <th class="text-left p-4 text-text-muted font-medium">Rationale</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            <tr>
+              <td class="p-4 font-medium">Core Library</td>
+              <td class="p-4"><span class="px-2 py-0.5 bg-success/20 text-success rounded text-xs">Trusted</span></td>
+              <td class="p-4 text-text-secondary">Cryptographic authority; small, auditable, zero dependencies</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Mobile App</td>
+              <td class="p-4"><span class="px-2 py-0.5 bg-warning/20 text-warning rounded text-xs">Partial</span></td>
+              <td class="p-4 text-text-secondary">Orchestration only; cannot modify cryptographic operations</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Relay Server</td>
+              <td class="p-4"><span class="px-2 py-0.5 bg-danger/20 text-danger rounded text-xs">Untrusted</span></td>
+              <td class="p-4 text-text-secondary">Never sees plaintext or key material; assumed compromised</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Network</td>
+              <td class="p-4"><span class="px-2 py-0.5 bg-danger/20 text-danger rounded text-xs">Untrusted</span></td>
+              <td class="p-4 text-text-secondary">Assumed hostile; all traffic is OTP-encrypted</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Operating System</td>
+              <td class="p-4"><span class="px-2 py-0.5 bg-success/20 text-success rounded text-xs">Trusted</span></td>
+              <td class="p-4 text-text-secondary">Must trust OS for entropy, memory protection, secure storage</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Partner</td>
+              <td class="p-4"><span class="px-2 py-0.5 bg-text-muted/20 text-text-secondary rounded text-xs">User Decision</span></td>
+              <td class="p-4 text-text-secondary">ASH cannot protect against malicious participants</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
-  <!-- Implementation Notes -->
-  <section>
-    <h2 id="implementation" class="section-heading">6. Implementation Notes</h2>
+    <!-- User Responsibilities -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">User Responsibilities</h2>
 
-    <h3 class="subsection-heading">6.1 Entropy Sources</h3>
-    <p>
-      Pad generation combines OS-provided cryptographic randomness with user
-      gesture entropy. This defense-in-depth approach ensures that compromise
-      of either source alone does not compromise pad randomness.
-    </p>
+      <p class="text-text-secondary mb-6">
+        Security in ASH is a shared responsibility. You must:
+      </p>
 
-    <h3 class="subsection-heading">6.2 Memory Protection</h3>
-    <p>
-      Sensitive data (pads, plaintext) is zeroed after use using volatile writes
-      that prevent compiler optimization from removing the wiping operations.
-      However, this does not guarantee forensic irrecoverability.
-    </p>
+      <div class="bg-bg-card border border-border rounded-xl divide-y divide-border">
+        <div class="p-4 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
+          <div>
+            <h4 class="font-medium mb-1">Perform the ceremony carefully</h4>
+            <p class="text-text-secondary text-sm">Do not rush. Scan all frames. Verify the mnemonic checksum verbally with your partner.</p>
+          </div>
+        </div>
+        <div class="p-4 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
+          <div>
+            <h4 class="font-medium mb-1">Choose a private location</h4>
+            <p class="text-text-secondary text-sm">The ceremony must be performed where visual observation is not possible — no cameras, mirrors, or observers.</p>
+          </div>
+        </div>
+        <div class="p-4 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+          <div>
+            <h4 class="font-medium mb-1">Trust your conversation partner</h4>
+            <p class="text-text-secondary text-sm">ASH cannot prevent screenshots or betrayal. Only communicate with people you trust.</p>
+          </div>
+        </div>
+        <div class="p-4 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+          <div>
+            <h4 class="font-medium mb-1">Maintain device security</h4>
+            <p class="text-text-secondary text-sm">Keep your device updated, avoid installing untrusted software, and use device encryption.</p>
+          </div>
+        </div>
+        <div class="p-4 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
+          <div>
+            <h4 class="font-medium mb-1">Understand the limitations</h4>
+            <p class="text-text-secondary text-sm">Read this document. Know what ASH protects against and what it does not.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <h3 class="subsection-heading">6.3 Supply Chain</h3>
-    <p>
-      The core library has zero external dependencies to minimize supply chain
-      attack surface. All cryptographic primitives are implemented directly:
-      CRC-32, XOR encryption, and secure zeroing.
-    </p>
-  </section>
+    <!-- Implementation Notes -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Implementation Notes</h2>
 
-  <!-- Footnote -->
-  <div class="footnote">
-    <p>
-      For security-critical deployments, conduct independent security audits
-      of the implementation. This document describes design intent; actual
-      security depends on correct implementation.
-    </p>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div>
+          <h3 class="font-semibold mb-2">Entropy Sources</h3>
+          <p class="text-text-secondary text-sm">
+            Pad generation combines OS-provided cryptographic randomness with user gesture entropy. Defense-in-depth ensures compromise of either source alone does not compromise randomness.
+          </p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-2">Memory Protection</h3>
+          <p class="text-text-secondary text-sm">
+            Sensitive data is zeroed after use using volatile writes that prevent compiler optimization from removing wiping operations. Does not guarantee forensic irrecoverability.
+          </p>
+        </div>
+        <div>
+          <h3 class="font-semibold mb-2">Supply Chain</h3>
+          <p class="text-text-secondary text-sm">
+            The core library has zero external dependencies to minimize supply chain attack surface. All cryptographic primitives are implemented directly.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="pt-8 border-t border-border">
+      <p class="text-text-muted text-sm text-center">
+        For security-critical deployments, conduct independent security audits. For technical details, see <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>. For ethical considerations, see <a href="/ethics" class="text-brand hover:text-brand-light">Ethics</a>.
+      </p>
+    </div>
   </div>
 </Layout>

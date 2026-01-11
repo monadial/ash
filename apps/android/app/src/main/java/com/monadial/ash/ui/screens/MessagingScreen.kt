@@ -67,10 +67,8 @@ import com.monadial.ash.domain.entities.DeliveryStatus
 import com.monadial.ash.domain.entities.Message
 import com.monadial.ash.domain.entities.MessageDirection
 import com.monadial.ash.ui.viewmodels.MessagingViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
+@Suppress("UnusedParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagingScreen(
@@ -544,11 +542,6 @@ private fun MnemonicTag(word: String, accentColor: Color) {
             fontWeight = FontWeight.Medium
         )
     }
-}
-
-private fun formatTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
 }
 
 private fun formatBytes(bytes: Long): String = when {

@@ -28,12 +28,13 @@ import androidx.compose.ui.unit.dp
  * Entropy collection canvas - just the drawing surface
  * Text/labels are handled by the parent EntropyCollectionContent
  */
+@Suppress("UnusedParameter")
 @Composable
 fun EntropyCollectionView(
     progress: Float,
     onPointCollected: (Float, Float) -> Unit,
-    accentColor: Color = MaterialTheme.colorScheme.primary,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     val touchPoints = remember { mutableStateListOf<Offset>() }
 

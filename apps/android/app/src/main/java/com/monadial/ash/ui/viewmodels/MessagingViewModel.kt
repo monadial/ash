@@ -142,7 +142,11 @@ class MessagingViewModel @Inject constructor(
                             Log.i(TAG, "[$logId] SSE connected")
                         }
                         is SSEEvent.MessageReceived -> {
-                            Log.d(TAG, "[$logId] SSE raw: ${event.ciphertext.size} bytes, seq=${event.sequence}, blobId=${event.id.take(8)}")
+                            Log.d(
+                                TAG,
+                                "[$logId] SSE raw: ${event.ciphertext.size} bytes, " +
+                                    "seq=${event.sequence}, blobId=${event.id.take(8)}"
+                            )
                             Log.d(
                                 TAG,
                                 "[$logId] sentSequences=$sentSequences, sentBlobIds=${sentBlobIds.map {

@@ -54,9 +54,6 @@ class InitiatorCeremonyViewModel @Inject constructor(
 
         // QR code size in pixels (larger for better scanning)
         private const val QR_CODE_SIZE = 600
-
-        // Frame display interval in milliseconds (matches iOS 0.15s = 150ms, ~6.67 FPS)
-        private const val FRAME_DISPLAY_INTERVAL_MS = 150L
     }
 
     // State
@@ -327,7 +324,8 @@ class InitiatorCeremonyViewModel @Inject constructor(
 
             Log.d(
                 TAG,
-                "Creating fountain generator: blockSize=$FOUNTAIN_BLOCK_SIZE, passphraseEnabled=${_passphraseEnabled.value}"
+                "Creating fountain generator: blockSize=$FOUNTAIN_BLOCK_SIZE, " +
+                    "passphraseEnabled=${_passphraseEnabled.value}"
             )
 
             // Create fountain generator using FFI
@@ -347,7 +345,8 @@ class InitiatorCeremonyViewModel @Inject constructor(
 
             Log.d(
                 TAG,
-                "Fountain generator created: sourceCount=$sourceCount, blockSize=${generator.blockSize()}, totalSize=${generator.totalSize()}"
+                "Fountain generator created: sourceCount=$sourceCount, " +
+                    "blockSize=${generator.blockSize()}, totalSize=${generator.totalSize()}"
             )
 
             val images = mutableListOf<Bitmap>()

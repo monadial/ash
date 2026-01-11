@@ -8,7 +8,6 @@ import com.monadial.ash.core.services.ConversationStorageService
 import com.monadial.ash.core.services.PadManager
 import com.monadial.ash.core.services.QRCodeService
 import com.monadial.ash.core.services.RelayService
-import com.monadial.ash.core.services.SettingsService
 import com.monadial.ash.domain.entities.CeremonyError
 import com.monadial.ash.domain.entities.CeremonyPhase
 import com.monadial.ash.domain.entities.Conversation
@@ -27,7 +26,6 @@ import uniffi.ash.FountainFrameReceiver
 
 @HiltViewModel
 class ReceiverCeremonyViewModel @Inject constructor(
-    private val settingsService: SettingsService,
     private val qrCodeService: QRCodeService,
     private val conversationStorage: ConversationStorageService,
     private val ashCoreService: AshCoreService,

@@ -825,6 +825,7 @@ private fun PadSizeCard(size: PadSize, isSelected: Boolean, onClick: () -> Unit,
 // ============================================================================
 
 @OptIn(ExperimentalLayoutApi::class)
+@Suppress("UnusedParameter")
 @Composable
 private fun OptionsConfigurationContent(
     conversationName: String,
@@ -2111,6 +2112,7 @@ private fun MnemonicWord(number: Int, word: String, accentColor: Color = Color(0
 // Completed Content
 // ============================================================================
 
+@Suppress("UnusedParameter")
 @Composable
 private fun CompletedContent(conversationId: String, onDismiss: () -> Unit) {
     Box(

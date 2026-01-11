@@ -214,11 +214,20 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                         Row(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val statusColor = if (result.success) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            }
                             Icon(
-                                imageVector = if (result.success) Icons.Default.Wifi else Icons.Default.Warning,
+                                imageVector = if (result.success) {
+                                    Icons.Default.Wifi
+                                } else {
+                                    Icons.Default.Warning
+                                },
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = if (result.success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                tint = statusColor
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
@@ -231,7 +240,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
                                     "Failed: ${result.error ?: "Unknown error"}"
                                 },
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (result.success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                color = statusColor
                             )
                         }
                     }

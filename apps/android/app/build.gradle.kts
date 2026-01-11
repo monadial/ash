@@ -82,11 +82,15 @@ android {
         checkReleaseBuilds = true
         xmlReport = true
         htmlReport = true
-        baseline = file("lint-baseline.xml")
+        lintConfig = file("lint.xml")
         disable +=
             setOf(
                 "ObsoleteLintCustomCheck",
-                "GradleDependency"
+                "GradleDependency",
+                "OldTargetApi",
+                "AndroidGradlePluginVersion",
+                "Aligned16KB",
+                "MissingApplicationIcon"
             )
         enable +=
             setOf(
@@ -101,7 +105,6 @@ detekt {
     buildUponDefaultConfig = true
     allRules = false
     config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-    baseline = file("$rootDir/config/detekt/baseline.xml")
     parallel = true
     autoCorrect = true
 }

@@ -1,7 +1,7 @@
 # Cloudflare Pages configuration
 # https://developers.cloudflare.com/pages/functions/wrangler-configuration/
 
-name = "ash-website"
+name = "ash"
 compatibility_date = "2024-01-01"
 pages_build_output_dir = "dist"
 

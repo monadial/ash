@@ -1,9 +1,13 @@
 package com.monadial.ash.di
 
 import com.monadial.ash.data.services.CryptoServiceImpl
+import com.monadial.ash.data.services.LocationServiceImpl
+import com.monadial.ash.data.services.QRCodeServiceImpl
 import com.monadial.ash.data.services.RealtimeServiceImpl
 import com.monadial.ash.data.services.RelayServiceImpl
 import com.monadial.ash.domain.services.CryptoService
+import com.monadial.ash.domain.services.LocationService
+import com.monadial.ash.domain.services.QRCodeService
 import com.monadial.ash.domain.services.RealtimeService
 import com.monadial.ash.domain.services.RelayService
 import dagger.Binds
@@ -31,4 +35,12 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindRealtimeService(impl: RealtimeServiceImpl): RealtimeService
+
+    @Binds
+    @Singleton
+    abstract fun bindQRCodeService(impl: QRCodeServiceImpl): QRCodeService
+
+    @Binds
+    @Singleton
+    abstract fun bindLocationService(impl: LocationServiceImpl): LocationService
 }

@@ -2,11 +2,12 @@ package com.monadial.ash.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.monadial.ash.BuildConfig
+import com.monadial.ash.core.common.AppResult
 import com.monadial.ash.core.services.ConnectionTestResult
-import com.monadial.ash.core.services.ConversationStorageService
-import com.monadial.ash.core.services.RelayService
-import com.monadial.ash.core.services.SettingsService
+import com.monadial.ash.domain.repositories.SettingsRepository
+import com.monadial.ash.domain.services.RelayService
+import com.monadial.ash.domain.usecases.conversation.BurnConversationUseCase
+import com.monadial.ash.domain.usecases.conversation.GetConversationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,13 +16,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for the settings screen.
+ *
+ * Follows Clean Architecture by:
+ * - Using SettingsRepository for settings persistence
+ * - Using BurnConversationUseCase for burning all conversations
+ * - Using RelayService for connection testing
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsService: SettingsService,
-    private val conversationStorage: ConversationStorageService,
-    private val relayService: RelayService
+    private val settingsRepository: SettingsRepository,
+    private val relayService: RelayService,
+    private val getConversationsUseCase: GetConversationsUseCase,
+    private val burnConversationUseCase: BurnConversationUseCase
 ) : ViewModel() {
-    val isBiometricEnabled: StateFlow<Boolean> = settingsService.isBiometricEnabled
+
+    val isBiometricEnabled: StateFlow<Boolean> = settingsRepository.isBiometricEnabled
 
     private val _lockOnBackground = MutableStateFlow(true)
     val lockOnBackground: StateFlow<Boolean> = _lockOnBackground.asStateFlow()
@@ -47,14 +58,21 @@ class SettingsViewModel @Inject constructor(
     private val _isBurningAll = MutableStateFlow(false)
     val isBurningAll: StateFlow<Boolean> = _isBurningAll.asStateFlow()
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     init {
+        observeSettings()
+    }
+
+    private fun observeSettings() {
         viewModelScope.launch {
-            settingsService.lockOnBackground.collect {
+            settingsRepository.lockOnBackground.collect {
                 _lockOnBackground.value = it
             }
         }
         viewModelScope.launch {
-            settingsService.relayServerUrl.collect { url ->
+            settingsRepository.relayServerUrl.collect { url ->
                 _relayUrl.value = url
                 // Only update edited URL if there are no unsaved changes
                 if (!_hasUnsavedChanges.value) {
@@ -80,12 +98,15 @@ class SettingsViewModel @Inject constructor(
 
     fun saveRelayUrl() {
         viewModelScope.launch {
-            settingsService.setRelayServerUrl(_editedRelayUrl.value)
+            when (val result = settingsRepository.setRelayUrl(_editedRelayUrl.value)) {
+                is AppResult.Success -> _error.value = null
+                is AppResult.Error -> _error.value = result.error.message
+            }
         }
     }
 
     fun resetRelayUrl() {
-        _editedRelayUrl.value = BuildConfig.DEFAULT_RELAY_URL
+        _editedRelayUrl.value = settingsRepository.getDefaultRelayUrl()
         _connectionTestResult.value = null
     }
 
@@ -96,13 +117,13 @@ class SettingsViewModel @Inject constructor(
 
     fun setBiometricEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsService.setBiometricEnabled(enabled)
+            settingsRepository.setBiometricEnabled(enabled)
         }
     }
 
     fun setLockOnBackground(enabled: Boolean) {
         viewModelScope.launch {
-            settingsService.setLockOnBackground(enabled)
+            settingsRepository.setLockOnBackground(enabled)
         }
     }
 
@@ -116,11 +137,10 @@ class SettingsViewModel @Inject constructor(
                 val result = relayService.testConnection(url)
                 _connectionTestResult.value = result
             } catch (e: Exception) {
-                _connectionTestResult.value =
-                    ConnectionTestResult(
-                        success = false,
-                        error = e.message
-                    )
+                _connectionTestResult.value = ConnectionTestResult(
+                    success = false,
+                    error = e.message
+                )
             } finally {
                 _isTestingConnection.value = false
             }
@@ -131,33 +151,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             _isBurningAll.value = true
             try {
-                val conversations = conversationStorage.conversations.value
+                val conversations = getConversationsUseCase.conversations.value
+                val burnedCount = burnConversationUseCase.burnAll(conversations)
 
-                // Burn each conversation
-                for (conv in conversations) {
-                    // Notify relay (fire-and-forget)
-                    try {
-                        relayService.burnConversation(
-                            conversationId = conv.id,
-                            burnToken = conv.burnToken,
-                            relayUrl = conv.relayUrl
-                        )
-                    } catch (_: Exception) {
-                        // Continue even if relay notification fails
-                    }
-
-                    // Delete pad bytes
-                    conversationStorage.deletePadBytes(conv.id)
-
-                    // Delete conversation
-                    conversationStorage.deleteConversation(conv.id)
+                if (burnedCount < conversations.size) {
+                    _error.value = "Failed to burn some conversations"
                 }
 
-                // Reload conversations to update state
-                conversationStorage.loadConversations()
+                // Reload to update UI
+                getConversationsUseCase.refresh()
             } finally {
                 _isBurningAll.value = false
             }
         }
+    }
+
+    fun clearError() {
+        _error.value = null
     }
 }

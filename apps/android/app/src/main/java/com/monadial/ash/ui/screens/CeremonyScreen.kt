@@ -110,6 +110,7 @@ import com.monadial.ash.domain.entities.ConversationColor
 import com.monadial.ash.domain.entities.DisappearingMessages
 import com.monadial.ash.domain.entities.MessageRetention
 import com.monadial.ash.domain.entities.PadSize
+import com.monadial.ash.ui.state.ConnectionTestResult
 import com.monadial.ash.ui.components.EntropyCollectionView
 import com.monadial.ash.ui.components.QRCodeView
 import com.monadial.ash.ui.components.QRScannerView
@@ -336,24 +337,28 @@ private fun InitiatorCeremonyScreen(
     onComplete: (String) -> Unit,
     onCancel: () -> Unit
 ) {
-    val phase by viewModel.phase.collectAsState()
-    val selectedPadSize by viewModel.selectedPadSize.collectAsState()
-    val selectedColor by viewModel.selectedColor.collectAsState()
-    val conversationName by viewModel.conversationName.collectAsState()
-    val relayUrl by viewModel.relayUrl.collectAsState()
-    val serverRetention by viewModel.serverRetention.collectAsState()
-    val disappearingMessages by viewModel.disappearingMessages.collectAsState()
-    val consent by viewModel.consent.collectAsState()
-    val entropyProgress by viewModel.entropyProgress.collectAsState()
-    val currentQRBitmap by viewModel.currentQRBitmap.collectAsState()
-    val currentFrameIndex by viewModel.currentFrameIndex.collectAsState()
-    val totalFrames by viewModel.totalFrames.collectAsState()
-    val connectionTestResult by viewModel.connectionTestResult.collectAsState()
-    val isTestingConnection by viewModel.isTestingConnection.collectAsState()
-    val passphraseEnabled by viewModel.passphraseEnabled.collectAsState()
-    val passphrase by viewModel.passphrase.collectAsState()
-    val isPaused by viewModel.isPaused.collectAsState()
-    val fps by viewModel.fps.collectAsState()
+    // Single consolidated state collection (principal developer pattern)
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Extract values for readability
+    val phase = uiState.phase
+    val selectedPadSize = uiState.selectedPadSize
+    val selectedColor = uiState.selectedColor
+    val conversationName = uiState.conversationName
+    val relayUrl = uiState.relayUrl
+    val serverRetention = uiState.serverRetention
+    val disappearingMessages = uiState.disappearingMessages
+    val consent = uiState.consent
+    val entropyProgress = uiState.entropyProgress
+    val currentQRBitmap = uiState.currentQRBitmap
+    val currentFrameIndex = uiState.currentFrameIndex
+    val totalFrames = uiState.totalFrames
+    val connectionTestResult = uiState.connectionTestResult
+    val isTestingConnection = uiState.isTestingConnection
+    val passphraseEnabled = uiState.passphraseEnabled
+    val passphrase = uiState.passphrase
+    val isPaused = uiState.isPaused
+    val fps = uiState.fps
 
     val accentColor = Color(selectedColor.toColorLong())
 
@@ -513,13 +518,17 @@ private fun ReceiverCeremonyScreen(
     onComplete: (String) -> Unit,
     onCancel: () -> Unit
 ) {
-    val phase by viewModel.phase.collectAsState()
-    val conversationName by viewModel.conversationName.collectAsState()
-    val selectedColor by viewModel.selectedColor.collectAsState()
-    val receivedBlocks by viewModel.receivedBlocks.collectAsState()
-    val totalBlocks by viewModel.totalBlocks.collectAsState()
-    val passphraseEnabled by viewModel.passphraseEnabled.collectAsState()
-    val passphrase by viewModel.passphrase.collectAsState()
+    // Single consolidated state collection (principal developer pattern)
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Extract values for readability
+    val phase = uiState.phase
+    val conversationName = uiState.conversationName
+    val selectedColor = uiState.selectedColor
+    val receivedBlocks = uiState.receivedBlocks
+    val totalBlocks = uiState.totalBlocks
+    val passphraseEnabled = uiState.passphraseEnabled
+    val passphrase = uiState.passphrase
 
     Scaffold(
         topBar = {
@@ -840,7 +849,7 @@ private fun OptionsConfigurationContent(
     onDisappearingChange: (DisappearingMessages) -> Unit,
     onTestConnection: () -> Unit,
     isTestingConnection: Boolean,
-    connectionTestResult: InitiatorCeremonyViewModel.ConnectionTestResult?,
+    connectionTestResult: ConnectionTestResult?,
     onProceed: () -> Unit,
     accentColor: Color
 ) {
@@ -1028,9 +1037,9 @@ private fun OptionsConfigurationContent(
 
                     connectionTestResult?.let { result ->
                         when (result) {
-                            is InitiatorCeremonyViewModel.ConnectionTestResult.Success ->
+                            is ConnectionTestResult.Success ->
                                 Text("Connected", color = MaterialTheme.colorScheme.primary)
-                            is InitiatorCeremonyViewModel.ConnectionTestResult.Failure ->
+                            is ConnectionTestResult.Failure ->
                                 Text("Failed", color = MaterialTheme.colorScheme.error)
                         }
                     }

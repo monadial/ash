@@ -75,6 +75,13 @@ android {
         }
     }
 
+    testOptions {
+        unitTests.all {
+            it.useJUnitPlatform()
+        }
+        unitTests.isReturnDefaultValues = true
+    }
+
     lint {
         warningsAsErrors = false
         abortOnError = false
@@ -196,4 +203,17 @@ dependencies {
 
     // Play Services Location
     implementation(libs.play.services.location)
+
+    // Testing
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testImplementation(libs.junit.jupiter.params)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.truth)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.arch.core.testing)
+
+    // Android Instrumentation Tests
+    androidTestImplementation(libs.mockk.android)
 }

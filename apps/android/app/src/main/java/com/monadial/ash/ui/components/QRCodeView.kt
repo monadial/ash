@@ -23,13 +23,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun QRCodeView(
-    bitmap: Bitmap?,
-    modifier: Modifier = Modifier,
-    size: Dp = 320.dp
-) {
+fun QRCodeView(bitmap: Bitmap?, modifier: Modifier = Modifier, size: Dp = 320.dp) {
     Box(
-        modifier = modifier
+        modifier =
+        modifier
             .size(size)
             .shadow(8.dp, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
@@ -42,7 +39,8 @@ fun QRCodeView(
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = "QR Code",
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .padding(4.dp)
                         .size(size - 8.dp),
                     contentScale = ContentScale.Fit,
@@ -59,13 +57,10 @@ fun QRCodeView(
 }
 
 @Composable
-fun QRCodeFrameCounter(
-    currentFrame: Int,
-    totalFrames: Int,
-    modifier: Modifier = Modifier
-) {
+fun QRCodeFrameCounter(currentFrame: Int, totalFrames: Int, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
+        modifier =
+        modifier
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f))
             .padding(horizontal = 16.dp, vertical = 8.dp)

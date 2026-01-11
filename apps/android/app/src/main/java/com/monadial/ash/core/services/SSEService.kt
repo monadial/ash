@@ -1,6 +1,12 @@
 package com.monadial.ash.core.services
 
 import android.util.Log
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,38 +23,35 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
-import javax.inject.Inject
-import javax.inject.Singleton
 
 sealed class SSEEvent {
     /** New message received (matching iOS SSEMessageEvent) */
-    data class MessageReceived(
-        val id: String,
-        val sequence: Long?,
-        val ciphertext: ByteArray,
-        val receivedAt: String
-    ) : SSEEvent() {
+    data class MessageReceived(val id: String, val sequence: Long?, val ciphertext: ByteArray, val receivedAt: String) :
+        SSEEvent() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
             other as MessageReceived
             return id == other.id && ciphertext.contentEquals(other.ciphertext)
         }
+
         override fun hashCode(): Int = id.hashCode()
     }
 
     /** Delivery confirmation (matching iOS SSEDeliveredEvent) */
     data class DeliveryConfirmed(val blobIds: List<String>, val deliveredAt: String) : SSEEvent()
+
     data class BurnSignal(val burnedAt: String) : SSEEvent()
+
     data object Ping : SSEEvent()
+
     data class Error(val message: String) : SSEEvent()
+
     /** Conversation not found on relay - needs registration */
     data object NotFound : SSEEvent()
+
     data object Connected : SSEEvent()
+
     data object Disconnected : SSEEvent()
 }
 
@@ -96,11 +99,7 @@ class SSEService @Inject constructor() {
     private var currentAuthToken: String? = null
     private var retryAttempts = 0
 
-    fun connect(
-        relayUrl: String,
-        conversationId: String,
-        authToken: String
-    ) {
+    fun connect(relayUrl: String, conversationId: String, authToken: String) {
         // Disconnect existing connection if different conversation
         if (currentConversationId != conversationId) {
             disconnect()
@@ -116,9 +115,10 @@ class SSEService @Inject constructor() {
 
     private fun startConnection() {
         connectionJob?.cancel()
-        connectionJob = scope.launch {
-            connectInternal()
-        }
+        connectionJob =
+            scope.launch {
+                connectInternal()
+            }
     }
 
     private suspend fun connectInternal() {
@@ -133,17 +133,18 @@ class SSEService @Inject constructor() {
             // URL format matching iOS: {baseURL}/v1/messages/stream?conversation_id={conversationId}
             val url = URL("$relayUrl/v1/messages/stream?conversation_id=$conversationId")
             Log.d(TAG, "Connecting to SSE: $url")
-            connection = withContext(Dispatchers.IO) {
-                (url.openConnection() as HttpURLConnection).apply {
-                    requestMethod = "GET"
-                    setRequestProperty("Authorization", "Bearer $authToken")
-                    setRequestProperty("Accept", "text/event-stream")
-                    setRequestProperty("Cache-Control", "no-cache")
-                    connectTimeout = 10000
-                    readTimeout = 0 // No timeout for SSE
-                    doInput = true
+            connection =
+                withContext(Dispatchers.IO) {
+                    (url.openConnection() as HttpURLConnection).apply {
+                        requestMethod = "GET"
+                        setRequestProperty("Authorization", "Bearer $authToken")
+                        setRequestProperty("Accept", "text/event-stream")
+                        setRequestProperty("Cache-Control", "no-cache")
+                        connectTimeout = 10000
+                        readTimeout = 0 // No timeout for SSE
+                        doInput = true
+                    }
                 }
-            }
 
             val responseCode = connection.responseCode
             if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
@@ -151,7 +152,7 @@ class SSEService @Inject constructor() {
                 Log.w(TAG, "SSE connection returned 404 - conversation not found on relay")
                 _events.emit(SSEEvent.NotFound)
                 _connectionState.value = SSEConnectionState.DISCONNECTED
-                return  // Don't retry automatically - let caller handle registration
+                return // Don't retry automatically - let caller handle registration
             }
             if (responseCode != HttpURLConnection.HTTP_OK) {
                 throw Exception("SSE connection failed with code: $responseCode")
@@ -166,9 +167,10 @@ class SSEService @Inject constructor() {
             val dataBuilder = StringBuilder()
 
             while (scope.isActive) {
-                val line = withContext(Dispatchers.IO) {
-                    reader.readLine()
-                } ?: break
+                val line =
+                    withContext(Dispatchers.IO) {
+                        reader.readLine()
+                    } ?: break
 
                 when {
                     line.startsWith("event:") -> {
@@ -200,10 +202,11 @@ class SSEService @Inject constructor() {
         // Attempt reconnection with exponential backoff
         if (scope.isActive && retryAttempts < MAX_RETRY_ATTEMPTS) {
             retryAttempts++
-            val delayMs = minOf(
-                INITIAL_RETRY_DELAY_MS * (1 shl (retryAttempts - 1)),
-                MAX_RETRY_DELAY_MS
-            )
+            val delayMs =
+                minOf(
+                    INITIAL_RETRY_DELAY_MS * (1 shl (retryAttempts - 1)),
+                    MAX_RETRY_DELAY_MS
+                )
             Log.d(TAG, "Reconnecting in ${delayMs}ms (attempt $retryAttempts)")
             _connectionState.value = SSEConnectionState.RECONNECTING
             delay(delayMs)
@@ -223,10 +226,11 @@ class SSEService @Inject constructor() {
                     val receivedAt = rawEvent.received_at
 
                     if (id != null && ciphertextBase64 != null && receivedAt != null) {
-                        val ciphertext = android.util.Base64.decode(
-                            ciphertextBase64,
-                            android.util.Base64.DEFAULT
-                        )
+                        val ciphertext =
+                            android.util.Base64.decode(
+                                ciphertextBase64,
+                                android.util.Base64.DEFAULT
+                            )
                         Log.d(TAG, "Received message: ${ciphertext.size} bytes, seq=${rawEvent.sequence ?: 0}")
                         _events.emit(
                             SSEEvent.MessageReceived(
@@ -277,6 +281,5 @@ class SSEService @Inject constructor() {
 
     fun isConnected(): Boolean = _connectionState.value == SSEConnectionState.CONNECTED
 
-    fun isConnectedTo(conversationId: String): Boolean =
-        isConnected() && currentConversationId == conversationId
+    fun isConnectedTo(conversationId: String): Boolean = isConnected() && currentConversationId == conversationId
 }

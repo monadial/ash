@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -100,7 +99,8 @@ fun ConversationInfoScreen(
     ) { padding ->
         if (isLoading) {
             Box(
-                modifier = Modifier
+                modifier =
+                Modifier
                     .fillMaxSize()
                     .padding(padding),
                 contentAlignment = Alignment.Center
@@ -112,7 +112,8 @@ fun ConversationInfoScreen(
                 val accentColor = Color(conv.color.toColorLong())
 
                 Column(
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxSize()
                         .padding(padding)
                         .verticalScroll(rememberScrollState())
@@ -172,7 +173,7 @@ fun ConversationInfoScreen(
             text = {
                 Text(
                     "This will permanently destroy the encryption pad and all messages. " +
-                    "Your peer will be notified. This action cannot be undone."
+                        "Your peer will be notified. This action cannot be undone."
                 )
             },
             confirmButton = {
@@ -181,7 +182,8 @@ fun ConversationInfoScreen(
                         showBurnDialog = false
                         viewModel.burnConversation()
                     },
-                    colors = ButtonDefaults.buttonColors(
+                    colors =
+                    ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFF3B30)
                     )
                 ) {
@@ -231,17 +233,14 @@ fun ConversationInfoScreen(
 }
 
 @Composable
-private fun ConversationHeader(
-    conversation: Conversation,
-    accentColor: Color,
-    onRenameClick: () -> Unit
-) {
+private fun ConversationHeader(conversation: Conversation, accentColor: Color, onRenameClick: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .size(80.dp)
                 .clip(CircleShape)
                 .background(accentColor),
@@ -273,7 +272,8 @@ private fun ConversationHeader(
 private fun MnemonicCard(mnemonic: List<String>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        colors =
+        CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
         )
     ) {
@@ -313,7 +313,8 @@ private fun MnemonicCard(mnemonic: List<String>) {
 private fun PadUsageCard(conversation: Conversation, accentColor: Color) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        colors =
+        CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
@@ -395,13 +396,10 @@ private fun PadUsageCard(conversation: Conversation, accentColor: Color) {
 }
 
 @Composable
-private fun DualUsageBar(
-    myUsage: Float,
-    peerUsage: Float,
-    accentColor: Color
-) {
+private fun DualUsageBar(myUsage: Float, peerUsage: Float, accentColor: Color) {
     Box(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .height(12.dp)
             .clip(RoundedCornerShape(6.dp))
@@ -409,7 +407,8 @@ private fun DualUsageBar(
     ) {
         // My usage from left
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth(myUsage / 100f)
                 .height(12.dp)
                 .background(accentColor)
@@ -417,7 +416,8 @@ private fun DualUsageBar(
         )
         // Peer usage from right
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth(peerUsage / 100f)
                 .height(12.dp)
                 .background(accentColor.copy(alpha = 0.5f))
@@ -430,7 +430,8 @@ private fun DualUsageBar(
 private fun UsageLegendItem(color: Color, label: String, percentage: Double) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .size(12.dp)
                 .clip(CircleShape)
                 .background(color)
@@ -448,7 +449,8 @@ private fun UsageLegendItem(color: Color, label: String, percentage: Double) {
 private fun DetailsCard(conversation: Conversation) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        colors =
+        CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
@@ -495,7 +497,8 @@ private fun DetailRow(label: String, value: String) {
 private fun MessageSettingsCard(conversation: Conversation) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
+        colors =
+        CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
@@ -567,7 +570,8 @@ private fun BurnButton(isBurning: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         enabled = !isBurning,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(
+        colors =
+        ButtonDefaults.buttonColors(
             containerColor = Color(0xFFFF3B30)
         ),
         shape = RoundedCornerShape(12.dp)

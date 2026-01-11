@@ -6,18 +6,17 @@ import com.monadial.ash.core.services.ConversationStorageService
 import com.monadial.ash.core.services.RelayService
 import com.monadial.ash.domain.entities.Conversation
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class ConversationsViewModel @Inject constructor(
     private val conversationStorage: ConversationStorageService,
     private val relayService: RelayService
 ) : ViewModel() {
-
     val conversations: StateFlow<List<Conversation>> = conversationStorage.conversations
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -46,11 +45,12 @@ class ConversationsViewModel @Inject constructor(
     }
 
     private suspend fun checkBurnStatus(conversation: Conversation) {
-        val result = relayService.checkBurnStatus(
-            conversationId = conversation.id,
-            authToken = conversation.authToken,
-            relayUrl = conversation.relayUrl
-        )
+        val result =
+            relayService.checkBurnStatus(
+                conversationId = conversation.id,
+                authToken = conversation.authToken,
+                relayUrl = conversation.relayUrl
+            )
         result.onSuccess { status ->
             if (status.burned && conversation.peerBurnedAt == null) {
                 // Peer has burned - update local state

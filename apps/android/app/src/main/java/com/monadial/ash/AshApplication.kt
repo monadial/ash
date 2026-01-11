@@ -5,7 +5,6 @@ import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 class AshApplication : Application() {
-
     override fun onCreate() {
         super.onCreate()
         // Load native library

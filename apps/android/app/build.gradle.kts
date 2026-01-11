@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.detekt)
+    alias(libs.plugins.ktlint)
     kotlin("plugin.serialization") version "2.1.0"
 }
 
@@ -71,6 +73,62 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
+    }
+
+    lint {
+        warningsAsErrors = false
+        abortOnError = false
+        checkDependencies = true
+        checkReleaseBuilds = true
+        xmlReport = true
+        htmlReport = true
+        baseline = file("lint-baseline.xml")
+        disable +=
+            setOf(
+                "ObsoleteLintCustomCheck",
+                "GradleDependency"
+            )
+        enable +=
+            setOf(
+                "Interoperability",
+                "UnusedResources"
+            )
+    }
+}
+
+// Detekt configuration
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+    baseline = file("$rootDir/config/detekt/baseline.xml")
+    parallel = true
+    autoCorrect = true
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = "17"
+    exclude("**/uniffi/**")
+    exclude("**/ash.kt")
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.DetektCreateBaselineTask>().configureEach {
+    jvmTarget = "17"
+}
+
+// ktlint configuration
+ktlint {
+    android = true
+    ignoreFailures = true
+    reporters {
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.HTML)
+    }
+    filter {
+        exclude("**/generated/**")
+        exclude("**/uniffi/**")
+        exclude("**/ash.kt")
+        include("**/kotlin/**")
     }
 }
 

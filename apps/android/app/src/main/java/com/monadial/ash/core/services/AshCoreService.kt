@@ -1,5 +1,7 @@
 package com.monadial.ash.core.services
 
+import javax.inject.Inject
+import javax.inject.Singleton
 import uniffi.ash.AuthTokens
 import uniffi.ash.CeremonyMetadata
 import uniffi.ash.FountainCeremonyResult
@@ -17,8 +19,6 @@ import uniffi.ash.deriveConversationId
 import uniffi.ash.encrypt
 import uniffi.ash.generateMnemonic
 import uniffi.ash.validatePassphrase
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Service that wraps the ASH Core Rust FFI bindings.
@@ -27,7 +27,6 @@ import javax.inject.Singleton
  */
 @Singleton
 class AshCoreService @Inject constructor() {
-
     // === Fountain Code Operations (QR Transfer) ===
 
     /**
@@ -199,11 +198,7 @@ class AshCoreService @Inject constructor() {
      * @param consumedBack Bytes consumed from end (by Responder)
      * @return A new Pad instance with restored state
      */
-    fun createPadFromBytesWithState(
-        bytes: ByteArray,
-        consumedFront: ULong,
-        consumedBack: ULong
-    ): Pad {
+    fun createPadFromBytesWithState(bytes: ByteArray, consumedFront: ULong, consumedBack: ULong): Pad {
         return Pad.fromBytesWithState(
             bytes.map { it.toUByte() },
             consumedFront,
@@ -237,23 +232,17 @@ class AshCoreService @Inject constructor() {
     /**
      * Get the decoded pad bytes from a ceremony result.
      */
-    fun FountainCeremonyResult.getPadBytes(): ByteArray {
-        return this.pad.map { it.toByte() }.toByteArray()
-    }
+    fun FountainCeremonyResult.getPadBytes(): ByteArray = this.pad.map { it.toByte() }.toByteArray()
 
     /**
      * Get pad bytes from a Pad.
      */
-    fun Pad.getBytes(): ByteArray {
-        return this.asBytes().map { it.toByte() }.toByteArray()
-    }
+    fun Pad.getBytes(): ByteArray = this.asBytes().map { it.toByte() }.toByteArray()
 
     /**
      * Consume bytes from a Pad.
      */
-    fun Pad.consumeBytes(n: UInt, role: Role): ByteArray {
-        return this.consume(n, role).map { it.toByte() }.toByteArray()
-    }
+    fun Pad.consumeBytes(n: UInt, role: Role): ByteArray = this.consume(n, role).map { it.toByte() }.toByteArray()
 }
 
 // === Extension functions for convenience ===

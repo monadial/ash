@@ -27,10 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.monadial.ash.ui.viewmodels.LockViewModel
 
 @Composable
-fun LockScreen(
-    onUnlocked: () -> Unit,
-    viewModel: LockViewModel = hiltViewModel()
-) {
+fun LockScreen(onUnlocked: () -> Unit, viewModel: LockViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val isUnlocked by viewModel.isUnlocked.collectAsState()
     val isBiometricAvailable by viewModel.isBiometricAvailable.collectAsState()
@@ -42,7 +39,8 @@ fun LockScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

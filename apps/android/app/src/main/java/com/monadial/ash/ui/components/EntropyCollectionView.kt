@@ -38,7 +38,8 @@ fun EntropyCollectionView(
     val touchPoints = remember { mutableStateListOf<Offset>() }
 
     Box(
-        modifier = modifier
+        modifier =
+        modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -67,16 +68,18 @@ fun EntropyCollectionView(
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             if (touchPoints.size > 1) {
-                val path = Path().apply {
-                    moveTo(touchPoints[0].x, touchPoints[0].y)
-                    touchPoints.drop(1).forEach { point ->
-                        lineTo(point.x, point.y)
+                val path =
+                    Path().apply {
+                        moveTo(touchPoints[0].x, touchPoints[0].y)
+                        touchPoints.drop(1).forEach { point ->
+                            lineTo(point.x, point.y)
+                        }
                     }
-                }
                 drawPath(
                     path = path,
                     color = accentColor.copy(alpha = 0.7f),
-                    style = Stroke(
+                    style =
+                    Stroke(
                         width = 4.dp.toPx(),
                         cap = StrokeCap.Round,
                         join = StrokeJoin.Round

@@ -20,6 +20,8 @@ import com.monadial.ash.domain.entities.DisappearingMessages
 import com.monadial.ash.domain.entities.MessageRetention
 import com.monadial.ash.domain.entities.PadSize
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.security.SecureRandom
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -31,8 +33,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uniffi.ash.CeremonyMetadata
 import uniffi.ash.FountainFrameGenerator
-import java.security.SecureRandom
-import javax.inject.Inject
 
 @HiltViewModel
 class InitiatorCeremonyViewModel @Inject constructor(
@@ -47,11 +47,14 @@ class InitiatorCeremonyViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "InitiatorCeremonyVM"
+
         // Block size for fountain encoding (1500 bytes + 16 header, base64 ~2021 chars, fits Version 23-24 QR)
         // Must match iOS: apps/ios/Ash/Ash/Presentation/ViewModels/InitiatorCeremonyViewModel.swift
         private const val FOUNTAIN_BLOCK_SIZE = 1500u
+
         // QR code size in pixels (larger for better scanning)
         private const val QR_CODE_SIZE = 600
+
         // Frame display interval in milliseconds (matches iOS 0.15s = 150ms, ~6.67 FPS)
         private const val FRAME_DISPLAY_INTERVAL_MS = 150L
     }
@@ -120,10 +123,11 @@ class InitiatorCeremonyViewModel @Inject constructor(
     private var displayJob: Job? = null
     private var mnemonic: List<String> = emptyList()
     private var fountainGenerator: FountainFrameGenerator? = null
-    private var isGeneratingPad: Boolean = false  // Guard against multiple generatePad() calls
+    private var isGeneratingPad: Boolean = false // Guard against multiple generatePad() calls
 
     sealed class ConnectionTestResult {
         data class Success(val version: String) : ConnectionTestResult()
+
         data class Failure(val error: String) : ConnectionTestResult()
     }
 
@@ -183,11 +187,12 @@ class InitiatorCeremonyViewModel @Inject constructor(
             _connectionTestResult.value = null
             try {
                 val result = relayService.testConnection(_relayUrl.value)
-                _connectionTestResult.value = if (result.success) {
-                    ConnectionTestResult.Success(result.version ?: "OK")
-                } else {
-                    ConnectionTestResult.Failure(result.error ?: "Connection failed")
-                }
+                _connectionTestResult.value =
+                    if (result.success) {
+                        ConnectionTestResult.Success(result.version ?: "OK")
+                    } else {
+                        ConnectionTestResult.Failure(result.error ?: "Connection failed")
+                    }
             } catch (e: Exception) {
                 _connectionTestResult.value = ConnectionTestResult.Failure(e.message ?: "Unknown error")
             } finally {
@@ -248,12 +253,13 @@ class InitiatorCeremonyViewModel @Inject constructor(
             _phase.value = CeremonyPhase.GeneratingPad
 
             try {
-                val padBytes = withContext(Dispatchers.Default) {
-                    generatePadBytes(
-                        entropy = entropySnapshot.toByteArray(),
-                        sizeBytes = padSize
-                    )
-                }
+                val padBytes =
+                    withContext(Dispatchers.Default) {
+                        generatePadBytes(
+                            entropy = entropySnapshot.toByteArray(),
+                            sizeBytes = padSize
+                        )
+                    }
                 generatedPadBytes = padBytes
 
                 Log.d(TAG, "Generated pad: ${padBytes.size} bytes")
@@ -307,48 +313,58 @@ class InitiatorCeremonyViewModel @Inject constructor(
     private suspend fun preGenerateQRCodes(padBytes: ByteArray) {
         try {
             // Build ceremony metadata using FFI struct
-            val metadata = CeremonyMetadata(
-                version = 1u,
-                ttlSeconds = _serverRetention.value.seconds.toULong(),
-                disappearingMessagesSeconds = (_disappearingMessages.value.seconds ?: 0).toUInt(),
-                notificationFlags = buildNotificationFlags(),
-                relayUrl = _relayUrl.value
-            )
+            val metadata =
+                CeremonyMetadata(
+                    version = 1u,
+                    ttlSeconds = _serverRetention.value.seconds.toULong(),
+                    disappearingMessagesSeconds = (_disappearingMessages.value.seconds ?: 0).toUInt(),
+                    notificationFlags = buildNotificationFlags(),
+                    relayUrl = _relayUrl.value
+                )
 
             // Use passphrase if enabled, otherwise null
             val passphraseToUse = if (_passphraseEnabled.value) _passphrase.value.ifEmpty { null } else null
 
-            Log.d(TAG, "Creating fountain generator: blockSize=$FOUNTAIN_BLOCK_SIZE, passphraseEnabled=${_passphraseEnabled.value}")
+            Log.d(
+                TAG,
+                "Creating fountain generator: blockSize=$FOUNTAIN_BLOCK_SIZE, passphraseEnabled=${_passphraseEnabled.value}"
+            )
 
             // Create fountain generator using FFI
-            val generator = withContext(Dispatchers.Default) {
-                ashCoreService.createFountainGenerator(
-                    metadata = metadata,
-                    padBytes = padBytes,
-                    blockSize = FOUNTAIN_BLOCK_SIZE,
-                    passphrase = passphraseToUse
-                )
-            }
+            val generator =
+                withContext(Dispatchers.Default) {
+                    ashCoreService.createFountainGenerator(
+                        metadata = metadata,
+                        padBytes = padBytes,
+                        blockSize = FOUNTAIN_BLOCK_SIZE,
+                        passphrase = passphraseToUse
+                    )
+                }
             fountainGenerator = generator
 
             val sourceCount = generator.sourceCount().toInt()
             _totalFrames.value = sourceCount
 
-            Log.d(TAG, "Fountain generator created: sourceCount=$sourceCount, blockSize=${generator.blockSize()}, totalSize=${generator.totalSize()}")
+            Log.d(
+                TAG,
+                "Fountain generator created: sourceCount=$sourceCount, blockSize=${generator.blockSize()}, totalSize=${generator.totalSize()}"
+            )
 
             val images = mutableListOf<Bitmap>()
 
             withContext(Dispatchers.Default) {
                 for (index in 0 until sourceCount) {
-                    _phase.value = CeremonyPhase.GeneratingQRCodes(
-                        progress = (index + 1).toFloat() / sourceCount,
-                        total = sourceCount
-                    )
+                    _phase.value =
+                        CeremonyPhase.GeneratingQRCodes(
+                            progress = (index + 1).toFloat() / sourceCount,
+                            total = sourceCount
+                        )
 
                     // Generate frame using FFI
-                    val frameBytes = with(ashCoreService) {
-                        generator.generateFrameBytes(index.toUInt())
-                    }
+                    val frameBytes =
+                        with(ashCoreService) {
+                            generator.generateFrameBytes(index.toUInt())
+                        }
 
                     Log.d(TAG, "Frame $index: ${frameBytes.size} bytes")
 
@@ -395,25 +411,27 @@ class InitiatorCeremonyViewModel @Inject constructor(
         _isPaused.value = false
         _currentQRBitmap.value = preGeneratedQRImages.firstOrNull()
 
-        displayJob = viewModelScope.launch {
-            while (isActive && preGeneratedQRImages.isNotEmpty()) {
-                val delayMs = 1000L / _fps.value
-                delay(delayMs)
+        displayJob =
+            viewModelScope.launch {
+                while (isActive && preGeneratedQRImages.isNotEmpty()) {
+                    val delayMs = 1000L / _fps.value
+                    delay(delayMs)
 
-                if (!_isPaused.value) {
-                    val nextIndex = (_currentFrameIndex.value + 1) % preGeneratedQRImages.size
-                    _currentFrameIndex.value = nextIndex
-                    _currentQRBitmap.value = preGeneratedQRImages[nextIndex]
+                    if (!_isPaused.value) {
+                        val nextIndex = (_currentFrameIndex.value + 1) % preGeneratedQRImages.size
+                        _currentFrameIndex.value = nextIndex
+                        _currentQRBitmap.value = preGeneratedQRImages[nextIndex]
 
-                    if (_phase.value is CeremonyPhase.Transferring) {
-                        _phase.value = CeremonyPhase.Transferring(
-                            currentFrame = nextIndex % _totalFrames.value,
-                            totalFrames = _totalFrames.value
-                        )
+                        if (_phase.value is CeremonyPhase.Transferring) {
+                            _phase.value =
+                                CeremonyPhase.Transferring(
+                                    currentFrame = nextIndex % _totalFrames.value,
+                                    totalFrames = _totalFrames.value
+                                )
+                        }
                     }
                 }
             }
-        }
     }
 
     fun stopDisplayCycling() {
@@ -433,11 +451,12 @@ class InitiatorCeremonyViewModel @Inject constructor(
 
     fun previousFrame() {
         if (preGeneratedQRImages.isEmpty()) return
-        val prevIndex = if (_currentFrameIndex.value > 0) {
-            _currentFrameIndex.value - 1
-        } else {
-            preGeneratedQRImages.size - 1
-        }
+        val prevIndex =
+            if (_currentFrameIndex.value > 0) {
+                _currentFrameIndex.value - 1
+            } else {
+                preGeneratedQRImages.size - 1
+            }
         _currentFrameIndex.value = prevIndex
         _currentQRBitmap.value = preGeneratedQRImages[prevIndex]
         updateTransferringPhase(prevIndex)
@@ -475,10 +494,11 @@ class InitiatorCeremonyViewModel @Inject constructor(
 
     private fun updateTransferringPhase(frameIndex: Int) {
         if (_phase.value is CeremonyPhase.Transferring) {
-            _phase.value = CeremonyPhase.Transferring(
-                currentFrame = frameIndex % _totalFrames.value,
-                totalFrames = _totalFrames.value
-            )
+            _phase.value =
+                CeremonyPhase.Transferring(
+                    currentFrame = frameIndex % _totalFrames.value,
+                    totalFrames = _totalFrames.value
+                )
         }
     }
 
@@ -496,20 +516,21 @@ class InitiatorCeremonyViewModel @Inject constructor(
             // Derive all tokens using FFI
             val tokens = ashCoreService.deriveAllTokens(padBytes)
 
-            val conversation = Conversation(
-                id = tokens.conversationId,
-                name = _conversationName.value.ifBlank { null },
-                relayUrl = _relayUrl.value,
-                authToken = tokens.authToken,
-                burnToken = tokens.burnToken,
-                role = ConversationRole.INITIATOR,
-                color = _selectedColor.value,
-                createdAt = System.currentTimeMillis(),
-                padTotalSize = padBytes.size.toLong(),
-                mnemonic = mnemonic,
-                messageRetention = _serverRetention.value,
-                disappearingMessages = _disappearingMessages.value
-            )
+            val conversation =
+                Conversation(
+                    id = tokens.conversationId,
+                    name = _conversationName.value.ifBlank { null },
+                    relayUrl = _relayUrl.value,
+                    authToken = tokens.authToken,
+                    burnToken = tokens.burnToken,
+                    role = ConversationRole.INITIATOR,
+                    color = _selectedColor.value,
+                    createdAt = System.currentTimeMillis(),
+                    padTotalSize = padBytes.size.toLong(),
+                    mnemonic = mnemonic,
+                    messageRetention = _serverRetention.value,
+                    disappearingMessages = _disappearingMessages.value
+                )
 
             viewModelScope.launch {
                 conversationStorage.saveConversation(conversation)
@@ -532,12 +553,13 @@ class InitiatorCeremonyViewModel @Inject constructor(
         try {
             val authTokenHash = relayService.hashToken(conversation.authToken)
             val burnTokenHash = relayService.hashToken(conversation.burnToken)
-            val result = relayService.registerConversation(
-                conversationId = conversation.id,
-                authTokenHash = authTokenHash,
-                burnTokenHash = burnTokenHash,
-                relayUrl = conversation.relayUrl
-            )
+            val result =
+                relayService.registerConversation(
+                    conversationId = conversation.id,
+                    authTokenHash = authTokenHash,
+                    burnTokenHash = burnTokenHash,
+                    relayUrl = conversation.relayUrl
+                )
             if (result.isSuccess) {
                 Log.d(TAG, "Conversation registered with relay")
             } else {
@@ -574,7 +596,7 @@ class InitiatorCeremonyViewModel @Inject constructor(
         _passphraseEnabled.value = false
         _passphrase.value = ""
         _isPaused.value = false
-        _fps.value = 7  // Reset to default ~7 FPS
+        _fps.value = 7 // Reset to default ~7 FPS
         collectedEntropy.clear()
         generatedPadBytes = null
         preGeneratedQRImages = emptyList()

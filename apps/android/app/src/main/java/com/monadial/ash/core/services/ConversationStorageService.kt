@@ -5,6 +5,8 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.monadial.ash.domain.entities.Conversation
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,8 +15,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Pad storage data matching iOS PadStorageData structure.
@@ -22,26 +22,26 @@ import javax.inject.Singleton
  */
 @Serializable
 data class PadStorageData(
-    val bytes: String,  // Base64-encoded pad bytes
+    val bytes: String, // Base64-encoded pad bytes
     val consumedFront: Long,
     val consumedBack: Long
 )
 
 @Singleton
-class ConversationStorageService @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+class ConversationStorageService @Inject constructor(@ApplicationContext private val context: Context) {
+    private val masterKey =
+        MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
 
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        "ash_conversations",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val encryptedPrefs =
+        EncryptedSharedPreferences.create(
+            context,
+            "ash_conversations",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -50,15 +50,18 @@ class ConversationStorageService @Inject constructor(
 
     suspend fun loadConversations() = withContext(Dispatchers.IO) {
         val all = encryptedPrefs.all
-        val loaded = all.mapNotNull { (key, value) ->
-            if (key.startsWith("conversation_") && value is String) {
-                try {
-                    json.decodeFromString<Conversation>(value)
-                } catch (e: Exception) {
+        val loaded =
+            all.mapNotNull { (key, value) ->
+                if (key.startsWith("conversation_") && value is String) {
+                    try {
+                        json.decodeFromString<Conversation>(value)
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else {
                     null
                 }
-            } else null
-        }.sortedByDescending { it.lastMessageAt ?: it.createdAt }
+            }.sortedByDescending { it.lastMessageAt ?: it.createdAt }
         _conversations.value = loaded
     }
 
@@ -96,11 +99,12 @@ class ConversationStorageService @Inject constructor(
      * Matching iOS: PadManager.storePad
      */
     suspend fun savePadBytes(conversationId: String, padBytes: ByteArray) = withContext(Dispatchers.IO) {
-        val storageData = PadStorageData(
-            bytes = android.util.Base64.encodeToString(padBytes, android.util.Base64.NO_WRAP),
-            consumedFront = 0,
-            consumedBack = 0
-        )
+        val storageData =
+            PadStorageData(
+                bytes = android.util.Base64.encodeToString(padBytes, android.util.Base64.NO_WRAP),
+                consumedFront = 0,
+                consumedBack = 0
+            )
         val serialized = json.encodeToString(storageData)
         encryptedPrefs.edit()
             .putString("pad_$conversationId", serialized)
@@ -111,22 +115,19 @@ class ConversationStorageService @Inject constructor(
      * Save pad with current consumption state.
      * Matching iOS: PadManager.savePadState
      */
-    suspend fun savePadState(
-        conversationId: String,
-        padBytes: ByteArray,
-        consumedFront: Long,
-        consumedBack: Long
-    ) = withContext(Dispatchers.IO) {
-        val storageData = PadStorageData(
-            bytes = android.util.Base64.encodeToString(padBytes, android.util.Base64.NO_WRAP),
-            consumedFront = consumedFront,
-            consumedBack = consumedBack
-        )
-        val serialized = json.encodeToString(storageData)
-        encryptedPrefs.edit()
-            .putString("pad_$conversationId", serialized)
-            .apply()
-    }
+    suspend fun savePadState(conversationId: String, padBytes: ByteArray, consumedFront: Long, consumedBack: Long) =
+        withContext(Dispatchers.IO) {
+            val storageData =
+                PadStorageData(
+                    bytes = android.util.Base64.encodeToString(padBytes, android.util.Base64.NO_WRAP),
+                    consumedFront = consumedFront,
+                    consumedBack = consumedBack
+                )
+            val serialized = json.encodeToString(storageData)
+            encryptedPrefs.edit()
+                .putString("pad_$conversationId", serialized)
+                .apply()
+        }
 
     /**
      * Get pad bytes only (for decryption/token derivation).
@@ -180,22 +181,20 @@ class ConversationStorageService @Inject constructor(
      * Update consumption state in pad storage.
      * Matching iOS: PadManager.savePadState
      */
-    suspend fun updatePadConsumption(
-        conversationId: String,
-        consumedFront: Long,
-        consumedBack: Long
-    ) = withContext(Dispatchers.IO) {
-        // Load existing pad data
-        val existing = getPadStorageData(conversationId) ?: return@withContext
+    suspend fun updatePadConsumption(conversationId: String, consumedFront: Long, consumedBack: Long) =
+        withContext(Dispatchers.IO) {
+            // Load existing pad data
+            val existing = getPadStorageData(conversationId) ?: return@withContext
 
-        // Save with updated consumption state
-        val updated = existing.copy(
-            consumedFront = consumedFront,
-            consumedBack = consumedBack
-        )
-        val serialized = json.encodeToString(updated)
-        encryptedPrefs.edit()
-            .putString("pad_$conversationId", serialized)
-            .apply()
-    }
+            // Save with updated consumption state
+            val updated =
+                existing.copy(
+                    consumedFront = consumedFront,
+                    consumedBack = consumedBack
+                )
+            val serialized = json.encodeToString(updated)
+            encryptedPrefs.edit()
+                .putString("pad_$conversationId", serialized)
+                .apply()
+        }
 }

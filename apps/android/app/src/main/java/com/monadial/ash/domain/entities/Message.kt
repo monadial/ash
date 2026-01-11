@@ -1,8 +1,8 @@
 package com.monadial.ash.domain.entities
 
+import java.util.UUID
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.util.UUID
 
 @Serializable
 data class Message(
@@ -12,11 +12,16 @@ data class Message(
     val direction: MessageDirection,
     val timestamp: Long = System.currentTimeMillis(),
     val status: DeliveryStatus = DeliveryStatus.NONE,
-    val sequence: Long? = null,  // Pad offset for deduplication
-    val blobId: String? = null,  // Server blob ID for ACK
-    val expiresAt: Long? = null,  // Display TTL (disappearing messages)
-    val serverExpiresAt: Long? = null,  // Server TTL (for sent messages awaiting delivery)
-    val isContentWiped: Boolean = false  // Message expired, show placeholder
+    /** Pad offset for deduplication */
+    val sequence: Long? = null,
+    /** Server blob ID for ACK */
+    val blobId: String? = null,
+    /** Display TTL (disappearing messages) */
+    val expiresAt: Long? = null,
+    /** Server TTL (for sent messages awaiting delivery) */
+    val serverExpiresAt: Long? = null,
+    /** Message expired, show placeholder */
+    val isContentWiped: Boolean = false,
 ) {
     // Computed properties
     val isExpired: Boolean
@@ -29,7 +34,8 @@ data class Message(
         get() = serverExpiresAt?.let { maxOf(0, it - System.currentTimeMillis()) }
 
     val isAwaitingDelivery: Boolean
-        get() = direction == MessageDirection.SENT &&
+        get() =
+            direction == MessageDirection.SENT &&
                 (status == DeliveryStatus.SENDING || status == DeliveryStatus.SENT) &&
                 serverExpiresAt != null
 
@@ -47,10 +53,11 @@ data class Message(
         }
 
     val displayContent: String
-        get() = when {
-            isContentWiped -> "[Message Expired]"
-            else -> content.displayText
-        }
+        get() =
+            when {
+                isContentWiped -> "[Message Expired]"
+                else -> content.displayText
+            }
 
     fun withDeliveryStatus(status: DeliveryStatus): Message = copy(status = status)
 
@@ -59,12 +66,7 @@ data class Message(
     fun withContentWiped(): Message = copy(isContentWiped = true)
 
     companion object {
-        fun outgoing(
-            conversationId: String,
-            text: String,
-            sequence: Long,
-            serverTTLSeconds: Long
-        ): Message = Message(
+        fun outgoing(conversationId: String, text: String, sequence: Long, serverTTLSeconds: Long): Message = Message(
             conversationId = conversationId,
             content = MessageContent.Text(text),
             direction = MessageDirection.SENT,
@@ -153,11 +155,9 @@ sealed class MessageContent {
             return Text(text)
         }
 
-        fun toBytes(content: MessageContent): ByteArray {
-            return when (content) {
-                is Text -> content.text.toByteArray(Charsets.UTF_8)
-                is Location -> content.toEncodedString().toByteArray(Charsets.UTF_8)
-            }
+        fun toBytes(content: MessageContent): ByteArray = when (content) {
+            is Text -> content.text.toByteArray(Charsets.UTF_8)
+            is Location -> content.toEncodedString().toByteArray(Charsets.UTF_8)
         }
     }
 }
@@ -194,11 +194,12 @@ sealed class DeliveryStatus {
         get() = this is FAILED
 
     val displayName: String
-        get() = when (this) {
-            NONE -> ""
-            SENDING -> "Sending..."
-            SENT -> "Sent"
-            DELIVERED -> "Delivered"
-            is FAILED -> "Failed"
-        }
+        get() =
+            when (this) {
+                NONE -> ""
+                SENDING -> "Sending..."
+                SENT -> "Sent"
+                DELIVERED -> "Delivered"
+                is FAILED -> "Failed"
+            }
 }

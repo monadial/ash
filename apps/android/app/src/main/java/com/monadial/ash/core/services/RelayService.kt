@@ -13,14 +13,14 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import javax.inject.Inject
-import javax.inject.Singleton
 
 // === Request DTOs (matching iOS) ===
 
@@ -35,10 +35,7 @@ data class SubmitMessageRequest(
 )
 
 @Serializable
-data class SubmitMessageResponse(
-    val accepted: Boolean,
-    @SerialName("blob_id") val blobId: String
-)
+data class SubmitMessageResponse(val accepted: Boolean, @SerialName("blob_id") val blobId: String)
 
 @Serializable
 data class AckMessageRequest(
@@ -47,9 +44,7 @@ data class AckMessageRequest(
 )
 
 @Serializable
-data class AckMessageResponse(
-    val acknowledged: Int
-)
+data class AckMessageResponse(val acknowledged: Int)
 
 @Serializable
 data class RegisterConversationRequest(
@@ -72,18 +67,12 @@ data class BurnConversationRequest(
 )
 
 @Serializable
-data class BurnStatusResponse(
-    val burned: Boolean,
-    @SerialName("burned_at") val burnedAt: String? = null
-)
+data class BurnStatusResponse(val burned: Boolean, @SerialName("burned_at") val burnedAt: String? = null)
 
 // === Response DTOs ===
 
 @Serializable
-data class HealthResponse(
-    val status: String,
-    val version: String? = null
-)
+data class HealthResponse(val status: String, val version: String? = null)
 
 @Serializable
 data class PollMessageItem(
@@ -109,11 +98,7 @@ data class ConnectionTestResult(
     val error: String? = null
 )
 
-data class SendResult(
-    val success: Boolean,
-    val blobId: String? = null,
-    val error: String? = null
-)
+data class SendResult(val success: Boolean, val blobId: String? = null, val error: String? = null)
 
 data class PollResult(
     val success: Boolean,
@@ -123,12 +108,7 @@ data class PollResult(
     val error: String? = null
 )
 
-data class ReceivedMessage(
-    val id: String,
-    val ciphertext: ByteArray,
-    val sequence: Long?,
-    val receivedAt: String
-) {
+data class ReceivedMessage(val id: String, val ciphertext: ByteArray, val sequence: Long?, val receivedAt: String) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -201,20 +181,22 @@ class RelayService @Inject constructor(
 
             Log.d(TAG, "[$id] Submitting: ${ciphertext.size} bytes, seq=${sequence ?: 0}, ttl=${ttlSeconds ?: 0}s")
 
-            val request = SubmitMessageRequest(
-                conversationId = conversationId,
-                ciphertext = encoded,
-                sequence = sequence,
-                ttlSeconds = ttlSeconds,
-                extendedTTL = extendedTTL,
-                persistent = persistent
-            )
+            val request =
+                SubmitMessageRequest(
+                    conversationId = conversationId,
+                    ciphertext = encoded,
+                    sequence = sequence,
+                    ttlSeconds = ttlSeconds,
+                    extendedTTL = extendedTTL,
+                    persistent = persistent
+                )
 
-            val response: HttpResponse = httpClient.post("$url/v1/messages") {
-                header("Authorization", "Bearer $authToken")
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
+            val response: HttpResponse =
+                httpClient.post("$url/v1/messages") {
+                    header("Authorization", "Bearer $authToken")
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
 
             if (response.status.isSuccess()) {
                 val result: SubmitMessageResponse = response.body()
@@ -244,22 +226,24 @@ class RelayService @Inject constructor(
         val id = logId(conversationId)
         return try {
             val url = relayUrl ?: settingsService.relayServerUrl.first()
-            val response: HttpResponse = httpClient.get("$url/v1/messages") {
-                header("Authorization", "Bearer $authToken")
-                parameter("conversation_id", conversationId)
-                cursor?.let { parameter("cursor", it) }
-            }
+            val response: HttpResponse =
+                httpClient.get("$url/v1/messages") {
+                    header("Authorization", "Bearer $authToken")
+                    parameter("conversation_id", conversationId)
+                    cursor?.let { parameter("cursor", it) }
+                }
 
             if (response.status.isSuccess()) {
                 val result: PollMessagesResponse = response.body()
-                val receivedMessages = result.messages.map { msg ->
-                    ReceivedMessage(
-                        id = msg.id,
-                        ciphertext = Base64.decode(msg.ciphertext, Base64.DEFAULT),
-                        sequence = msg.sequence,
-                        receivedAt = msg.receivedAt
-                    )
-                }
+                val receivedMessages =
+                    result.messages.map { msg ->
+                        ReceivedMessage(
+                            id = msg.id,
+                            ciphertext = Base64.decode(msg.ciphertext, Base64.DEFAULT),
+                            sequence = msg.sequence,
+                            receivedAt = msg.receivedAt
+                        )
+                    }
                 if (result.messages.isNotEmpty()) {
                     Log.d(TAG, "[$id] Poll returned ${result.messages.size} messages, burned=${result.burned}")
                 }
@@ -310,16 +294,18 @@ class RelayService @Inject constructor(
 
             Log.d(TAG, "[$id] Acknowledging ${blobIds.size} messages")
 
-            val request = AckMessageRequest(
-                conversationId = conversationId,
-                blobIds = blobIds
-            )
+            val request =
+                AckMessageRequest(
+                    conversationId = conversationId,
+                    blobIds = blobIds
+                )
 
-            val response: HttpResponse = httpClient.post("$url/v1/messages/ack") {
-                header("Authorization", "Bearer $authToken")
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
+            val response: HttpResponse =
+                httpClient.post("$url/v1/messages/ack") {
+                    header("Authorization", "Bearer $authToken")
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
 
             if (response.status.isSuccess()) {
                 val result: AckMessageResponse = response.body()
@@ -347,16 +333,18 @@ class RelayService @Inject constructor(
 
             Log.d(TAG, "[$id] Registering conversation with relay")
 
-            val request = RegisterConversationRequest(
-                conversationId = conversationId,
-                authTokenHash = authTokenHash,
-                burnTokenHash = burnTokenHash
-            )
+            val request =
+                RegisterConversationRequest(
+                    conversationId = conversationId,
+                    authTokenHash = authTokenHash,
+                    burnTokenHash = burnTokenHash
+                )
 
-            val response: HttpResponse = httpClient.post("$url/v1/conversations") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
+            val response: HttpResponse =
+                httpClient.post("$url/v1/conversations") {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
 
             if (response.status.isSuccess()) {
                 Log.d(TAG, "[$id] Conversation registered successfully")
@@ -383,17 +371,19 @@ class RelayService @Inject constructor(
 
             Log.d(TAG, "[$id] Registering device for push notifications")
 
-            val request = RegisterDeviceRequest(
-                conversationId = conversationId,
-                deviceToken = deviceToken,
-                platform = "android"
-            )
+            val request =
+                RegisterDeviceRequest(
+                    conversationId = conversationId,
+                    deviceToken = deviceToken,
+                    platform = "android"
+                )
 
-            val response: HttpResponse = httpClient.post("$url/v1/register") {
-                header("Authorization", "Bearer $authToken")
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
+            val response: HttpResponse =
+                httpClient.post("$url/v1/register") {
+                    header("Authorization", "Bearer $authToken")
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
 
             if (response.status.isSuccess()) {
                 Log.d(TAG, "[$id] Device registered successfully")
@@ -408,26 +398,24 @@ class RelayService @Inject constructor(
 
     // === Burn Conversation (matching iOS: POST /v1/burn) ===
 
-    suspend fun burnConversation(
-        conversationId: String,
-        burnToken: String,
-        relayUrl: String? = null
-    ): Result<Unit> {
+    suspend fun burnConversation(conversationId: String, burnToken: String, relayUrl: String? = null): Result<Unit> {
         val id = logId(conversationId)
         return try {
             val url = relayUrl ?: settingsService.relayServerUrl.first()
 
             Log.w(TAG, "[$id] Burning conversation on relay")
 
-            val request = BurnConversationRequest(
-                conversationId = conversationId,
-                burnToken = burnToken
-            )
+            val request =
+                BurnConversationRequest(
+                    conversationId = conversationId,
+                    burnToken = burnToken
+                )
 
-            val response: HttpResponse = httpClient.post("$url/v1/burn") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
+            val response: HttpResponse =
+                httpClient.post("$url/v1/burn") {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
 
             if (response.status.isSuccess()) {
                 Log.w(TAG, "[$id] Conversation burned on relay")
@@ -449,10 +437,11 @@ class RelayService @Inject constructor(
     ): Result<BurnStatusResponse> {
         return try {
             val url = relayUrl ?: settingsService.relayServerUrl.first()
-            val response: HttpResponse = httpClient.get("$url/v1/burn") {
-                header("Authorization", "Bearer $authToken")
-                parameter("conversation_id", conversationId)
-            }
+            val response: HttpResponse =
+                httpClient.get("$url/v1/burn") {
+                    header("Authorization", "Bearer $authToken")
+                    parameter("conversation_id", conversationId)
+                }
             if (response.status.isSuccess()) {
                 Result.success(response.body())
             } else {

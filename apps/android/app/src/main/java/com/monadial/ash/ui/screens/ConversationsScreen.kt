@@ -34,7 +34,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -62,7 +61,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.monadial.ash.domain.entities.Conversation
 import com.monadial.ash.ui.viewmodels.ConversationsViewModel
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -102,7 +100,8 @@ fun ConversationsScreen(
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { viewModel.refresh() },
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
@@ -150,7 +149,7 @@ fun ConversationsScreen(
             text = {
                 Text(
                     "This will permanently destroy the encryption pad and all messages with \"${conv.displayName}\". " +
-                    "Your peer will be notified. This cannot be undone."
+                        "Your peer will be notified. This cannot be undone."
                 )
             },
             confirmButton = {
@@ -159,7 +158,8 @@ fun ConversationsScreen(
                         viewModel.burnConversation(conv)
                         conversationToBurn = null
                     },
-                    colors = ButtonDefaults.buttonColors(
+                    colors =
+                    ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
@@ -177,22 +177,19 @@ fun ConversationsScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeableConversationCard(
-    conversation: Conversation,
-    onClick: () -> Unit,
-    onBurn: () -> Unit
-) {
+private fun SwipeableConversationCard(conversation: Conversation, onClick: () -> Unit, onBurn: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onBurn()
-                false // Don't actually dismiss, show confirmation dialog
-            } else {
-                false
+    val dismissState =
+        rememberSwipeToDismissBoxState(
+            confirmValueChange = { value ->
+                if (value == SwipeToDismissBoxValue.EndToStart) {
+                    onBurn()
+                    false // Don't actually dismiss, show confirmation dialog
+                } else {
+                    false
+                }
             }
-        }
-    )
+        )
 
     val errorColor = MaterialTheme.colorScheme.error
 
@@ -207,7 +204,8 @@ private fun SwipeableConversationCard(
                 label = "background"
             )
             Box(
-                modifier = Modifier
+                modifier =
+                Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(12.dp))
                     .background(color)
@@ -231,10 +229,7 @@ private fun SwipeableConversationCard(
 }
 
 @Composable
-private fun EmptyConversationsView(
-    modifier: Modifier = Modifier,
-    onNewConversation: () -> Unit
-) {
+private fun EmptyConversationsView(modifier: Modifier = Modifier, onNewConversation: () -> Unit) {
     Column(
         modifier = modifier.padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -242,7 +237,8 @@ private fun EmptyConversationsView(
     ) {
         // Icon circle
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .size(100.dp)
                 .background(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
@@ -278,7 +274,8 @@ private fun EmptyConversationsView(
 
         Button(
             onClick = onNewConversation,
-            colors = ButtonDefaults.buttonColors(
+            colors =
+            ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
@@ -295,10 +292,7 @@ private fun EmptyConversationsView(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MnemonicTagsRow(
-    mnemonic: List<String>,
-    accentColor: Color
-) {
+private fun MnemonicTagsRow(mnemonic: List<String>, accentColor: Color) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -321,23 +315,23 @@ private fun MnemonicTagsRow(
 }
 
 @Composable
-private fun ConversationCard(
-    conversation: Conversation,
-    onClick: () -> Unit
-) {
+private fun ConversationCard(conversation: Conversation, onClick: () -> Unit) {
     val accentColor = Color(conversation.color.toColorLong())
 
     Card(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
+        colors =
+        CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column {
             Row(
-                modifier = Modifier
+                modifier =
+                Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -415,20 +409,18 @@ private fun ConversationCard(
 }
 
 @Composable
-private fun DualUsageBar(
-    myUsage: Float,
-    peerUsage: Float,
-    accentColor: Color
-) {
+private fun DualUsageBar(myUsage: Float, peerUsage: Float, accentColor: Color) {
     Box(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .height(4.dp)
             .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         // My usage from left
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth(myUsage / 100f)
                 .height(4.dp)
                 .background(accentColor)
@@ -436,7 +428,8 @@ private fun DualUsageBar(
         )
         // Peer usage from right
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth(peerUsage / 100f)
                 .height(4.dp)
                 .background(accentColor.copy(alpha = 0.5f))
@@ -444,7 +437,6 @@ private fun DualUsageBar(
         )
     }
 }
-
 
 private fun formatTimestamp(timestamp: Long): String {
     val now = System.currentTimeMillis()

@@ -13,7 +13,6 @@ import javax.inject.Singleton
 
 @Singleton
 class QRCodeService @Inject constructor() {
-
     companion object {
         private const val TAG = "QRCodeService"
     }
@@ -46,11 +45,12 @@ class QRCodeService @Inject constructor() {
             Log.d(TAG, "Generating QR code: ${data.size} bytes -> ${base64.length} chars base64, target size: $size px")
 
             val writer = QRCodeWriter()
-            val hints = mapOf(
-                EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
-                EncodeHintType.MARGIN to 1,
-                EncodeHintType.CHARACTER_SET to "ISO-8859-1"  // Binary-safe encoding
-            )
+            val hints =
+                mapOf(
+                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
+                    EncodeHintType.MARGIN to 1,
+                    EncodeHintType.CHARACTER_SET to "ISO-8859-1" // Binary-safe encoding
+                )
 
             val bitMatrix = writer.encode(base64, BarcodeFormat.QR_CODE, size, size, hints)
 
@@ -70,7 +70,7 @@ class QRCodeService @Inject constructor() {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
 
-            Log.d(TAG, "QR code generated: ${width}x${height} pixels")
+            Log.d(TAG, "QR code generated: ${width}x$height pixels")
             bitmap
         } catch (e: Exception) {
             Log.e(TAG, "Failed to generate QR code: ${e.message}", e)
@@ -92,10 +92,11 @@ class QRCodeService @Inject constructor() {
             }
 
             val writer = QRCodeWriter()
-            val hints = mapOf(
-                EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
-                EncodeHintType.MARGIN to 1
-            )
+            val hints =
+                mapOf(
+                    EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.L,
+                    EncodeHintType.MARGIN to 1
+                )
 
             // Let ZXing determine optimal size
             val bitMatrix = writer.encode(base64, BarcodeFormat.QR_CODE, 0, 0, hints)
@@ -124,14 +125,12 @@ class QRCodeService @Inject constructor() {
      * Decode base64 string from QR code back to raw bytes.
      * Uses DEFAULT flag for maximum compatibility with iOS base64 encoding.
      */
-    fun decodeBase64(base64String: String): ByteArray? {
-        return try {
-            // Use DEFAULT for decoding - it's more permissive and handles
-            // both with/without line breaks and padding variations
-            Base64.decode(base64String, Base64.DEFAULT)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to decode base64: ${e.message}")
-            null
-        }
+    fun decodeBase64(base64String: String): ByteArray? = try {
+        // Use DEFAULT for decoding - it's more permissive and handles
+        // both with/without line breaks and padding variations
+        Base64.decode(base64String, Base64.DEFAULT)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to decode base64: ${e.message}")
+        null
     }
 }

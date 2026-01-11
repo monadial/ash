@@ -1,0 +1,43 @@
+---
+interface TocItem {
+  id: string
+  title: string
+  children?: TocItem[]
+}
+
+interface Props {
+  items: TocItem[]
+}
+
+const { items } = Astro.props
+---
+
+<nav class="lg:sticky lg:top-24 lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+  <h2 class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-4">Contents</h2>
+  <ul class="space-y-2 text-sm">
+    {items.map(item => (
+      <li>
+        <a
+          href={`#${item.id}`}
+          class="block text-text-secondary hover:text-white transition-colors py-1"
+        >
+          {item.title}
+        </a>
+        {item.children && (
+          <ul class="ml-4 mt-1 space-y-1 border-l border-border pl-4">
+            {item.children.map(child => (
+              <li>
+                <a
+                  href={`#${child.id}`}
+                  class="block text-text-muted hover:text-text-secondary transition-colors py-0.5 text-xs"
+                >
+                  {child.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+    ))}
+  </ul>
+</nav>

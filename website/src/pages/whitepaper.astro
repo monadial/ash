@@ -1,0 +1,626 @@
+---
+import Layout from '../layouts/Layout.astro'
+import TableOfContents from '../components/TableOfContents.astro'
+import Diagram from '../components/Diagram.astro'
+import InfoBox from '../components/InfoBox.astro'
+
+const tocItems = [
+  { id: 'overview', title: 'Protocol Overview', children: [
+    { id: 'otp', title: 'One-Time Pad' },
+    { id: 'shannon', title: 'Perfect Secrecy' },
+  ]},
+  { id: 'architecture', title: 'System Architecture', children: [
+    { id: 'core', title: 'Shared Rust Core' },
+    { id: 'apps', title: 'Mobile Applications' },
+    { id: 'backend', title: 'Backend Relay' },
+  ]},
+  { id: 'ceremony', title: 'Ceremony Protocol', children: [
+    { id: 'ceremony-flow', title: 'Ceremony Flow' },
+    { id: 'mnemonic', title: 'Mnemonic Verification' },
+    { id: 'pad-sizes', title: 'Pad Sizes' },
+  ]},
+  { id: 'framing', title: 'Frame Format', children: [
+    { id: 'basic-frame', title: 'Basic Frame' },
+    { id: 'extended-frame', title: 'Extended Frame' },
+  ]},
+  { id: 'messages', title: 'Message Format', children: [
+    { id: 'message-structure', title: 'Message Structure' },
+    { id: 'bidirectional', title: 'Bidirectional Consumption' },
+    { id: 'message-types', title: 'Message Types' },
+  ]},
+  { id: 'tokens', title: 'Token Derivation' },
+  { id: 'trust', title: 'Trust Boundaries' },
+]
+---
+
+<Layout title="Whitepaper" description="ASH Protocol technical specification. One-Time Pad encryption, ceremony protocol, and frame format.">
+  <div class="py-16 sm:py-24">
+    <!-- Header -->
+    <div class="text-center mb-16">
+      <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
+        Technical Specification
+      </span>
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">ASH Protocol Whitepaper</h1>
+      <p class="text-text-secondary text-lg max-w-2xl mx-auto">
+        A comprehensive technical overview of the ASH secure messaging protocol, including architecture, ceremony specification, and frame format.
+      </p>
+    </div>
+
+    <!-- Main content with TOC -->
+    <div class="lg:grid lg:grid-cols-[240px_1fr] lg:gap-12">
+      <!-- Table of Contents (sticky sidebar) -->
+      <aside class="hidden lg:block">
+        <TableOfContents items={tocItems} />
+      </aside>
+
+      <!-- Content -->
+      <article class="prose-content space-y-16">
+        <!-- Protocol Overview -->
+        <section id="overview">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Protocol Overview</h2>
+
+          <div id="otp" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">One-Time Pad Encryption</h3>
+            <p class="text-text-secondary mb-4">
+              ASH uses the One-Time Pad (OTP) cipher, the only encryption method proven to provide <strong class="text-white">information-theoretic security</strong>. Unlike computational security (used by AES, RSA, and modern cryptography), OTP security does not depend on mathematical assumptions or computational hardness.
+            </p>
+            <p class="text-text-secondary mb-4">
+              The encryption is simple: each message byte is XOR'd with a corresponding key byte that is:
+            </p>
+            <ul class="list-disc list-inside text-text-secondary mb-4 space-y-1">
+              <li>Truly random (from entropy sources)</li>
+              <li>As long as the message</li>
+              <li>Never reused (consumed after use)</li>
+              <li>Known only to the two parties</li>
+            </ul>
+
+            <Diagram title="OTP Encryption">
+{`Plaintext:  H   E   L   L   O      (message bytes)
+               ⊕   ⊕   ⊕   ⊕   ⊕      (XOR operation)
+Key:        7   K   2   X   9      (random key bytes)
+               =   =   =   =   =
+Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
+            </Diagram>
+          </div>
+
+          <div id="shannon" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Shannon's Perfect Secrecy</h3>
+            <p class="text-text-secondary mb-4">
+              In 1949, Claude Shannon mathematically proved that OTP provides "perfect secrecy": the ciphertext reveals absolutely nothing about the plaintext to an attacker without the key.
+            </p>
+
+            <InfoBox>
+              <p class="text-sm">
+                <strong class="text-white">Formal definition:</strong> A cipher has perfect secrecy if for all plaintexts M and ciphertexts C: P(M|C) = P(M). The probability of any plaintext given the ciphertext equals its prior probability.
+              </p>
+            </InfoBox>
+
+            <p class="text-text-secondary mt-4">
+              This means that without the key, every possible plaintext is equally likely. "HELLO" could decrypt to "WORLD", "PIZZA", or any other 5-letter combination. No amount of computation—not even quantum computers—can determine the original message.
+            </p>
+          </div>
+        </section>
+
+        <!-- System Architecture -->
+        <section id="architecture">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">System Architecture</h2>
+
+          <p class="text-text-secondary mb-6">
+            ASH consists of four primary subsystems with explicitly defined trust boundaries. Security emerges from clear component separation and minimal infrastructure trust.
+          </p>
+
+          <Diagram title="System Overview">
+{`┌────────────┐
+│   Users    │
+└─────┬──────┘
+      │
+┌─────▼──────┐
+│  iOS App   │  (SwiftUI presentation layer)
+└─────┬──────┘
+      │  FFI boundary (UniFFI bindings)
+┌─────▼──────┐
+│   core     │  (Shared Rust Core - cryptographic authority)
+└─────┬──────┘
+      │
+┌─────▼──────┐
+│  Backend   │  (Rust Relay - stateless, untrusted)
+└────────────┘`}
+          </Diagram>
+
+          <div id="core" class="mt-8 mb-8">
+            <h3 class="text-xl font-semibold mb-4">Shared Rust Core (ash-core)</h3>
+            <p class="text-text-secondary mb-4">
+              The core is the <strong class="text-white">cryptographic and procedural authority</strong> of ASH. All security-sensitive behavior is defined here, and all other components must treat it as authoritative.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden mb-4">
+              <div class="px-4 py-2 border-b border-border bg-bg-elevated">
+                <span class="text-xs font-medium text-text-secondary">Core Responsibilities</span>
+              </div>
+              <ul class="p-4 space-y-2 text-sm text-text-secondary">
+                <li>• One-Time Pad creation and management</li>
+                <li>• Strict pad single-use semantics enforcement</li>
+                <li>• Bidirectional pad consumption (Initiator/Responder)</li>
+                <li>• OTP encryption and decryption</li>
+                <li>• Ceremony rules and frame encoding/decoding</li>
+                <li>• CRC-32 integrity validation</li>
+                <li>• Authorization token derivation</li>
+                <li>• Mnemonic checksum generation (6 words, 512-word wordlist)</li>
+                <li>• Best-effort memory wiping</li>
+              </ul>
+            </div>
+
+            <InfoBox variant="warning">
+              <p class="text-sm">
+                <strong>ash-core must never:</strong> access the network, perform I/O, access OS randomness directly, contain platform-specific code, store data, include UI logic, or log sensitive data.
+              </p>
+            </InfoBox>
+          </div>
+
+          <div id="apps" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Mobile Applications</h3>
+            <p class="text-text-secondary mb-4">
+              The iOS application (Android planned) is a <strong class="text-white">presentation and orchestration layer</strong>. It invokes core functionality via UniFFI-generated Swift bindings and manages the user interface.
+            </p>
+            <p class="text-text-secondary mb-4">
+              Mobile apps must never: reimplement cryptographic logic, alter OTP behavior, bypass the shared core, invent alternate checksums, persist decrypted messages, or perform silent background actions.
+            </p>
+          </div>
+
+          <div id="backend" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Backend Relay</h3>
+            <p class="text-text-secondary mb-4">
+              The backend is a <strong class="text-white">stateless RAM-only relay</strong>. It is intentionally simple and considered untrusted. Messages are held only in memory until ACK or TTL expiry.
+            </p>
+
+            <Diagram title="Message Flow">
+{`Alice                    Server (RAM)                    Bob
+  │                          │                              │
+  │  POST /v1/messages       │                              │
+  ├─────────────────────────►│  (store, start TTL)          │
+  │◄── {blob_id} ────────────│                              │
+  │                          │───── SSE: message ──────────►│
+  │                          │                     (decrypt) │
+  │                          │◄─── POST /v1/ack ────────────│
+  │◄── SSE: delivered ───────│  (delete from RAM)           │`}
+            </Diagram>
+
+            <p class="text-text-secondary mt-4">
+              Backend must never: persist messages to disk, decrypt messages, inspect payload contents, identify users, store data long-term, or implement business logic.
+            </p>
+          </div>
+        </section>
+
+        <!-- Ceremony Protocol -->
+        <section id="ceremony">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Ceremony Protocol</h2>
+
+          <p class="text-text-secondary mb-6">
+            The ceremony establishes a shared One-Time Pad between two devices. It is designed to be <strong class="text-white">offline</strong>, <strong class="text-white">explicit</strong>, <strong class="text-white">human-verifiable</strong>, and <strong class="text-white">atomic</strong>.
+          </p>
+
+          <div id="ceremony-flow" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Ceremony Flow</h3>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+              <div class="divide-y divide-border">
+                <div class="p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
+                    <div>
+                      <h4 class="font-medium mb-1">Pad Size Selection</h4>
+                      <p class="text-text-secondary text-sm">Sender selects pad size via slider, determining message capacity and ceremony duration.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
+                    <div>
+                      <h4 class="font-medium mb-1">Entropy Collection</h4>
+                      <p class="text-text-secondary text-sm">OS randomness mixed with required gesture input. User draws patterns while entropy accumulates visually.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+                    <div>
+                      <h4 class="font-medium mb-1">QR Transfer</h4>
+                      <p class="text-text-secondary text-sm">Sender displays QR codes sequentially. Receiver scans each frame, validates CRC, and acknowledges.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+                    <div>
+                      <h4 class="font-medium mb-1">Mnemonic Verification</h4>
+                      <p class="text-text-secondary text-sm">Both devices display 6-word checksum. Users verbally confirm match to detect tampering.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
+                    <div>
+                      <h4 class="font-medium mb-1">Activation</h4>
+                      <p class="text-text-secondary text-sm">Tokens derived from pad. Conversation becomes active. Messaging available.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="mnemonic" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Mnemonic Verification</h3>
+            <p class="text-text-secondary mb-4">
+              The mnemonic checksum allows human verification that both devices have identical pads.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Property</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Value</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr><td class="p-3">Wordlist size</td><td class="p-3 text-text-secondary">512 words (custom, not BIP-39)</td></tr>
+                  <tr><td class="p-3">Bits per word</td><td class="p-3 text-text-secondary">9 bits (512 = 2^9)</td></tr>
+                  <tr><td class="p-3">Word count</td><td class="p-3 text-text-secondary">6 words</td></tr>
+                  <tr><td class="p-3">Verification entropy</td><td class="p-3 text-text-secondary">54 bits</td></tr>
+                  <tr><td class="p-3">Word format</td><td class="p-3 text-text-secondary">3-7 characters, lowercase ASCII</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="text-text-secondary mt-4 text-sm">
+              Words are optimized for verbal clarity: distinct pronunciation, no homophones, minimal confusion between similar words, and cross-language usability.
+            </p>
+          </div>
+
+          <div id="pad-sizes" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Pad Size Options</h3>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Size</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Bytes</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Capacity</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Frames</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Transfer</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr><td class="p-3">Tiny (32 KB)</td><td class="p-3 text-text-secondary">32,768</td><td class="p-3 text-text-secondary">~25 messages</td><td class="p-3 text-text-secondary">~37</td><td class="p-3 text-text-secondary">30-45 sec</td></tr>
+                  <tr><td class="p-3">Small (64 KB)</td><td class="p-3 text-text-secondary">65,536</td><td class="p-3 text-text-secondary">~50 messages</td><td class="p-3 text-text-secondary">~74</td><td class="p-3 text-text-secondary">1-2 min</td></tr>
+                  <tr><td class="p-3">Medium (256 KB)</td><td class="p-3 text-text-secondary">262,144</td><td class="p-3 text-text-secondary">~200 messages</td><td class="p-3 text-text-secondary">~295</td><td class="p-3 text-text-secondary">~5 min</td></tr>
+                  <tr><td class="p-3">Large (512 KB)</td><td class="p-3 text-text-secondary">524,288</td><td class="p-3 text-text-secondary">~400 messages</td><td class="p-3 text-text-secondary">~590</td><td class="p-3 text-text-secondary">~10 min</td></tr>
+                  <tr><td class="p-3">Huge (1 MB)</td><td class="p-3 text-text-secondary">1,048,576</td><td class="p-3 text-text-secondary">~800 messages</td><td class="p-3 text-text-secondary">~1179</td><td class="p-3 text-text-secondary">~20 min</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Frame Format -->
+        <section id="framing">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Frame Format Specification</h2>
+
+          <p class="text-text-secondary mb-6">
+            Frames chunk large pad data into scannable QR codes, provide integrity verification per chunk, and enable ordered reconstruction.
+          </p>
+
+          <div id="basic-frame" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Basic Frame Structure</h3>
+
+            <Diagram title="Frame Layout">
+{`+------------------+------------------+------------------+------------------+
+|   Frame Index    |   Total Frames   |   Payload        |   CRC-32         |
+|   (2 bytes BE)   |   (2 bytes BE)   |   (N bytes)      |   (4 bytes BE)   |
++------------------+------------------+------------------+------------------+`}
+            </Diagram>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden mt-4">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Field</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Size</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr><td class="p-3 font-mono text-xs">Frame Index</td><td class="p-3 text-text-secondary">2 bytes</td><td class="p-3 text-text-secondary">Zero-based index (big-endian)</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">Total Frames</td><td class="p-3 text-text-secondary">2 bytes</td><td class="p-3 text-text-secondary">Total frames in sequence (big-endian)</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">Payload</td><td class="p-3 text-text-secondary">Variable</td><td class="p-3 text-text-secondary">Pad bytes (max 1000 bytes)</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">CRC-32</td><td class="p-3 text-text-secondary">4 bytes</td><td class="p-3 text-text-secondary">CRC of preceding bytes (ISO 3309)</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="extended-frame" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Extended Frame Format</h3>
+
+            <p class="text-text-secondary mb-4">
+              For ceremony transfer, an extended format includes metadata and optional encryption.
+            </p>
+
+            <Diagram title="Extended Frame">
+{`+-------+-------+------------------+------------------+------------------+------------------+
+| Magic | Flags | Frame Index      | Total Frames     | Payload          | CRC-32           |
+| (1B)  | (1B)  | (2 bytes BE)     | (2 bytes BE)     | (max 1500B)      | (4 bytes BE)     |
++-------+-------+------------------+------------------+------------------+------------------+
+
+Magic: 0xA5 (identifies extended format)
+Flags: Bit 0 = ENCRYPTED, Bit 1 = METADATA`}
+            </Diagram>
+
+            <h4 class="font-medium mt-6 mb-3">Ceremony Metadata (Frame 0)</h4>
+            <p class="text-text-secondary mb-4 text-sm">
+              When METADATA flag is set, frame 0 contains ceremony settings:
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg p-4 font-mono text-xs text-text-secondary">
+              [version: u8][ttl: u64 BE][disappearing: u32 BE][url_len: u16 BE][url: bytes]
+            </div>
+          </div>
+        </section>
+
+        <!-- Message Format -->
+        <section id="messages">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Message Format Specification</h2>
+
+          <p class="text-text-secondary mb-6">
+            Unlike the QR frame format (used during ceremony), encrypted messages use a minimal structure. The goal is simplicity: plaintext XOR'd with pad bytes produces ciphertext that is sent to the relay.
+          </p>
+
+          <div id="message-structure" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Message Structure</h3>
+
+            <p class="text-text-secondary mb-4">
+              Each message consists of plaintext encrypted with OTP and transmitted as an opaque blob. There is no envelope, header, or framing around individual messages.
+            </p>
+
+            <Diagram title="Message Encryption">
+{`Plaintext:     "Hello"        (UTF-8 bytes: 48 65 6C 6C 6F)
+                  ⊕               (XOR)
+Pad bytes:     A3 F1 2B 9E 07   (from shared pad)
+                  =
+Ciphertext:    EB 94 47 F2 68   (5 bytes)
+
+API payload:   { "ciphertext": "65STR+ho" }  (base64 encoded)`}
+            </Diagram>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden mt-4">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Field</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Format</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr><td class="p-3 font-mono text-xs">conversation_id</td><td class="p-3 text-text-secondary">64 hex chars</td><td class="p-3 text-text-secondary">Identifies the conversation</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">ciphertext</td><td class="p-3 text-text-secondary">base64</td><td class="p-3 text-text-secondary">Encrypted message (≤8KB)</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">sequence</td><td class="p-3 text-text-secondary">integer (optional)</td><td class="p-3 text-text-secondary">Message ordering hint</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <InfoBox class="mt-4">
+              <p class="text-sm">
+                <strong class="text-white">Design rationale:</strong> No message envelope or metadata is included in the ciphertext itself. Message length equals ciphertext length equals pad bytes consumed. The relay sees only opaque bytes.
+              </p>
+            </InfoBox>
+          </div>
+
+          <div id="bidirectional" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Bidirectional Pad Consumption</h3>
+
+            <p class="text-text-secondary mb-4">
+              ASH uses a bidirectional consumption model to enable independent messaging by both parties without coordination or collision.
+            </p>
+
+            <Diagram title="Pad Consumption Model">
+{`Pad:  [████████████████████████████████████████████████████████████████]
+       ↑                                                              ↑
+       │                                                              │
+       Initiator (Alice)                                  Responder (Bob)
+       consumes →                                              ← consumes
+
+Example (100-byte pad):
+Start:  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
+        0                                                           99
+
+Alice sends 20 bytes:
+        [████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]
+        0                  19                                       99
+
+Bob sends 30 bytes:
+        [████████████████████░░░░░░░░░░░░░░░░░░░░░░██████████████████]
+        0                  19                    69                 99
+
+Remaining: 50 bytes (indices 20-69)`}
+            </Diagram>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden mt-4">
+              <div class="px-4 py-2 border-b border-border bg-bg-elevated">
+                <span class="text-xs font-medium text-text-secondary">Consumption Rules</span>
+              </div>
+              <ul class="p-4 space-y-2 text-sm text-text-secondary">
+                <li>• <strong class="text-white">Initiator (ceremony starter):</strong> Consumes bytes from index 0 forward</li>
+                <li>• <strong class="text-white">Responder (ceremony receiver):</strong> Consumes bytes from the end backward</li>
+                <li>• <strong class="text-white">No overlap:</strong> The two fronts never collide (pad exhausted when they meet)</li>
+                <li>• <strong class="text-white">Independent:</strong> Either party can send without waiting for the other</li>
+                <li>• <strong class="text-white">Asymmetric:</strong> Alice can use 20%, Bob can use 80% (or any split)</li>
+              </ul>
+            </div>
+
+            <h4 class="font-medium mt-6 mb-3">Forward Secrecy</h4>
+            <p class="text-text-secondary text-sm">
+              After encryption, the used pad bytes are securely zeroed. Even if an attacker later compromises the device, they cannot decrypt messages encrypted with already-destroyed key material.
+            </p>
+          </div>
+
+          <div id="message-types" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Message Types</h3>
+
+            <p class="text-text-secondary mb-4">
+              ASH v1 supports two message types. Both are encrypted identically — the type is determined by content structure after decryption.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Type</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Format</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Size</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr>
+                    <td class="p-3 font-medium">Text</td>
+                    <td class="p-3 text-text-secondary">UTF-8 string</td>
+                    <td class="p-3 text-text-secondary">1 byte per character (ASCII) or more (Unicode)</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 font-medium">Location</td>
+                    <td class="p-3 text-text-secondary font-mono text-xs">lat,lng (6 decimal places)</td>
+                    <td class="p-3 text-text-secondary">~25 bytes (e.g., "37.774929,-122.419418")</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <InfoBox variant="warning" class="mt-4">
+              <p class="text-sm">
+                <strong>No media support:</strong> Photos and videos would exhaust pad capacity quickly. ASH intentionally supports only text and one-shot location sharing. This is a security feature, not a limitation.
+              </p>
+            </InfoBox>
+
+            <h4 class="font-medium mt-6 mb-3">Message Lifecycle</h4>
+            <Diagram title="Message Flow">
+{`Sender                      Relay (RAM)                     Receiver
+  │                              │                              │
+  │  1. Consume pad bytes        │                              │
+  │  2. XOR plaintext            │                              │
+  │  3. Base64 encode            │                              │
+  │                              │                              │
+  │  POST /v1/messages ──────────►  (store in RAM, start TTL)   │
+  │  ◄── {blob_id} ──────────────│                              │
+  │                              │                              │
+  │                              │  SSE: new message ───────────►
+  │                              │                    (decrypt)  │
+  │                              │  ◄── POST /v1/ack ───────────│
+  │  ◄── SSE: delivered ─────────│  (delete from RAM)           │
+  │                              │                              │
+  │  4. Zero used pad bytes      │                              │`}
+            </Diagram>
+          </div>
+        </section>
+
+        <!-- Token Derivation -->
+        <section id="tokens">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Authorization Token Derivation</h2>
+
+          <p class="text-text-secondary mb-6">
+            Authorization tokens enable API authentication without accounts or identity. Both parties derive the same tokens from the shared pad.
+          </p>
+
+          <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-border bg-bg-elevated">
+                  <th class="text-left p-3 text-text-muted font-medium">Token</th>
+                  <th class="text-left p-3 text-text-muted font-medium">Pad Bytes</th>
+                  <th class="text-left p-3 text-text-muted font-medium">Purpose</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr><td class="p-3 font-medium">Conversation ID</td><td class="p-3 text-text-secondary font-mono text-xs">0-31</td><td class="p-3 text-text-secondary">Identifies the conversation on the relay</td></tr>
+                <tr><td class="p-3 font-medium">Auth Token</td><td class="p-3 text-text-secondary font-mono text-xs">32-95</td><td class="p-3 text-text-secondary">Authenticates API requests</td></tr>
+                <tr><td class="p-3 font-medium">Burn Token</td><td class="p-3 text-text-secondary font-mono text-xs">96-159</td><td class="p-3 text-text-secondary">Required for burn operations</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 class="text-lg font-semibold mt-6 mb-3">Derivation Process</h3>
+          <ol class="list-decimal list-inside text-text-secondary space-y-1 text-sm">
+            <li>Extract specific byte ranges from pad</li>
+            <li>XOR-fold to 32-byte output</li>
+            <li>Apply domain separation constant</li>
+            <li>Multiple mixing rounds for diffusion</li>
+            <li>Encode as 64-character lowercase hex</li>
+          </ol>
+
+          <h3 class="text-lg font-semibold mt-6 mb-3">Security Properties</h3>
+          <ul class="list-disc list-inside text-text-secondary space-y-1 text-sm">
+            <li><strong class="text-white">Deterministic:</strong> Same pad produces same tokens on both devices</li>
+            <li><strong class="text-white">Unpredictable:</strong> Without pad, tokens cannot be computed or forged</li>
+            <li><strong class="text-white">Separated:</strong> Different tokens for different operations</li>
+            <li><strong class="text-white">Backend-safe:</strong> Backend stores only hash(token)</li>
+          </ul>
+        </section>
+
+        <!-- Trust Boundaries -->
+        <section id="trust">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Trust Boundaries</h2>
+
+          <p class="text-text-secondary mb-6">
+            ASH explicitly defines what each component is trusted to do. This is fundamental to the security model.
+          </p>
+
+          <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-border bg-bg-elevated">
+                  <th class="text-left p-3 text-text-muted font-medium">Component</th>
+                  <th class="text-left p-3 text-text-muted font-medium">Trust Level</th>
+                  <th class="text-left p-3 text-text-muted font-medium">Rationale</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr><td class="p-3 font-medium">ash-core</td><td class="p-3"><span class="px-2 py-0.5 bg-success/20 text-success rounded text-xs">Trusted</span></td><td class="p-3 text-text-secondary">Cryptographic authority, minimal surface</td></tr>
+                <tr><td class="p-3 font-medium">iOS App</td><td class="p-3"><span class="px-2 py-0.5 bg-warning/20 text-warning rounded text-xs">Partially</span></td><td class="p-3 text-text-secondary">Handles UI, invokes core, stores keys</td></tr>
+                <tr><td class="p-3 font-medium">Backend</td><td class="p-3"><span class="px-2 py-0.5 bg-danger/20 text-danger rounded text-xs">Untrusted</span></td><td class="p-3 text-text-secondary">Never sees plaintext or keys</td></tr>
+                <tr><td class="p-3 font-medium">Network</td><td class="p-3"><span class="px-2 py-0.5 bg-danger/20 text-danger rounded text-xs">Untrusted</span></td><td class="p-3 text-text-secondary">All traffic is encrypted blobs</td></tr>
+                <tr><td class="p-3 font-medium">User</td><td class="p-3"><span class="px-2 py-0.5 bg-success/20 text-success rounded text-xs">Trusted</span></td><td class="p-3 text-text-secondary">Must perform ceremony correctly</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <InfoBox class="mt-6">
+            <p class="text-sm">
+              <strong class="text-white">Design consequence:</strong> ASH deliberately avoids background synchronization, convenience features, user accounts, key recovery, cloud storage, and analytics. All constraints are intentional.
+            </p>
+          </InfoBox>
+        </section>
+
+        <!-- Footer -->
+        <div class="pt-8 border-t border-border">
+          <p class="text-text-muted text-sm text-center">
+            For security analysis, see <a href="/security" class="text-brand hover:text-brand-light">Security Model</a>. For ethical considerations, see <a href="/ethics" class="text-brand hover:text-brand-light">Ethics Statement</a>.
+          </p>
+        </div>
+      </article>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .prose-content h2 {
+    scroll-margin-top: 6rem;
+  }
+  .prose-content h3 {
+    scroll-margin-top: 6rem;
+  }
+</style>

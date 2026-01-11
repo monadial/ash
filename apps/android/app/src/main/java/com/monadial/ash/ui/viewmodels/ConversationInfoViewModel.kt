@@ -7,11 +7,11 @@ import com.monadial.ash.core.services.ConversationStorageService
 import com.monadial.ash.core.services.RelayService
 import com.monadial.ash.domain.entities.Conversation
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class ConversationInfoViewModel @Inject constructor(
@@ -19,7 +19,6 @@ class ConversationInfoViewModel @Inject constructor(
     private val conversationStorage: ConversationStorageService,
     private val relayService: RelayService
 ) : ViewModel() {
-
     private val conversationId: String = savedStateHandle["conversationId"]!!
 
     private val _conversation = MutableStateFlow<Conversation?>(null)

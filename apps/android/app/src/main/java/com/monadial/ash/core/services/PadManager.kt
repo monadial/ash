@@ -1,12 +1,12 @@
 package com.monadial.ash.core.services
 
 import android.util.Log
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import uniffi.ash.Pad
 import uniffi.ash.Role
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Pad state for UI display
@@ -28,9 +28,7 @@ data class PadState(
  * Matching iOS: apps/ios/Ash/Ash/Core/Services/PadManager.swift
  */
 @Singleton
-class PadManager @Inject constructor(
-    private val conversationStorage: ConversationStorageService
-) {
+class PadManager @Inject constructor(private val conversationStorage: ConversationStorageService) {
     companion object {
         private const val TAG = "PadManager"
     }
@@ -52,19 +50,26 @@ class PadManager @Inject constructor(
         padCache[conversationId]?.let { return@withLock it }
 
         // Load from storage (matching iOS: PadStorageData from Keychain)
-        val storageData = conversationStorage.getPadStorageData(conversationId)
-            ?: throw IllegalStateException("Pad not found for conversation $conversationId")
+        val storageData =
+            conversationStorage.getPadStorageData(conversationId)
+                ?: throw IllegalStateException("Pad not found for conversation $conversationId")
 
         val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
 
         // Create Rust Pad with state (matching iOS: Pad.fromBytesWithState)
-        val pad = Pad.fromBytesWithState(
-            padBytes.map { it.toUByte() },
-            storageData.consumedFront.toULong(),
-            storageData.consumedBack.toULong()
-        )
+        val pad =
+            Pad.fromBytesWithState(
+                padBytes.map { it.toUByte() },
+                storageData.consumedFront.toULong(),
+                storageData.consumedBack.toULong()
+            )
 
-        Log.d(TAG, "Loaded pad for ${conversationId.take(8)}: front=${storageData.consumedFront}, back=${storageData.consumedBack}")
+        Log.d(
+            TAG,
+            "Loaded pad for ${conversationId.take(
+                8
+            )}: front=${storageData.consumedFront}, back=${storageData.consumedBack}"
+        )
 
         padCache[conversationId] = pad
         pad
@@ -134,16 +139,18 @@ class PadManager @Inject constructor(
      */
     suspend fun consumeForSending(length: Int, role: Role, conversationId: String): ByteArray = mutex.withLock {
         // Get cached pad or load it (matching iOS pattern)
-        val pad = padCache[conversationId] ?: run {
-            val storageData = conversationStorage.getPadStorageData(conversationId)
-                ?: throw IllegalStateException("Pad not found for conversation $conversationId")
-            val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
-            Pad.fromBytesWithState(
-                padBytes.map { it.toUByte() },
-                storageData.consumedFront.toULong(),
-                storageData.consumedBack.toULong()
-            ).also { padCache[conversationId] = it }
-        }
+        val pad =
+            padCache[conversationId] ?: run {
+                val storageData =
+                    conversationStorage.getPadStorageData(conversationId)
+                        ?: throw IllegalStateException("Pad not found for conversation $conversationId")
+                val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
+                Pad.fromBytesWithState(
+                    padBytes.map { it.toUByte() },
+                    storageData.consumedFront.toULong(),
+                    storageData.consumedBack.toULong()
+                ).also { padCache[conversationId] = it }
+            }
 
         Log.d(TAG, "Consuming $length bytes for sending (role=$role, conv=${conversationId.take(8)})")
 
@@ -165,16 +172,18 @@ class PadManager @Inject constructor(
      */
     suspend fun updatePeerConsumption(peerRole: Role, consumed: Long, conversationId: String) = mutex.withLock {
         // Get cached pad or load it (matching iOS pattern)
-        val pad = padCache[conversationId] ?: run {
-            val storageData = conversationStorage.getPadStorageData(conversationId)
-                ?: throw IllegalStateException("Pad not found for conversation $conversationId")
-            val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
-            Pad.fromBytesWithState(
-                padBytes.map { it.toUByte() },
-                storageData.consumedFront.toULong(),
-                storageData.consumedBack.toULong()
-            ).also { padCache[conversationId] = it }
-        }
+        val pad =
+            padCache[conversationId] ?: run {
+                val storageData =
+                    conversationStorage.getPadStorageData(conversationId)
+                        ?: throw IllegalStateException("Pad not found for conversation $conversationId")
+                val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
+                Pad.fromBytesWithState(
+                    padBytes.map { it.toUByte() },
+                    storageData.consumedFront.toULong(),
+                    storageData.consumedBack.toULong()
+                ).also { padCache[conversationId] = it }
+            }
 
         pad.updatePeerConsumption(peerRole, consumed.toULong())
 
@@ -225,16 +234,18 @@ class PadManager @Inject constructor(
      */
     suspend fun zeroPadBytes(offset: Long, length: Int, conversationId: String) = mutex.withLock {
         // Get cached pad or load it (matching iOS pattern)
-        val pad = padCache[conversationId] ?: run {
-            val storageData = conversationStorage.getPadStorageData(conversationId)
-                ?: throw IllegalStateException("Pad not found for conversation $conversationId")
-            val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
-            Pad.fromBytesWithState(
-                padBytes.map { it.toUByte() },
-                storageData.consumedFront.toULong(),
-                storageData.consumedBack.toULong()
-            ).also { padCache[conversationId] = it }
-        }
+        val pad =
+            padCache[conversationId] ?: run {
+                val storageData =
+                    conversationStorage.getPadStorageData(conversationId)
+                        ?: throw IllegalStateException("Pad not found for conversation $conversationId")
+                val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
+                Pad.fromBytesWithState(
+                    padBytes.map { it.toUByte() },
+                    storageData.consumedFront.toULong(),
+                    storageData.consumedBack.toULong()
+                ).also { padCache[conversationId] = it }
+            }
 
         val success = pad.zeroBytesAt(offset.toULong(), length.toULong())
 

@@ -8,13 +8,12 @@ import com.monadial.ash.core.services.ConversationStorageService
 import com.monadial.ash.core.services.RelayService
 import com.monadial.ash.core.services.SettingsService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -22,7 +21,6 @@ class SettingsViewModel @Inject constructor(
     private val conversationStorage: ConversationStorageService,
     private val relayService: RelayService
 ) : ViewModel() {
-
     val isBiometricEnabled: StateFlow<Boolean> = settingsService.isBiometricEnabled
 
     private val _lockOnBackground = MutableStateFlow(true)
@@ -118,10 +116,11 @@ class SettingsViewModel @Inject constructor(
                 val result = relayService.testConnection(url)
                 _connectionTestResult.value = result
             } catch (e: Exception) {
-                _connectionTestResult.value = ConnectionTestResult(
-                    success = false,
-                    error = e.message
-                )
+                _connectionTestResult.value =
+                    ConnectionTestResult(
+                        success = false,
+                        error = e.message
+                    )
             } finally {
                 _isTestingConnection.value = false
             }

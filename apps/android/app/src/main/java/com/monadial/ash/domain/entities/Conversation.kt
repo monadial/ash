@@ -16,8 +16,8 @@ data class Conversation(
     val lastMessagePreview: String? = null,
     val unreadCount: Int = 0,
     // Pad state - bidirectional consumption
-    val padConsumedFront: Long = 0,  // Bytes consumed by initiator (from start)
-    val padConsumedBack: Long = 0,   // Bytes consumed by responder (from end)
+    val padConsumedFront: Long = 0, // Bytes consumed by initiator (from start)
+    val padConsumedBack: Long = 0, // Bytes consumed by responder (from end)
     val padTotalSize: Long = 0,
     val mnemonic: List<String> = emptyList(),
     // Message settings
@@ -49,19 +49,28 @@ data class Conversation(
         get() = padTotalSize - padConsumedFront - padConsumedBack
 
     val usagePercentage: Double
-        get() = if (padTotalSize > 0) {
-            ((padConsumedFront + padConsumedBack).toDouble() / padTotalSize) * 100
-        } else 0.0
+        get() =
+            if (padTotalSize > 0) {
+                ((padConsumedFront + padConsumedBack).toDouble() / padTotalSize) * 100
+            } else {
+                0.0
+            }
 
     val myUsagePercentage: Double
-        get() = if (padTotalSize > 0) {
-            (sendOffset.toDouble() / padTotalSize) * 100
-        } else 0.0
+        get() =
+            if (padTotalSize > 0) {
+                (sendOffset.toDouble() / padTotalSize) * 100
+            } else {
+                0.0
+            }
 
     val peerUsagePercentage: Double
-        get() = if (padTotalSize > 0) {
-            (peerConsumed.toDouble() / padTotalSize) * 100
-        } else 0.0
+        get() =
+            if (padTotalSize > 0) {
+                (peerConsumed.toDouble() / padTotalSize) * 100
+            } else {
+                0.0
+            }
 
     val isExhausted: Boolean
         get() = remainingBytes <= 0
@@ -119,14 +128,15 @@ data class Conversation(
 
     fun afterReceiving(sequence: Long, length: Long): Conversation {
         // Update peer's consumption based on role
-        val newPeerConsumed = if (role == ConversationRole.INITIATOR) {
-            // Peer is responder, consuming from back
-            // sequence is start offset from end
-            maxOf(padConsumedBack, padTotalSize - sequence)
-        } else {
-            // Peer is initiator, consuming from front
-            maxOf(padConsumedFront, sequence + length)
-        }
+        val newPeerConsumed =
+            if (role == ConversationRole.INITIATOR) {
+                // Peer is responder, consuming from back
+                // sequence is start offset from end
+                maxOf(padConsumedBack, padTotalSize - sequence)
+            } else {
+                // Peer is initiator, consuming from front
+                maxOf(padConsumedFront, sequence + length)
+            }
 
         return if (role == ConversationRole.INITIATOR) {
             copy(

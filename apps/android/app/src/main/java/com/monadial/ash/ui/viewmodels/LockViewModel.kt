@@ -6,18 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.monadial.ash.core.services.BiometricService
 import com.monadial.ash.core.services.SettingsService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 @HiltViewModel
 class LockViewModel @Inject constructor(
     private val biometricService: BiometricService,
     private val settingsService: SettingsService
 ) : ViewModel() {
-
     private val _isUnlocked = MutableStateFlow(false)
     val isUnlocked: StateFlow<Boolean> = _isUnlocked.asStateFlow()
 
@@ -38,11 +37,12 @@ class LockViewModel @Inject constructor(
 
     fun authenticate(activity: FragmentActivity) {
         viewModelScope.launch {
-            val success = biometricService.authenticate(
-                activity = activity,
-                title = "Unlock ASH",
-                subtitle = "Verify your identity to access secure messages"
-            )
+            val success =
+                biometricService.authenticate(
+                    activity = activity,
+                    title = "Unlock ASH",
+                    subtitle = "Verify your identity to access secure messages"
+                )
             if (success) {
                 _isUnlocked.value = true
             }

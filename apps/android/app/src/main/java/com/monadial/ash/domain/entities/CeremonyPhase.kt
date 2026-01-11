@@ -6,18 +6,28 @@ sealed class CeremonyPhase {
 
     // Initiator phases
     data object SelectingPadSize : CeremonyPhase()
+
     data object ConfiguringOptions : CeremonyPhase()
+
     data object ConfirmingConsent : CeremonyPhase()
+
     data object CollectingEntropy : CeremonyPhase()
+
     data object GeneratingPad : CeremonyPhase()
+
     data class GeneratingQRCodes(val progress: Float, val total: Int) : CeremonyPhase()
+
     data class Transferring(val currentFrame: Int, val totalFrames: Int) : CeremonyPhase()
+
     data class Verifying(val mnemonic: List<String>) : CeremonyPhase()
+
     data class Completed(val conversation: Conversation) : CeremonyPhase()
+
     data class Failed(val error: CeremonyError) : CeremonyPhase()
 
     // Receiver phases
     data object ConfiguringReceiver : CeremonyPhase()
+
     data object Scanning : CeremonyPhase()
 }
 
@@ -30,12 +40,7 @@ enum class CeremonyError {
     INVALID_FRAME
 }
 
-enum class PadSize(
-    val bytes: Long,
-    val displayName: String,
-    val messageEstimate: Int,
-    val frameCount: Int
-) {
+enum class PadSize(val bytes: Long, val displayName: String, val messageEstimate: Int, val frameCount: Int) {
     TINY(32 * 1024L, "Tiny", 50, 38),
     SMALL(64 * 1024L, "Small", 100, 75),
     MEDIUM(256 * 1024L, "Medium", 500, 296),
@@ -46,13 +51,14 @@ enum class PadSize(
         get() = "~$messageEstimate messages"
 
     val transferTime: String
-        get() = when (this) {
-            TINY -> "~10 seconds"
-            SMALL -> "~15 seconds"
-            MEDIUM -> "~45 seconds"
-            LARGE -> "~1.5 minutes"
-            HUGE -> "~3 minutes"
-        }
+        get() =
+            when (this) {
+                TINY -> "~10 seconds"
+                SMALL -> "~15 seconds"
+                MEDIUM -> "~45 seconds"
+                LARGE -> "~1.5 minutes"
+                HUGE -> "~3 minutes"
+            }
 }
 
 data class ConsentState(
@@ -72,11 +78,16 @@ data class ConsentState(
     val limitationsConfirmed: Boolean get() = relayMayBeUnavailable && relayDataNotPersisted && burnDestroysAll
     val allConfirmed: Boolean get() = environmentConfirmed && responsibilitiesConfirmed && limitationsConfirmed
 
-    val confirmedCount: Int get() = listOf(
-        noOneWatching, notUnderSurveillance,
-        ethicsUnderstood, keysNotRecoverable,
-        relayMayBeUnavailable, relayDataNotPersisted, burnDestroysAll
-    ).count { it }
+    val confirmedCount: Int get() =
+        listOf(
+            noOneWatching,
+            notUnderSurveillance,
+            ethicsUnderstood,
+            keysNotRecoverable,
+            relayMayBeUnavailable,
+            relayDataNotPersisted,
+            burnDestroysAll
+        ).count { it }
 
     val totalCount: Int get() = 7
 }

@@ -7,7 +7,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -73,7 +71,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -82,16 +79,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -107,7 +100,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -131,10 +123,7 @@ import com.monadial.ash.ui.viewmodels.ReceiverCeremonyViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CeremonyScreen(
-    onComplete: (String) -> Unit,
-    onCancel: () -> Unit
-) {
+fun CeremonyScreen(onComplete: (String) -> Unit, onCancel: () -> Unit) {
     var selectedRole by remember { mutableStateOf<CeremonyRole?>(null) }
 
     when (selectedRole) {
@@ -170,10 +159,7 @@ enum class CeremonyRole {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RoleSelectionScreen(
-    onRoleSelected: (CeremonyRole) -> Unit,
-    onCancel: () -> Unit
-) {
+private fun RoleSelectionScreen(onRoleSelected: (CeremonyRole) -> Unit, onCancel: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -187,7 +173,8 @@ private fun RoleSelectionScreen(
         }
     ) { padding ->
         Column(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .padding(24.dp),
@@ -235,7 +222,8 @@ private fun RoleSelectionScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -287,7 +275,8 @@ private fun RoleSelectionScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -386,7 +375,8 @@ private fun InitiatorCeremonyScreen(
         AnimatedContent(
             targetState = phase,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxSize()
                 .padding(padding),
             label = "ceremony_phase",
@@ -549,7 +539,8 @@ private fun ReceiverCeremonyScreen(
         AnimatedContent(
             targetState = phase,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxSize()
                 .padding(padding),
             label = "receiver_ceremony_phase",
@@ -629,7 +620,8 @@ private fun PadSizeSelectionContent(
     val accentContainer = accentColor.copy(alpha = 0.15f)
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
@@ -709,7 +701,8 @@ private fun PadSizeSelectionContent(
                     Switch(
                         checked = passphraseEnabled,
                         onCheckedChange = onPassphraseToggle,
-                        colors = SwitchDefaults.colors(
+                        colors =
+                        SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = accentColor,
                             checkedBorderColor = accentColor
@@ -736,7 +729,8 @@ private fun PadSizeSelectionContent(
         Button(
             onClick = onProceed,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
+            colors =
+            ButtonDefaults.buttonColors(
                 containerColor = accentColor
             )
         ) {
@@ -746,29 +740,29 @@ private fun PadSizeSelectionContent(
 }
 
 @Composable
-private fun PadSizeCard(
-    size: PadSize,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    accentColor: Color
-) {
+private fun PadSizeCard(size: PadSize, isSelected: Boolean, onClick: () -> Unit, accentColor: Color) {
     val accentContainer = accentColor.copy(alpha = 0.15f)
-    val containerColor = if (isSelected) {
-        accentContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
+    val containerColor =
+        if (isSelected) {
+            accentContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
 
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        border = if (isSelected) {
+        border =
+        if (isSelected) {
             androidx.compose.foundation.BorderStroke(2.dp, accentColor)
-        } else null
+        } else {
+            null
+        }
     ) {
         Row(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -816,7 +810,8 @@ private fun PadSizeCard(
             RadioButton(
                 selected = isSelected,
                 onClick = onClick,
-                colors = RadioButtonDefaults.colors(
+                colors =
+                RadioButtonDefaults.colors(
                     selectedColor = accentColor,
                     unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -852,7 +847,8 @@ private fun OptionsConfigurationContent(
     var showDisappearingMenu by remember { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
@@ -893,7 +889,8 @@ private fun OptionsConfigurationContent(
 
                 // Server Retention
                 Row(
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxWidth()
                         .clickable { showRetentionMenu = true }
                         .padding(vertical = 8.dp),
@@ -935,7 +932,8 @@ private fun OptionsConfigurationContent(
 
                 // Disappearing Messages
                 Row(
-                    modifier = Modifier
+                    modifier =
+                    Modifier
                         .fillMaxWidth()
                         .clickable { showDisappearingMenu = true }
                         .padding(vertical = 8.dp),
@@ -1010,7 +1008,8 @@ private fun OptionsConfigurationContent(
                     FilledTonalButton(
                         onClick = onTestConnection,
                         enabled = !isTestingConnection,
-                        colors = ButtonDefaults.filledTonalButtonColors(
+                        colors =
+                        ButtonDefaults.filledTonalButtonColors(
                             containerColor = accentColor.copy(alpha = 0.15f),
                             contentColor = accentColor
                         )
@@ -1076,7 +1075,8 @@ private fun OptionsConfigurationContent(
         Button(
             onClick = onProceed,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
+            colors =
+            ButtonDefaults.buttonColors(
                 containerColor = accentColor
             )
         ) {
@@ -1086,19 +1086,18 @@ private fun OptionsConfigurationContent(
 }
 
 @Composable
-private fun ColorButton(
-    color: Color,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
+private fun ColorButton(color: Color, isSelected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         modifier = Modifier.size(44.dp),
         shape = CircleShape,
         color = color,
-        border = if (isSelected) {
+        border =
+        if (isSelected) {
             androidx.compose.foundation.BorderStroke(3.dp, MaterialTheme.colorScheme.outline)
-        } else null
+        } else {
+            null
+        }
     ) {
         if (isSelected) {
             Box(contentAlignment = Alignment.Center) {
@@ -1130,7 +1129,8 @@ private fun ConsentContent(
     val accentContainer = accentColor.copy(alpha = 0.15f)
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
@@ -1170,7 +1170,8 @@ private fun ConsentContent(
         // Progress bar
         LinearProgressIndicator(
             progress = { consent.confirmedCount.toFloat() / consent.totalCount },
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth()
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp)),
@@ -1283,7 +1284,8 @@ private fun ConsentContent(
             onClick = onConfirm,
             modifier = Modifier.fillMaxWidth(),
             enabled = consent.allConfirmed,
-            colors = ButtonDefaults.buttonColors(
+            colors =
+            ButtonDefaults.buttonColors(
                 containerColor = accentColor
             )
         ) {
@@ -1302,11 +1304,7 @@ private fun ConsentContent(
 }
 
 @Composable
-private fun ConsentSection(
-    title: String,
-    icon: ImageVector,
-    content: @Composable () -> Unit
-) {
+private fun ConsentSection(title: String, icon: ImageVector, content: @Composable () -> Unit) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1339,7 +1337,8 @@ private fun ConsentCheckItem(
     iconTint: Color? = null
 ) {
     Row(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 4.dp),
@@ -1348,7 +1347,8 @@ private fun ConsentCheckItem(
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = CheckboxDefaults.colors(
+            colors =
+            CheckboxDefaults.colors(
                 checkedColor = accentColor,
                 checkmarkColor = Color.White
             )
@@ -1382,7 +1382,8 @@ private fun ConsentCheckItem(
 @Composable
 private fun EthicsGuidelinesContent(onDismiss: () -> Unit) {
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(24.dp)
@@ -1416,7 +1417,8 @@ private fun EthicsGuidelinesContent(onDismiss: () -> Unit) {
 @Composable
 private fun EthicsItem(number: Int, title: String, description: String) {
     Row(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
@@ -1450,15 +1452,12 @@ private fun EthicsItem(number: Int, title: String, description: String) {
 // ============================================================================
 
 @Composable
-private fun EntropyCollectionContent(
-    progress: Float,
-    onPointCollected: (Float, Float) -> Unit,
-    accentColor: Color
-) {
+private fun EntropyCollectionContent(progress: Float, onPointCollected: (Float, Float) -> Unit, accentColor: Color) {
     val accentContainer = accentColor.copy(alpha = 0.15f)
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1481,7 +1480,8 @@ private fun EntropyCollectionContent(
             progress = progress,
             onPointCollected = onPointCollected,
             accentColor = accentColor,
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth()
                 .weight(1f)
         )
@@ -1491,7 +1491,8 @@ private fun EntropyCollectionContent(
         // Compact progress indicator
         LinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth()
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp)),
@@ -1514,11 +1515,7 @@ private fun EntropyCollectionContent(
 // ============================================================================
 
 @Composable
-private fun LoadingContent(
-    title: String,
-    message: String,
-    progress: Float? = null
-) {
+private fun LoadingContent(title: String, message: String, progress: Float? = null) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -1576,15 +1573,17 @@ private fun TransferringContent(
         val originalBrightness = window?.attributes?.screenBrightness ?: -1f
 
         window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        window?.attributes = window?.attributes?.apply {
-            screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
-        }
+        window?.attributes =
+            window?.attributes?.apply {
+                screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+            }
 
         onDispose {
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            window?.attributes = window?.attributes?.apply {
-                screenBrightness = originalBrightness
-            }
+            window?.attributes =
+                window?.attributes?.apply {
+                    screenBrightness = originalBrightness
+                }
         }
     }
 
@@ -1595,7 +1594,8 @@ private fun TransferringContent(
     )
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1627,7 +1627,8 @@ private fun TransferringContent(
             Spacer(modifier = Modifier.height(4.dp))
             LinearProgressIndicator(
                 progress = { progressAnimation },
-                modifier = Modifier
+                modifier =
+                Modifier
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp)),
@@ -1653,7 +1654,8 @@ private fun TransferringContent(
             FilledIconButton(
                 onClick = onTogglePause,
                 modifier = Modifier.size(56.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
+                colors =
+                IconButtonDefaults.filledIconButtonColors(
                     containerColor = accentColor
                 )
             ) {
@@ -1714,7 +1716,8 @@ private fun TransferringContent(
         Button(
             onClick = onDone,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
+            colors =
+            ButtonDefaults.buttonColors(
                 containerColor = accentColor
             )
         ) {
@@ -1730,11 +1733,7 @@ private fun TransferringContent(
 // ============================================================================
 
 @Composable
-private fun ScanningContent(
-    receivedBlocks: Int,
-    totalBlocks: Int,
-    onFrameScanned: (String) -> Unit
-) {
+private fun ScanningContent(receivedBlocks: Int, totalBlocks: Int, onFrameScanned: (String) -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         QRScannerView(
             onQRCodeScanned = onFrameScanned,
@@ -1744,7 +1743,8 @@ private fun ScanningContent(
         ScanProgressOverlay(
             receivedBlocks = receivedBlocks,
             totalBlocks = totalBlocks,
-            modifier = Modifier
+            modifier =
+            Modifier
                 .align(Alignment.BottomCenter)
                 .padding(24.dp)
         )
@@ -1769,7 +1769,8 @@ private fun ReceiverSetupContent(
     val accentColor = Color(selectedColor.toColorLong())
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
@@ -1858,7 +1859,8 @@ private fun ReceiverSetupContent(
                     Switch(
                         checked = passphraseEnabled,
                         onCheckedChange = onPassphraseToggle,
-                        colors = SwitchDefaults.colors(
+                        colors =
+                        SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = accentColor,
                             checkedBorderColor = accentColor
@@ -1920,7 +1922,8 @@ private fun ReceiverSetupContent(
         Button(
             onClick = onStartScanning,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
+            colors =
+            ButtonDefaults.buttonColors(
                 containerColor = accentColor
             )
         ) {
@@ -1976,7 +1979,8 @@ private fun VerificationContent(
     val accentContainer = accentColor.copy(alpha = 0.15f)
 
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
@@ -2015,7 +2019,8 @@ private fun VerificationContent(
         // Mnemonic words in a grid
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
+            colors =
+            CardDefaults.cardColors(
                 containerColor = accentContainer
             )
         ) {
@@ -2052,7 +2057,8 @@ private fun VerificationContent(
         Button(
             onClick = onConfirm,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
+            colors =
+            ButtonDefaults.buttonColors(
                 containerColor = accentColor
             )
         ) {
@@ -2066,7 +2072,8 @@ private fun VerificationContent(
         OutlinedButton(
             onClick = onReject,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(
+            colors =
+            ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
             )
         ) {
@@ -2080,7 +2087,8 @@ private fun VerificationContent(
 @Composable
 private fun MnemonicWord(number: Int, word: String, accentColor: Color = Color(0xFF5856D6)) {
     Row(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -2104,10 +2112,7 @@ private fun MnemonicWord(number: Int, word: String, accentColor: Color = Color(0
 // ============================================================================
 
 @Composable
-private fun CompletedContent(
-    conversationId: String,
-    onDismiss: () -> Unit
-) {
+private fun CompletedContent(conversationId: String, onDismiss: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -2157,11 +2162,7 @@ private fun CompletedContent(
 // ============================================================================
 
 @Composable
-private fun FailedContent(
-    error: CeremonyError,
-    onRetry: () -> Unit,
-    onCancel: () -> Unit
-) {
+private fun FailedContent(error: CeremonyError, onRetry: () -> Unit, onCancel: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -2192,7 +2193,8 @@ private fun FailedContent(
             )
 
             Text(
-                text = when (error) {
+                text =
+                when (error) {
                     CeremonyError.CANCELLED -> "The ceremony was cancelled"
                     CeremonyError.QR_GENERATION_FAILED -> "Failed to generate QR codes"
                     CeremonyError.PAD_RECONSTRUCTION_FAILED -> "Failed to reconstruct pad"
@@ -2227,20 +2229,18 @@ private fun FailedContent(
  * Important: Scanning and Transferring use the same key in receiver flow
  * to prevent camera recreation when progress updates.
  */
-private fun phaseToContentKey(phase: CeremonyPhase): String {
-    return when (phase) {
-        is CeremonyPhase.SelectingRole -> "selecting_role"
-        is CeremonyPhase.SelectingPadSize -> "selecting_pad_size"
-        is CeremonyPhase.ConfiguringOptions -> "configuring_options"
-        is CeremonyPhase.ConfirmingConsent -> "confirming_consent"
-        is CeremonyPhase.CollectingEntropy -> "collecting_entropy"
-        is CeremonyPhase.GeneratingPad -> "generating_pad"
-        is CeremonyPhase.GeneratingQRCodes -> "generating_qr"
-        is CeremonyPhase.Transferring -> "scanning_transferring" // Same key as Scanning for receiver
-        is CeremonyPhase.Verifying -> "verifying"
-        is CeremonyPhase.Completed -> "completed"
-        is CeremonyPhase.Failed -> "failed"
-        is CeremonyPhase.ConfiguringReceiver -> "configuring_receiver"
-        is CeremonyPhase.Scanning -> "scanning_transferring" // Same key as Transferring for receiver
-    }
+private fun phaseToContentKey(phase: CeremonyPhase): String = when (phase) {
+    is CeremonyPhase.SelectingRole -> "selecting_role"
+    is CeremonyPhase.SelectingPadSize -> "selecting_pad_size"
+    is CeremonyPhase.ConfiguringOptions -> "configuring_options"
+    is CeremonyPhase.ConfirmingConsent -> "confirming_consent"
+    is CeremonyPhase.CollectingEntropy -> "collecting_entropy"
+    is CeremonyPhase.GeneratingPad -> "generating_pad"
+    is CeremonyPhase.GeneratingQRCodes -> "generating_qr"
+    is CeremonyPhase.Transferring -> "scanning_transferring" // Same key as Scanning for receiver
+    is CeremonyPhase.Verifying -> "verifying"
+    is CeremonyPhase.Completed -> "completed"
+    is CeremonyPhase.Failed -> "failed"
+    is CeremonyPhase.ConfiguringReceiver -> "configuring_receiver"
+    is CeremonyPhase.Scanning -> "scanning_transferring" // Same key as Transferring for receiver
 }

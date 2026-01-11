@@ -55,9 +55,7 @@ private const val DEDUPLICATION_INTERVAL_MS = 300L
 /**
  * Thread-safe callback holder that can be updated without recreating camera
  */
-private class CallbackHolder(
-    initialCallback: (String) -> Unit
-) {
+private class CallbackHolder(initialCallback: (String) -> Unit) {
     private val callbackRef = AtomicReference(initialCallback)
     private val lastScanTime = AtomicLong(0L)
     private val recentScans = ConcurrentHashMap<String, Long>()
@@ -100,10 +98,7 @@ private class CallbackHolder(
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun QRScannerView(
-    onQRCodeScanned: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun QRScannerView(onQRCodeScanned: (String) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
@@ -135,7 +130,8 @@ fun QRScannerView(
         }
 
         Box(
-            modifier = modifier
+            modifier =
+            modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color.Black)
@@ -143,9 +139,10 @@ fun QRScannerView(
             AndroidView(
                 factory = { ctx ->
                     Log.d(TAG, "Creating PreviewView")
-                    val previewView = PreviewView(ctx).apply {
-                        implementationMode = PreviewView.ImplementationMode.PERFORMANCE
-                    }
+                    val previewView =
+                        PreviewView(ctx).apply {
+                            implementationMode = PreviewView.ImplementationMode.PERFORMANCE
+                        }
 
                     setupCamera(
                         context = ctx,
@@ -164,7 +161,8 @@ fun QRScannerView(
         }
     } else {
         Box(
-            modifier = modifier
+            modifier =
+            modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
@@ -192,59 +190,64 @@ private fun setupCamera(
         val provider = cameraProviderFuture.get()
         onCameraProviderReady(provider)
 
-        val preview = Preview.Builder().build().also {
-            it.surfaceProvider = previewView.surfaceProvider
-        }
+        val preview =
+            Preview.Builder().build().also {
+                it.surfaceProvider = previewView.surfaceProvider
+            }
 
-        val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-            .build()
+        val options =
+            BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build()
         val barcodeScanner = BarcodeScanning.getClient(options)
 
-        val resolutionSelector = ResolutionSelector.Builder()
-            .setResolutionStrategy(
-                ResolutionStrategy(
-                    Size(1920, 1080),
-                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+        val resolutionSelector =
+            ResolutionSelector.Builder()
+                .setResolutionStrategy(
+                    ResolutionStrategy(
+                        Size(1920, 1080),
+                        ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                    )
                 )
-            )
-            .build()
+                .build()
 
-        val imageAnalysis = ImageAnalysis.Builder()
-            .setResolutionSelector(resolutionSelector)
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .build()
-            .also { analysis ->
-                analysis.setAnalyzer(analysisExecutor) { imageProxy ->
-                    @androidx.camera.core.ExperimentalGetImage
-                    val mediaImage = imageProxy.image
-                    if (mediaImage != null) {
-                        val image = InputImage.fromMediaImage(
-                            mediaImage,
-                            imageProxy.imageInfo.rotationDegrees
-                        )
+        val imageAnalysis =
+            ImageAnalysis.Builder()
+                .setResolutionSelector(resolutionSelector)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+                .also { analysis ->
+                    analysis.setAnalyzer(analysisExecutor) { imageProxy ->
+                        @androidx.camera.core.ExperimentalGetImage
+                        val mediaImage = imageProxy.image
+                        if (mediaImage != null) {
+                            val image =
+                                InputImage.fromMediaImage(
+                                    mediaImage,
+                                    imageProxy.imageInfo.rotationDegrees
+                                )
 
-                        barcodeScanner.process(image)
-                            .addOnSuccessListener { barcodes ->
-                                for (barcode in barcodes) {
-                                    if (barcode.format == Barcode.FORMAT_QR_CODE) {
-                                        barcode.rawValue?.let { value ->
-                                            callbackHolder.onQRScanned(value)
+                            barcodeScanner.process(image)
+                                .addOnSuccessListener { barcodes ->
+                                    for (barcode in barcodes) {
+                                        if (barcode.format == Barcode.FORMAT_QR_CODE) {
+                                            barcode.rawValue?.let { value ->
+                                                callbackHolder.onQRScanned(value)
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .addOnFailureListener { e ->
-                                Log.e(TAG, "Barcode scanning failed: ${e.message}")
-                            }
-                            .addOnCompleteListener {
-                                imageProxy.close()
-                            }
-                    } else {
-                        imageProxy.close()
+                                .addOnFailureListener { e ->
+                                    Log.e(TAG, "Barcode scanning failed: ${e.message}")
+                                }
+                                .addOnCompleteListener {
+                                    imageProxy.close()
+                                }
+                        } else {
+                            imageProxy.close()
+                        }
                     }
                 }
-            }
 
         try {
             provider.unbindAll()
@@ -262,13 +265,10 @@ private fun setupCamera(
 }
 
 @Composable
-fun ScanProgressOverlay(
-    receivedBlocks: Int,
-    totalBlocks: Int,
-    modifier: Modifier = Modifier
-) {
+fun ScanProgressOverlay(receivedBlocks: Int, totalBlocks: Int, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
+        modifier =
+        modifier
             .clip(RoundedCornerShape(8.dp))
             .background(Color.Black.copy(alpha = 0.7f))
             .padding(horizontal = 24.dp, vertical = 16.dp)

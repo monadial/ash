@@ -1,7 +1,6 @@
 package com.monadial.ash.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -90,8 +89,9 @@ fun MessagingScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
 
-    val accentColor = conversation?.color?.let { Color(it.toColorLong()) }
-        ?: MaterialTheme.colorScheme.primary
+    val accentColor =
+        conversation?.color?.let { Color(it.toColorLong()) }
+            ?: MaterialTheme.colorScheme.primary
 
     // Scroll to bottom when new message arrives
     LaunchedEffect(messages.size) {
@@ -139,7 +139,8 @@ fun MessagingScreen(
                         Icon(Icons.Default.Info, contentDescription = "Info")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors =
+                TopAppBarDefaults.topAppBarColors(
                     containerColor = accentColor.copy(alpha = 0.1f)
                 )
             )
@@ -155,18 +156,20 @@ fun MessagingScreen(
         }
     ) { padding ->
         Column(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding()
         ) {
             // Pad usage bar
             if (conversation != null) {
-                val progressColor = when {
-                    viewModel.padUsagePercentage > 90 -> MaterialTheme.colorScheme.error
-                    viewModel.padUsagePercentage > 70 -> MaterialTheme.colorScheme.tertiary
-                    else -> accentColor
-                }
+                val progressColor =
+                    when {
+                        viewModel.padUsagePercentage > 90 -> MaterialTheme.colorScheme.error
+                        viewModel.padUsagePercentage > 70 -> MaterialTheme.colorScheme.tertiary
+                        else -> accentColor
+                    }
                 LinearProgressIndicator(
                     progress = { viewModel.padUsagePercentage / 100f },
                     modifier = Modifier.fillMaxWidth(),
@@ -176,7 +179,8 @@ fun MessagingScreen(
 
             // Messages list
             LazyColumn(
-                modifier = Modifier
+                modifier =
+                Modifier
                     .weight(1f)
                     .fillMaxWidth(),
                 state = listState,
@@ -186,7 +190,8 @@ fun MessagingScreen(
                 if (isLoading) {
                     item {
                         Box(
-                            modifier = Modifier
+                            modifier =
+                            Modifier
                                 .fillMaxWidth()
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center
@@ -229,11 +234,7 @@ fun MessagingScreen(
 }
 
 @Composable
-private fun MessageBubble(
-    message: Message,
-    accentColor: Color,
-    onRetry: () -> Unit
-) {
+private fun MessageBubble(message: Message, accentColor: Color, onRetry: () -> Unit) {
     val isSent = message.direction == MessageDirection.SENT
     val alignment = if (isSent) Alignment.CenterEnd else Alignment.CenterStart
     val backgroundColor = if (isSent) accentColor else MaterialTheme.colorScheme.surfaceVariant
@@ -247,7 +248,8 @@ private fun MessageBubble(
             horizontalAlignment = if (isSent) Alignment.End else Alignment.Start
         ) {
             Surface(
-                shape = RoundedCornerShape(
+                shape =
+                RoundedCornerShape(
                     topStart = 16.dp,
                     topEnd = 16.dp,
                     bottomStart = if (isSent) 16.dp else 4.dp,
@@ -300,43 +302,45 @@ private fun MessageBubble(
 }
 
 @Composable
-private fun MessageStatusIcon(
-    status: DeliveryStatus,
-    tint: Color
-) {
+private fun MessageStatusIcon(status: DeliveryStatus, tint: Color) {
     val successColor = MaterialTheme.colorScheme.primary
     val errorColor = MaterialTheme.colorScheme.error
 
     when (status) {
-        DeliveryStatus.SENDING -> CircularProgressIndicator(
-            modifier = Modifier.size(12.dp),
-            strokeWidth = 1.dp,
-            color = tint
-        )
-        DeliveryStatus.SENT -> Icon(
-            Icons.Default.CheckCircle,
-            contentDescription = "Sent",
-            modifier = Modifier.size(14.dp),
-            tint = tint
-        )
-        DeliveryStatus.DELIVERED -> Icon(
-            Icons.Default.CheckCircle,
-            contentDescription = "Delivered",
-            modifier = Modifier.size(14.dp),
-            tint = successColor
-        )
-        is DeliveryStatus.FAILED -> Icon(
-            Icons.Default.Error,
-            contentDescription = "Failed",
-            modifier = Modifier.size(14.dp),
-            tint = errorColor
-        )
-        DeliveryStatus.NONE -> Icon(
-            Icons.Default.Schedule,
-            contentDescription = "Pending",
-            modifier = Modifier.size(14.dp),
-            tint = tint
-        )
+        DeliveryStatus.SENDING ->
+            CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                strokeWidth = 1.dp,
+                color = tint
+            )
+        DeliveryStatus.SENT ->
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = "Sent",
+                modifier = Modifier.size(14.dp),
+                tint = tint
+            )
+        DeliveryStatus.DELIVERED ->
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = "Delivered",
+                modifier = Modifier.size(14.dp),
+                tint = successColor
+            )
+        is DeliveryStatus.FAILED ->
+            Icon(
+                Icons.Default.Error,
+                contentDescription = "Failed",
+                modifier = Modifier.size(14.dp),
+                tint = errorColor
+            )
+        DeliveryStatus.NONE ->
+            Icon(
+                Icons.Default.Schedule,
+                contentDescription = "Pending",
+                modifier = Modifier.size(14.dp),
+                tint = tint
+            )
     }
 }
 
@@ -356,7 +360,8 @@ private fun MessageInput(
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -387,7 +392,8 @@ private fun MessageInput(
                 onValueChange = onTextChange,
                 modifier = Modifier.weight(1f),
                 placeholder = { Text("Message") },
-                colors = TextFieldDefaults.colors(
+                colors =
+                TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     focusedIndicatorColor = Color.Transparent,
@@ -404,14 +410,16 @@ private fun MessageInput(
             IconButton(
                 onClick = onSend,
                 enabled = text.isNotBlank() && !isSending,
-                modifier = Modifier
+                modifier =
+                Modifier
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(
-                        if (text.isNotBlank() && !isSending)
+                        if (text.isNotBlank() && !isSending) {
                             accentColor
-                        else
+                        } else {
                             MaterialTheme.colorScheme.surfaceVariant
+                        }
                     )
             ) {
                 if (isSending) {
@@ -424,8 +432,12 @@ private fun MessageInput(
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send",
-                        tint = if (text.isNotBlank()) Color.White
-                        else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint =
+                        if (text.isNotBlank()) {
+                            Color.White
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
@@ -440,7 +452,8 @@ private fun EmptyMessagesPlaceholder(
     accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     Column(
-        modifier = Modifier
+        modifier =
+        Modifier
             .fillMaxWidth()
             .padding(48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -448,7 +461,8 @@ private fun EmptyMessagesPlaceholder(
     ) {
         // Lock icon
         Box(
-            modifier = Modifier
+            modifier =
+            Modifier
                 .size(80.dp)
                 .background(
                     color = accentColor.copy(alpha = 0.1f),
@@ -517,10 +531,7 @@ private fun EmptyMessagesPlaceholder(
 }
 
 @Composable
-private fun MnemonicTag(
-    word: String,
-    accentColor: Color
-) {
+private fun MnemonicTag(word: String, accentColor: Color) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = accentColor.copy(alpha = 0.1f)
@@ -540,10 +551,8 @@ private fun formatTime(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes >= 1024 * 1024 -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
-        bytes >= 1024 -> "%.1f KB".format(bytes / 1024.0)
-        else -> "$bytes B"
-    }
+private fun formatBytes(bytes: Long): String = when {
+    bytes >= 1024 * 1024 -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+    bytes >= 1024 -> "%.1f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
 }

@@ -19,31 +19,35 @@ import com.monadial.ash.ui.viewmodels.AppViewModel
 
 sealed class Screen(val route: String) {
     data object Lock : Screen("lock")
+
     data object Conversations : Screen("conversations")
+
     data object Messaging : Screen("messaging/{conversationId}") {
         fun createRoute(conversationId: String) = "messaging/$conversationId"
     }
+
     data object ConversationInfo : Screen("conversation-info/{conversationId}") {
         fun createRoute(conversationId: String) = "conversation-info/$conversationId"
     }
+
     data object Ceremony : Screen("ceremony")
+
     data object Settings : Screen("settings")
 }
 
 @Composable
-fun AshApp(
-    viewModel: AppViewModel = hiltViewModel()
-) {
+fun AshApp(viewModel: AppViewModel = hiltViewModel()) {
     val isLocked by viewModel.isLocked.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
     val navController = rememberNavController()
 
-    val startDestination = when {
-        isLoading -> Screen.Lock.route
-        isLocked -> Screen.Lock.route
-        else -> Screen.Conversations.route
-    }
+    val startDestination =
+        when {
+            isLoading -> Screen.Lock.route
+            isLocked -> Screen.Lock.route
+            else -> Screen.Conversations.route
+        }
 
     NavHost(
         navController = navController,

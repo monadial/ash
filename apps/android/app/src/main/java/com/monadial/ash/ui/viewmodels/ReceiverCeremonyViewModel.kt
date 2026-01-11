@@ -17,14 +17,13 @@ import com.monadial.ash.domain.entities.ConversationRole
 import com.monadial.ash.domain.entities.DisappearingMessages
 import com.monadial.ash.domain.entities.MessageRetention
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import uniffi.ash.CeremonyMetadata
 import uniffi.ash.FountainCeremonyResult
 import uniffi.ash.FountainFrameReceiver
-import javax.inject.Inject
 
 @HiltViewModel
 class ReceiverCeremonyViewModel @Inject constructor(
@@ -35,7 +34,6 @@ class ReceiverCeremonyViewModel @Inject constructor(
     private val relayService: RelayService,
     private val padManager: PadManager
 ) : ViewModel() {
-
     companion object {
         private const val TAG = "ReceiverCeremonyVM"
     }
@@ -123,9 +121,10 @@ class ReceiverCeremonyViewModel @Inject constructor(
 
         try {
             // Add frame to receiver using FFI
-            val isComplete = with(ashCoreService) {
-                receiver.addFrameBytes(frameBytes)
-            }
+            val isComplete =
+                with(ashCoreService) {
+                    receiver.addFrameBytes(frameBytes)
+                }
 
             // Update progress - use unique blocks for better UX (excludes duplicates)
             val uniqueBlocks = receiver.uniqueBlocksReceived().toInt()
@@ -136,13 +135,17 @@ class ReceiverCeremonyViewModel @Inject constructor(
             _totalBlocks.value = sourceCount
             _progress.value = progress
 
-            Log.d(TAG, "Frame processed: unique=$uniqueBlocks, sourceCount=$sourceCount, progress=${(progress * 100).toInt()}%")
+            Log.d(
+                TAG,
+                "Frame processed: unique=$uniqueBlocks, sourceCount=$sourceCount, progress=${(progress * 100).toInt()}%"
+            )
 
             // Update phase
-            _phase.value = CeremonyPhase.Transferring(
-                currentFrame = uniqueBlocks,
-                totalFrames = sourceCount
-            )
+            _phase.value =
+                CeremonyPhase.Transferring(
+                    currentFrame = uniqueBlocks,
+                    totalFrames = sourceCount
+                )
 
             // Check if complete
             if (isComplete || receiver.isComplete()) {
@@ -157,10 +160,11 @@ class ReceiverCeremonyViewModel @Inject constructor(
     // MARK: - Reconstruction
 
     private fun reconstructAndVerify() {
-        val receiver = fountainReceiver ?: run {
-            _phase.value = CeremonyPhase.Failed(CeremonyError.PAD_RECONSTRUCTION_FAILED)
-            return
-        }
+        val receiver =
+            fountainReceiver ?: run {
+                _phase.value = CeremonyPhase.Failed(CeremonyError.PAD_RECONSTRUCTION_FAILED)
+                return
+            }
 
         try {
             // Get the decoded result from FFI receiver
@@ -229,20 +233,21 @@ class ReceiverCeremonyViewModel @Inject constructor(
             val messageRetention = MessageRetention.fromSeconds(metadata.ttlSeconds.toLong())
             val disappearingMessages = DisappearingMessages.fromSeconds(metadata.disappearingMessagesSeconds.toInt())
 
-            val conversation = Conversation(
-                id = tokens.conversationId,
-                name = _conversationName.value.ifBlank { null },
-                relayUrl = metadata.relayUrl,
-                authToken = tokens.authToken,
-                burnToken = tokens.burnToken,
-                role = ConversationRole.RESPONDER,
-                color = color,
-                createdAt = System.currentTimeMillis(),
-                padTotalSize = padUBytes.size.toLong(),
-                mnemonic = mnemonic,
-                messageRetention = messageRetention,
-                disappearingMessages = disappearingMessages
-            )
+            val conversation =
+                Conversation(
+                    id = tokens.conversationId,
+                    name = _conversationName.value.ifBlank { null },
+                    relayUrl = metadata.relayUrl,
+                    authToken = tokens.authToken,
+                    burnToken = tokens.burnToken,
+                    role = ConversationRole.RESPONDER,
+                    color = color,
+                    createdAt = System.currentTimeMillis(),
+                    padTotalSize = padUBytes.size.toLong(),
+                    mnemonic = mnemonic,
+                    messageRetention = messageRetention,
+                    disappearingMessages = disappearingMessages
+                )
 
             // Convert to ByteArray for storage
             val padBytes = padUBytes.map { it.toByte() }.toByteArray()
@@ -267,12 +272,13 @@ class ReceiverCeremonyViewModel @Inject constructor(
         try {
             val authTokenHash = relayService.hashToken(conversation.authToken)
             val burnTokenHash = relayService.hashToken(conversation.burnToken)
-            val result = relayService.registerConversation(
-                conversationId = conversation.id,
-                authTokenHash = authTokenHash,
-                burnTokenHash = burnTokenHash,
-                relayUrl = conversation.relayUrl
-            )
+            val result =
+                relayService.registerConversation(
+                    conversationId = conversation.id,
+                    authTokenHash = authTokenHash,
+                    burnTokenHash = burnTokenHash,
+                    relayUrl = conversation.relayUrl
+                )
             if (result.isSuccess) {
                 Log.d(TAG, "Conversation registered with relay")
             } else {

@@ -44,25 +44,27 @@ class PadManager @Inject constructor(
     // MARK: - Load/Store
 
     /**
-     * Load pad for a conversation, using cache if available
+     * Load pad for a conversation, using cache if available.
+     * Matching iOS: PadManager.loadPad
      */
     suspend fun loadPad(conversationId: String): Pad = mutex.withLock {
         // Check cache first
         padCache[conversationId]?.let { return@withLock it }
 
-        // Load from storage
-        val padBytes = conversationStorage.getPadBytes(conversationId)
+        // Load from storage (matching iOS: PadStorageData from Keychain)
+        val storageData = conversationStorage.getPadStorageData(conversationId)
             ?: throw IllegalStateException("Pad not found for conversation $conversationId")
 
-        val conversation = conversationStorage.getConversation(conversationId)
-            ?: throw IllegalStateException("Conversation not found: $conversationId")
+        val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
 
-        // Create Rust Pad with state
+        // Create Rust Pad with state (matching iOS: Pad.fromBytesWithState)
         val pad = Pad.fromBytesWithState(
             padBytes.map { it.toUByte() },
-            conversation.padConsumedFront.toULong(),
-            conversation.padConsumedBack.toULong()
+            storageData.consumedFront.toULong(),
+            storageData.consumedBack.toULong()
         )
+
+        Log.d(TAG, "Loaded pad for ${conversationId.take(8)}: front=${storageData.consumedFront}, back=${storageData.consumedBack}")
 
         padCache[conversationId] = pad
         pad
@@ -80,13 +82,22 @@ class PadManager @Inject constructor(
     }
 
     /**
-     * Save current pad state to storage
+     * Save current pad state to storage.
+     * Matching iOS: PadManager.savePadState - saves bytes + consumption together
      * Note: Called within mutex.withLock, no additional locking needed
      */
     private suspend fun savePadState(pad: Pad, conversationId: String) {
         val consumedFront = pad.consumedFront().toLong()
         val consumedBack = pad.consumedBack().toLong()
-        conversationStorage.updatePadConsumption(conversationId, consumedFront, consumedBack)
+        val padBytes = pad.asBytes().map { it.toByte() }.toByteArray()
+
+        // Save bytes + consumption state together (matching iOS PadStorageData)
+        conversationStorage.savePadState(
+            conversationId = conversationId,
+            padBytes = padBytes,
+            consumedFront = consumedFront,
+            consumedBack = consumedBack
+        )
     }
 
     // MARK: - Send Operations
@@ -122,16 +133,15 @@ class PadManager @Inject constructor(
      * IMPORTANT: This updates consumption state - call only once per message!
      */
     suspend fun consumeForSending(length: Int, role: Role, conversationId: String): ByteArray = mutex.withLock {
-        // Get cached pad or load it
+        // Get cached pad or load it (matching iOS pattern)
         val pad = padCache[conversationId] ?: run {
-            val padBytes = conversationStorage.getPadBytes(conversationId)
+            val storageData = conversationStorage.getPadStorageData(conversationId)
                 ?: throw IllegalStateException("Pad not found for conversation $conversationId")
-            val conversation = conversationStorage.getConversation(conversationId)
-                ?: throw IllegalStateException("Conversation not found: $conversationId")
+            val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
             Pad.fromBytesWithState(
                 padBytes.map { it.toUByte() },
-                conversation.padConsumedFront.toULong(),
-                conversation.padConsumedBack.toULong()
+                storageData.consumedFront.toULong(),
+                storageData.consumedBack.toULong()
             ).also { padCache[conversationId] = it }
         }
 
@@ -154,16 +164,15 @@ class PadManager @Inject constructor(
      * Update peer's consumption based on received message
      */
     suspend fun updatePeerConsumption(peerRole: Role, consumed: Long, conversationId: String) = mutex.withLock {
-        // Get cached pad or load it
+        // Get cached pad or load it (matching iOS pattern)
         val pad = padCache[conversationId] ?: run {
-            val padBytes = conversationStorage.getPadBytes(conversationId)
+            val storageData = conversationStorage.getPadStorageData(conversationId)
                 ?: throw IllegalStateException("Pad not found for conversation $conversationId")
-            val conversation = conversationStorage.getConversation(conversationId)
-                ?: throw IllegalStateException("Conversation not found: $conversationId")
+            val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
             Pad.fromBytesWithState(
                 padBytes.map { it.toUByte() },
-                conversation.padConsumedFront.toULong(),
-                conversation.padConsumedBack.toULong()
+                storageData.consumedFront.toULong(),
+                storageData.consumedBack.toULong()
             ).also { padCache[conversationId] = it }
         }
 
@@ -215,26 +224,23 @@ class PadManager @Inject constructor(
      * When a message expires, the key material is zeroed to prevent future decryption.
      */
     suspend fun zeroPadBytes(offset: Long, length: Int, conversationId: String) = mutex.withLock {
-        // Get cached pad or load it
+        // Get cached pad or load it (matching iOS pattern)
         val pad = padCache[conversationId] ?: run {
-            val padBytes = conversationStorage.getPadBytes(conversationId)
+            val storageData = conversationStorage.getPadStorageData(conversationId)
                 ?: throw IllegalStateException("Pad not found for conversation $conversationId")
-            val conversation = conversationStorage.getConversation(conversationId)
-                ?: throw IllegalStateException("Conversation not found: $conversationId")
+            val padBytes = android.util.Base64.decode(storageData.bytes, android.util.Base64.NO_WRAP)
             Pad.fromBytesWithState(
                 padBytes.map { it.toUByte() },
-                conversation.padConsumedFront.toULong(),
-                conversation.padConsumedBack.toULong()
+                storageData.consumedFront.toULong(),
+                storageData.consumedBack.toULong()
             ).also { padCache[conversationId] = it }
         }
 
         val success = pad.zeroBytesAt(offset.toULong(), length.toULong())
 
         if (success) {
-            // Persist updated state (with zeroed bytes)
-            // Note: We need to save the full pad bytes, not just consumption state
-            val bytes = pad.asBytes().map { it.toByte() }.toByteArray()
-            conversationStorage.savePadBytes(conversationId, bytes)
+            // Persist updated state (with zeroed bytes) - matching iOS savePadState
+            savePadState(pad, conversationId)
             Log.d(TAG, "Zeroed $length pad bytes at offset $offset for forward secrecy")
         } else {
             Log.w(TAG, "Failed to zero pad bytes: offset $offset, length $length out of bounds")

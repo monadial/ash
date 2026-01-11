@@ -56,6 +56,17 @@ class ReceiverCeremonyViewModel @Inject constructor(
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
 
+    // Passphrase protection
+    private val _passphraseEnabled = MutableStateFlow(false)
+    val passphraseEnabled: StateFlow<Boolean> = _passphraseEnabled.asStateFlow()
+
+    private val _passphrase = MutableStateFlow("")
+    val passphrase: StateFlow<String> = _passphrase.asStateFlow()
+
+    // Selected color (for receiver UI customization)
+    private val _selectedColor = MutableStateFlow(ConversationColor.INDIGO)
+    val selectedColor: StateFlow<ConversationColor> = _selectedColor.asStateFlow()
+
     // Private state - now using FFI receiver
     private var fountainReceiver: FountainFrameReceiver? = null
     private var ceremonyResult: FountainCeremonyResult? = null
@@ -65,9 +76,12 @@ class ReceiverCeremonyViewModel @Inject constructor(
     // MARK: - Scanning Setup
 
     fun startScanning() {
+        // Use passphrase if enabled, otherwise null
+        val passphraseToUse = if (_passphraseEnabled.value) _passphrase.value.ifEmpty { null } else null
+
         // Create a new fountain receiver using FFI
         fountainReceiver?.close()
-        fountainReceiver = ashCoreService.createFountainReceiver(passphrase = null)
+        fountainReceiver = ashCoreService.createFountainReceiver(passphrase = passphraseToUse)
 
         _phase.value = CeremonyPhase.Scanning
         _receivedBlocks.value = 0
@@ -77,11 +91,26 @@ class ReceiverCeremonyViewModel @Inject constructor(
         reconstructedPadBytes = null
         mnemonic = emptyList()
 
-        Log.d(TAG, "Started scanning with new fountain receiver")
+        Log.d(TAG, "Started scanning with new fountain receiver, passphraseEnabled=${_passphraseEnabled.value}")
     }
 
     fun setConversationName(name: String) {
         _conversationName.value = name
+    }
+
+    fun setPassphraseEnabled(enabled: Boolean) {
+        _passphraseEnabled.value = enabled
+        if (!enabled) {
+            _passphrase.value = ""
+        }
+    }
+
+    fun setPassphrase(value: String) {
+        _passphrase.value = value
+    }
+
+    fun setSelectedColor(color: ConversationColor) {
+        _selectedColor.value = color
     }
 
     // MARK: - Frame Processing
@@ -98,20 +127,20 @@ class ReceiverCeremonyViewModel @Inject constructor(
                 receiver.addFrameBytes(frameBytes)
             }
 
-            // Update progress
-            val blocksReceived = receiver.blocksReceived().toInt()
+            // Update progress - use unique blocks for better UX (excludes duplicates)
+            val uniqueBlocks = receiver.uniqueBlocksReceived().toInt()
             val sourceCount = receiver.sourceCount().toInt()
             val progress = receiver.progress().toFloat()
 
-            _receivedBlocks.value = blocksReceived
+            _receivedBlocks.value = uniqueBlocks
             _totalBlocks.value = sourceCount
             _progress.value = progress
 
-            Log.d(TAG, "Frame processed: received=$blocksReceived, total=$sourceCount, progress=${(progress * 100).toInt()}%")
+            Log.d(TAG, "Frame processed: unique=$uniqueBlocks, sourceCount=$sourceCount, progress=${(progress * 100).toInt()}%")
 
             // Update phase
             _phase.value = CeremonyPhase.Transferring(
-                currentFrame = blocksReceived,
+                currentFrame = uniqueBlocks,
                 totalFrames = sourceCount
             )
 
@@ -151,6 +180,12 @@ class ReceiverCeremonyViewModel @Inject constructor(
             Log.d(TAG, "Reconstructed pad: ${padUBytes.size} bytes, blocks used: ${result.blocksUsed}")
             Log.d(TAG, "Metadata: ttl=${result.metadata.ttlSeconds}, relayUrl=${result.metadata.relayUrl}")
 
+            // Extract and propagate color from notification flags to UI
+            val colorIndex = ((result.metadata.notificationFlags.toInt()) shr 12) and 0x0F
+            val decodedColor = ConversationColor.entries.getOrElse(colorIndex) { ConversationColor.INDIGO }
+            _selectedColor.value = decodedColor
+            Log.d(TAG, "Decoded conversation color: $decodedColor (index=$colorIndex)")
+
             // Log first and last 16 bytes of pad for debugging (as hex)
             val firstBytes = padUBytes.take(16).map { String.format("%02X", it.toInt()) }.joinToString("")
             val lastBytes = padUBytes.takeLast(16).map { String.format("%02X", it.toInt()) }.joinToString("")
@@ -187,9 +222,8 @@ class ReceiverCeremonyViewModel @Inject constructor(
             // Derive all tokens using FFI directly with UByte list
             val tokens = uniffi.ash.deriveAllTokens(padUBytes)
 
-            // Extract color from notification flags
-            val colorIndex = ((metadata.notificationFlags.toInt()) shr 12) and 0x0F
-            val color = ConversationColor.entries.getOrElse(colorIndex) { ConversationColor.INDIGO }
+            // Use the color already decoded and stored in _selectedColor (from reconstructAndVerify)
+            val color = _selectedColor.value
 
             // Map FFI metadata to domain entities
             val messageRetention = MessageRetention.fromSeconds(metadata.ttlSeconds.toLong())
@@ -197,7 +231,7 @@ class ReceiverCeremonyViewModel @Inject constructor(
 
             val conversation = Conversation(
                 id = tokens.conversationId,
-                name = _conversationName.value.ifBlank { "New Conversation" },
+                name = _conversationName.value.ifBlank { null },
                 relayUrl = metadata.relayUrl,
                 authToken = tokens.authToken,
                 burnToken = tokens.burnToken,
@@ -264,6 +298,9 @@ class ReceiverCeremonyViewModel @Inject constructor(
         _receivedBlocks.value = 0
         _totalBlocks.value = 0
         _progress.value = 0f
+        _passphraseEnabled.value = false
+        _passphrase.value = ""
+        _selectedColor.value = ConversationColor.INDIGO
         ceremonyResult = null
         reconstructedPadBytes = null
         mnemonic = emptyList()

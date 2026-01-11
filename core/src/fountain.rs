@@ -523,6 +523,11 @@ impl LTDecoder {
         self.k
     }
 
+    /// Number of unique blocks received (excluding duplicates).
+    pub fn unique_blocks_received(&self) -> usize {
+        self.seen_indices.len()
+    }
+
     /// Get decoded data (None if incomplete).
     pub fn get_data(&self) -> Option<Vec<u8>> {
         if !self.is_complete() {

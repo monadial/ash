@@ -20,7 +20,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "DEFAULT_RELAY_URL", "\"https://relay.ashprotocol.app\"")
+        buildConfigField("String", "DEFAULT_RELAY_URL", "\"https://eu.relay.ashprotocol.app\"")
     }
 
     signingConfigs {

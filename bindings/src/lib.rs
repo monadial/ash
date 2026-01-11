@@ -327,10 +327,16 @@ impl FountainFrameReceiver {
         receiver.progress()
     }
 
-    /// Number of blocks received
+    /// Number of blocks received (including duplicates)
     pub fn blocks_received(&self) -> u32 {
         let receiver = self.inner.lock().unwrap();
         receiver.blocks_received() as u32
+    }
+
+    /// Number of unique blocks received (excluding duplicates)
+    pub fn unique_blocks_received(&self) -> u32 {
+        let receiver = self.inner.lock().unwrap();
+        receiver.unique_blocks_received() as u32
     }
 
     /// Number of source blocks needed

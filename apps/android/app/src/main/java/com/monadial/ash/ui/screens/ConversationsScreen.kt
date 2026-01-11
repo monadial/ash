@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -141,7 +143,7 @@ fun ConversationsScreen(
                 Icon(
                     Icons.Default.LocalFireDepartment,
                     contentDescription = null,
-                    tint = Color(0xFFFF3B30)
+                    tint = MaterialTheme.colorScheme.error
                 )
             },
             title = { Text("Burn Conversation?") },
@@ -158,7 +160,7 @@ fun ConversationsScreen(
                         conversationToBurn = null
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF3B30)
+                        containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
                     Text("Burn")
@@ -192,12 +194,14 @@ private fun SwipeableConversationCard(
         }
     )
 
+    val errorColor = MaterialTheme.colorScheme.error
+
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
             val color by animateColorAsState(
                 when (dismissState.targetValue) {
-                    SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF3B30)
+                    SwipeToDismissBoxValue.EndToStart -> errorColor
                     else -> Color.Transparent
                 },
                 label = "background"
@@ -236,17 +240,83 @@ private fun EmptyConversationsView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Icon circle
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "💬",
+                style = MaterialTheme.typography.displayMedium
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = "No Conversations",
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
         )
+
         Spacer(modifier = Modifier.height(8.dp))
+
         Text(
-            text = "Start a secure conversation by tapping the + button",
+            text = "Start a secure conversation by meeting with someone in person and performing a key exchange ceremony.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(
+            onClick = onNewConversation,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("New Conversation")
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MnemonicTagsRow(
+    mnemonic: List<String>,
+    accentColor: Color
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        mnemonic.forEach { word ->
+            Surface(
+                shape = RoundedCornerShape(4.dp),
+                color = accentColor.copy(alpha = 0.15f)
+            ) {
+                Text(
+                    text = word,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = accentColor,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
 
@@ -323,13 +393,12 @@ private fun ConversationCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    // Mnemonic
+                    // Mnemonic tags
                     if (conversation.mnemonic.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = conversation.mnemonic.joinToString(" "),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        MnemonicTagsRow(
+                            mnemonic = conversation.mnemonic,
+                            accentColor = accentColor
                         )
                     }
                 }

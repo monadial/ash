@@ -1,9 +1,12 @@
 package com.monadial.ash.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -159,14 +162,15 @@ fun MessagingScreen(
         ) {
             // Pad usage bar
             if (conversation != null) {
+                val progressColor = when {
+                    viewModel.padUsagePercentage > 90 -> MaterialTheme.colorScheme.error
+                    viewModel.padUsagePercentage > 70 -> MaterialTheme.colorScheme.tertiary
+                    else -> accentColor
+                }
                 LinearProgressIndicator(
                     progress = { viewModel.padUsagePercentage / 100f },
                     modifier = Modifier.fillMaxWidth(),
-                    color = when {
-                        viewModel.padUsagePercentage > 90 -> Color(0xFFFF3B30)
-                        viewModel.padUsagePercentage > 70 -> Color(0xFFFF9500)
-                        else -> accentColor
-                    }
+                    color = progressColor
                 )
             }
 
@@ -194,7 +198,10 @@ fun MessagingScreen(
 
                 if (messages.isEmpty() && !isLoading) {
                     item {
-                        EmptyMessagesPlaceholder()
+                        EmptyMessagesPlaceholder(
+                            mnemonic = conversation?.mnemonic ?: emptyList(),
+                            accentColor = accentColor
+                        )
                     }
                 }
 
@@ -285,7 +292,7 @@ private fun MessageBubble(
             // Retry button for failed messages
             if (message.status.isFailed) {
                 TextButton(onClick = onRetry) {
-                    Text("Retry", color = Color(0xFFFF3B30))
+                    Text("Retry", color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -297,6 +304,9 @@ private fun MessageStatusIcon(
     status: DeliveryStatus,
     tint: Color
 ) {
+    val successColor = MaterialTheme.colorScheme.primary
+    val errorColor = MaterialTheme.colorScheme.error
+
     when (status) {
         DeliveryStatus.SENDING -> CircularProgressIndicator(
             modifier = Modifier.size(12.dp),
@@ -313,13 +323,13 @@ private fun MessageStatusIcon(
             Icons.Default.CheckCircle,
             contentDescription = "Delivered",
             modifier = Modifier.size(14.dp),
-            tint = Color(0xFF34C759)
+            tint = successColor
         )
         is DeliveryStatus.FAILED -> Icon(
             Icons.Default.Error,
             contentDescription = "Failed",
             modifier = Modifier.size(14.dp),
-            tint = Color(0xFFFF3B30)
+            tint = errorColor
         )
         DeliveryStatus.NONE -> Icon(
             Icons.Default.Schedule,
@@ -423,8 +433,12 @@ private fun MessageInput(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EmptyMessagesPlaceholder() {
+private fun EmptyMessagesPlaceholder(
+    mnemonic: List<String> = emptyList(),
+    accentColor: Color = MaterialTheme.colorScheme.primary
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -432,23 +446,91 @@ private fun EmptyMessagesPlaceholder() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "🔐",
-            style = MaterialTheme.typography.displayLarge
-        )
-        Spacer(modifier = Modifier.height(16.dp))
+        // Lock icon
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(
+                    color = accentColor.copy(alpha = 0.1f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "🔐",
+                style = MaterialTheme.typography.displaySmall
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = "Secure Channel Ready",
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
+
         Spacer(modifier = Modifier.height(8.dp))
+
         Text(
-            text = "Your messages are encrypted with a one-time pad. Send your first message!",
+            text = "Your messages are encrypted with a one-time pad that can never be recovered or compromised.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
+        )
+
+        // Mnemonic tags
+        if (mnemonic.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Security Words",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                mnemonic.forEach { word ->
+                    MnemonicTag(word = word, accentColor = accentColor)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Send your first message!",
+            style = MaterialTheme.typography.bodyMedium,
+            color = accentColor,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun MnemonicTag(
+    word: String,
+    accentColor: Color
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = accentColor.copy(alpha = 0.1f)
+    ) {
+        Text(
+            text = word,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = accentColor,
+            fontWeight = FontWeight.Medium
         )
     }
 }

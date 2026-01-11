@@ -409,6 +409,16 @@ impl FountainFrameReceiver {
         self.decoder.as_ref().map_or(0, |d| d.source_count())
     }
 
+    /// Number of unique blocks received (excluding duplicates).
+    ///
+    /// This is more useful for progress tracking than [`blocks_received`]
+    /// since it excludes frames that were scanned multiple times.
+    pub fn unique_blocks_received(&self) -> usize {
+        self.decoder
+            .as_ref()
+            .map_or(0, |d| d.unique_blocks_received())
+    }
+
     /// Get the decoded ceremony result.
     ///
     /// Returns `None` if decoding is not complete.

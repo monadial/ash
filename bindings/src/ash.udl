@@ -296,6 +296,10 @@ interface FountainFrameReceiver {
     /// Number of blocks received (including duplicates).
     u32 blocks_received();
 
+    /// Number of unique blocks received (excluding duplicates).
+    /// This is more useful for progress tracking.
+    u32 unique_blocks_received();
+
     /// Number of source blocks needed for complete decoding.
     /// Returns 0 before the first block is received.
     u32 source_count();

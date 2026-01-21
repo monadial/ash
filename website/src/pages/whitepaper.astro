@@ -3,6 +3,10 @@ import Layout from '../layouts/Layout.astro'
 import TableOfContents from '../components/TableOfContents.astro'
 import Diagram from '../components/Diagram.astro'
 import InfoBox from '../components/InfoBox.astro'
+import OTPDemo from '../components/OTPDemo.tsx'
+import PaddingDemo from '../components/PaddingDemo.tsx'
+import MnemonicDemo from '../components/MnemonicDemo.tsx'
+import TokenDemo from '../components/TokenDemo.tsx'
 import PolyHashDemo from '../components/PolyHashDemo.tsx'
 
 const tocItems = [
@@ -84,6 +88,13 @@ Key:        7   K   2   X   9      (random key bytes)
                =   =   =   =   =
 Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
             </Diagram>
+
+            <h4 class="font-medium mt-6 mb-3">Try It Yourself</h4>
+            <p class="text-text-secondary text-sm mb-4">
+              This interactive demo uses the actual ASH Rust cryptographic core compiled to WebAssembly.
+              Type a message and see how XOR encryption works byte-by-byte.
+            </p>
+            <OTPDemo client:load />
           </div>
 
           <div id="shannon" class="mb-8">
@@ -325,6 +336,12 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
             <p class="text-text-secondary mt-4 text-sm">
               Words are optimized for verbal clarity: distinct pronunciation, no homophones, minimal confusion between similar words, and cross-language usability.
             </p>
+
+            <h4 class="font-medium mt-6 mb-3">Try It Yourself</h4>
+            <p class="text-text-secondary text-sm mb-4">
+              Generate mnemonic checksums from random pad bytes. Both devices generate identical words from the same pad.
+            </p>
+            <MnemonicDemo client:load />
           </div>
 
           <div id="pad-sizes" class="mb-8">
@@ -1044,6 +1061,12 @@ With mandatory 32-byte padding:
 Padding format: [0x00 marker][2-byte length][content][zero fill to 32]`}
             </Diagram>
 
+            <h5 class="font-medium mt-6 mb-3">Try It Yourself</h5>
+            <p class="text-text-secondary text-sm mb-4">
+              See exactly how messages are padded. Type any message and observe the padding format.
+            </p>
+            <PaddingDemo client:load />
+
             <InfoBox variant="warning" class="mt-4">
               <p class="text-sm">
                 <strong>Attack prevented:</strong> Without padding, an adversary observing encrypted message sizes could fingerprint "yes/no" responses, detect typing patterns, or infer conversation topics from message length sequences.
@@ -1202,6 +1225,12 @@ Remaining: 50 bytes (indices 20-69)`}
             <li><strong class="text-white">Separated:</strong> Different tokens for different operations</li>
             <li><strong class="text-white">Backend-safe:</strong> Backend stores only hash(token)</li>
           </ul>
+
+          <h3 class="text-lg font-semibold mt-6 mb-3">Try It Yourself</h3>
+          <p class="text-text-secondary text-sm mb-4">
+            Watch how tokens are derived from specific byte ranges of the pad. Hover over each token to highlight its source bytes.
+          </p>
+          <TokenDemo client:load />
         </section>
 
         <!-- Trust Boundaries -->

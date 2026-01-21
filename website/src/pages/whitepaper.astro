@@ -818,6 +818,147 @@ Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
               The authentication tag is computed using dual polynomial evaluation over the Galois Field GF(2^128). This provides <strong class="text-white">information-theoretic authentication</strong> — mathematically proven unforgeable without the pad.
             </p>
 
+            <!-- How It Works -->
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden mb-6">
+              <div class="px-4 py-3 border-b border-border bg-bg-elevated">
+                <h5 class="font-semibold text-white">How Wegman-Carter Works</h5>
+              </div>
+              <div class="p-5 space-y-4">
+                <p class="text-text-secondary text-sm">
+                  The core idea: treat the message as coefficients of a polynomial, evaluate it at a secret random point <code class="text-brand">r</code>, then mask the result with a one-time pad value <code class="text-success">s</code>.
+                </p>
+
+                <!-- Conceptual Flow -->
+                <div class="flex flex-col sm:flex-row items-center gap-3 text-sm">
+                  <div class="px-4 py-2 bg-bg-elevated rounded-lg border border-border text-center">
+                    <div class="text-text-muted text-xs mb-1">Message</div>
+                    <div class="font-mono text-white">M = [b₁, b₂, ..., bₙ]</div>
+                  </div>
+                  <svg class="w-5 h-5 text-text-muted rotate-90 sm:rotate-0 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  <div class="px-4 py-2 bg-brand/10 rounded-lg border border-brand/30 text-center">
+                    <div class="text-text-muted text-xs mb-1">Polynomial</div>
+                    <div class="font-mono text-brand-light">P(x) = b₁x^n + b₂x^(n-1) + ...</div>
+                  </div>
+                  <svg class="w-5 h-5 text-text-muted rotate-90 sm:rotate-0 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                  <div class="px-4 py-2 bg-success/10 rounded-lg border border-success/30 text-center">
+                    <div class="text-text-muted text-xs mb-1">Tag</div>
+                    <div class="font-mono text-success">P(r) ⊕ s</div>
+                  </div>
+                </div>
+
+                <!-- Algorithm Steps -->
+                <div class="mt-4 space-y-3">
+                  <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">1</span>
+                    <div class="text-sm">
+                      <span class="text-white font-medium">Split message into 128-bit blocks:</span>
+                      <span class="text-text-secondary"> Each 16-byte chunk becomes a field element.</span>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">2</span>
+                    <div class="text-sm">
+                      <span class="text-white font-medium">Build polynomial:</span>
+                      <span class="text-text-secondary"> Blocks are coefficients: P(x) = b₁·x^n + b₂·x^(n-1) + ... + bₙ·x</span>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">3</span>
+                    <div class="text-sm">
+                      <span class="text-white font-medium">Evaluate at secret point r:</span>
+                      <span class="text-text-secondary"> Compute P(r) in GF(2^128) using Horner's method.</span>
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-6 h-6 bg-success/20 rounded flex items-center justify-center text-success text-xs font-bold">4</span>
+                    <div class="text-sm">
+                      <span class="text-white font-medium">Apply OTP mask:</span>
+                      <span class="text-text-secondary"> Tag = P(r) ⊕ s. The mask s is never reused.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Worked Example -->
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden mb-6">
+              <div class="px-4 py-3 border-b border-border bg-bg-elevated">
+                <h5 class="font-semibold text-white">Worked Example</h5>
+              </div>
+              <div class="p-5 space-y-4">
+                <p class="text-text-secondary text-sm">
+                  Authenticating a 32-byte ciphertext (2 blocks):
+                </p>
+
+                <!-- Input -->
+                <div class="bg-bg-elevated rounded-lg p-4 space-y-3">
+                  <div class="flex flex-wrap items-center gap-2 text-sm">
+                    <span class="text-text-muted w-20">Ciphertext:</span>
+                    <code class="text-warning font-mono text-xs">A3F1...29F6</code>
+                    <span class="text-text-muted">(block 1, 16 bytes)</span>
+                    <code class="text-warning font-mono text-xs">6EC4...D8B2</code>
+                    <span class="text-text-muted">(block 2, 16 bytes)</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2 text-sm">
+                    <span class="text-text-muted w-20">Auth key:</span>
+                    <code class="text-brand font-mono text-xs">r = 7B3A...F912</code>
+                    <span class="text-text-muted">(random point)</span>
+                    <code class="text-success font-mono text-xs">s = E5C1...8D4A</code>
+                    <span class="text-text-muted">(OTP mask)</span>
+                  </div>
+                </div>
+
+                <!-- Computation -->
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center gap-2">
+                    <span class="text-text-muted">Step 1:</span>
+                    <span class="text-text-secondary">Polynomial P(x) = b₁·x² + b₂·x</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-text-muted">Step 2:</span>
+                    <span class="text-text-secondary">Horner's method: ((b₁ · r) + b₂) · r</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-text-muted">Step 3:</span>
+                    <span class="text-text-secondary">P(r) = <code class="text-brand-light font-mono">3D7F...A2E1</code> (GF multiplication)</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-text-muted">Step 4:</span>
+                    <span class="text-text-secondary">Tag = P(r) ⊕ s = <code class="text-success font-mono">D8BE...2FAB</code></span>
+                  </div>
+                </div>
+
+                <!-- Final Tag -->
+                <div class="bg-success/10 border border-success/30 rounded-lg p-3">
+                  <div class="flex items-center gap-2 text-sm">
+                    <svg class="w-4 h-4 text-success shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    <span class="text-success font-medium">128-bit tag:</span>
+                    <code class="text-success font-mono text-xs">D8BE...2FAB</code>
+                  </div>
+                  <p class="text-text-muted text-xs mt-2">ASH uses dual evaluation (r₁, r₂ with s₁, s₂) to produce a 256-bit tag.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Why It's Secure -->
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden mb-6">
+              <div class="px-4 py-3 border-b border-border bg-bg-elevated">
+                <h5 class="font-semibold text-white">Why It's Unforgeable</h5>
+              </div>
+              <div class="p-5 space-y-3 text-sm text-text-secondary">
+                <p>
+                  <strong class="text-white">Without knowing r:</strong> An attacker sees only P(r) ⊕ s. The OTP mask s hides P(r) completely. They cannot learn r from a single tag.
+                </p>
+                <p>
+                  <strong class="text-white">To forge a different message M':</strong> They need P'(r) ⊕ s = P(r) ⊕ s ⊕ (P(r) ⊕ P'(r)). But P(r) ⊕ P'(r) is unknown without r.
+                </p>
+                <p>
+                  <strong class="text-white">Probability of guessing:</strong> For a degree-n polynomial in GF(2^128), there are at most n values where P(r) = P'(r). Probability of collision: n/2^128 ≈ 0.
+                </p>
+              </div>
+            </div>
+
+            <!-- Properties Table -->
             <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
               <table class="w-full text-sm">
                 <thead>

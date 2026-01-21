@@ -123,6 +123,52 @@ pub enum Error {
     ///
     /// Relay URL must be valid UTF-8.
     InvalidMetadataUrl,
+
+    // ==================== Message Frame Errors ====================
+    /// Message authentication failed.
+    ///
+    /// The authentication tag does not match. The message may have been
+    /// tampered with or the wrong key was used.
+    ///
+    /// Note: This error is intentionally uninformative to prevent
+    /// leaking information about what specifically failed.
+    AuthenticationFailed,
+
+    /// Message payload exceeds maximum size.
+    PayloadTooLarge {
+        /// Actual payload size.
+        size: usize,
+        /// Maximum allowed size.
+        max: usize,
+    },
+
+    /// Message frame is too short.
+    FrameTooShort {
+        /// Actual frame size.
+        size: usize,
+        /// Minimum required size.
+        minimum: usize,
+    },
+
+    /// Unsupported message frame version.
+    UnsupportedFrameVersion {
+        /// The unsupported version number.
+        version: u8,
+    },
+
+    /// Invalid message type in frame.
+    InvalidMessageType {
+        /// The invalid type byte.
+        msg_type: u8,
+    },
+
+    /// Frame length field doesn't match actual content.
+    FrameLengthMismatch {
+        /// Declared length in header.
+        declared: usize,
+        /// Actual content length.
+        actual: usize,
+    },
 }
 
 impl fmt::Display for Error {
@@ -190,6 +236,36 @@ impl fmt::Display for Error {
             }
             Error::InvalidMetadataUrl => {
                 write!(f, "invalid UTF-8 in metadata URL")
+            }
+            Error::AuthenticationFailed => {
+                write!(f, "message authentication failed")
+            }
+            Error::PayloadTooLarge { size, max } => {
+                write!(
+                    f,
+                    "payload too large: {} bytes exceeds maximum {}",
+                    size, max
+                )
+            }
+            Error::FrameTooShort { size, minimum } => {
+                write!(
+                    f,
+                    "frame too short: {} bytes, minimum is {}",
+                    size, minimum
+                )
+            }
+            Error::UnsupportedFrameVersion { version } => {
+                write!(f, "unsupported frame version: {}", version)
+            }
+            Error::InvalidMessageType { msg_type } => {
+                write!(f, "invalid message type: {:#04x}", msg_type)
+            }
+            Error::FrameLengthMismatch { declared, actual } => {
+                write!(
+                    f,
+                    "frame length mismatch: header declares {} bytes, got {}",
+                    declared, actual
+                )
             }
         }
     }

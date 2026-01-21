@@ -88,16 +88,22 @@ pub mod crc;
 pub mod error;
 pub mod fountain;
 pub mod frame;
+pub mod gf128;
+pub mod mac;
 pub mod mnemonic;
+pub mod message;
 pub mod otp;
 pub mod pad;
 pub mod passphrase;
+pub mod poly_hash;
+pub mod raptor;
 pub mod wordlist;
 
 // Re-export main types at crate root
-pub use ceremony::{CeremonyMetadata, NotificationFlags, DEFAULT_TTL_SECONDS, METADATA_VERSION};
+pub use ceremony::{CeremonyMetadata, ConversationFlags, DEFAULT_TTL_SECONDS, METADATA_VERSION};
 pub use error::{Error, Result};
 pub use fountain::{EncodedBlock, FountainDecoder, FountainEncoder};
+pub use raptor::{RaptorBlock, RaptorDecoder, RaptorEncoder};
 pub use frame::{
     create_fountain_ceremony, FountainCeremonyResult, FountainFrameGenerator,
     FountainFrameReceiver, DEFAULT_BLOCK_SIZE,

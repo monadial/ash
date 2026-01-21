@@ -361,38 +361,57 @@ export default function ProtocolDemo() {
       </div>
 
       {/* Mnemonic Verification */}
-      <div className="bg-success/10 border border-success/30 rounded-xl p-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
+      <div className="bg-success/10 border border-success/30 rounded-xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            <span className="font-medium text-success">Mnemonic Verification</span>
+            <span className="font-semibold text-success text-lg">Mnemonic Verification</span>
           </div>
-          <span className="text-xs text-text-muted">
-            {wasmReady ? 'Computed via Rust FFI' : 'Loading...'}
+          <span className="text-xs text-text-muted px-2 py-1 bg-success/20 rounded">
+            {wasmReady ? 'Rust FFI' : 'Loading...'}
           </span>
         </div>
-        <p className="text-xs text-text-secondary mb-3">
-          Both Alice and Bob see identical words — verbal confirmation that pads match:
+        <p className="text-sm text-text-secondary mb-4">
+          Both parties read these 6 words aloud to confirm identical pads:
         </p>
-        <div className="flex flex-wrap gap-2">
-          {mnemonic.map((word, i) => (
-            <span key={i} className="px-3 py-1.5 bg-bg-elevated rounded-lg text-white font-medium">
-              {word}
-            </span>
-          ))}
+
+        {/* Large mnemonic display */}
+        <div className="flex flex-wrap justify-center gap-3 mb-5">
+          {mnemonic.length > 0 ? mnemonic.map((word, i) => (
+            <div key={i} className="flex flex-col items-center">
+              <span className="text-[10px] text-text-muted mb-1">word {i + 1}</span>
+              <span className="px-4 py-2.5 bg-bg-elevated rounded-xl text-xl font-bold text-white shadow-lg border border-success/20">
+                {word}
+              </span>
+            </div>
+          )) : (
+            <span className="text-text-muted">Loading mnemonic...</span>
+          )}
         </div>
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-success/20">
-          <div className="flex items-center gap-2 text-xs">
-            <div className="w-6 h-6 rounded-full bg-brand flex items-center justify-center text-white text-[10px] font-bold">A</div>
-            <span className="text-text-muted">Alice sees: <span className="text-success">{mnemonic.join(' ')}</span></span>
+
+        {/* Alice and Bob verification */}
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-success/20">
+          <div className="bg-bg-elevated/50 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white text-sm font-bold">A</div>
+              <span className="font-medium text-white">Alice reads:</span>
+            </div>
+            <div className="text-success font-mono text-sm">{mnemonic.join(' ') || '...'}</div>
           </div>
-          <div className="flex items-center gap-2 text-xs">
-            <div className="w-6 h-6 rounded-full bg-success flex items-center justify-center text-white text-[10px] font-bold">B</div>
-            <span className="text-text-muted">Bob sees: <span className="text-success">{mnemonic.join(' ')}</span></span>
+          <div className="bg-bg-elevated/50 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-full bg-success flex items-center justify-center text-white text-sm font-bold">B</div>
+              <span className="font-medium text-white">Bob reads:</span>
+            </div>
+            <div className="text-success font-mono text-sm">{mnemonic.join(' ') || '...'}</div>
           </div>
         </div>
+
+        <p className="text-xs text-text-muted mt-4 text-center">
+          If words match, pads are identical. If different, ceremony failed — discard and retry.
+        </p>
       </div>
 
       {/* Pad Progress Bar */}

@@ -130,20 +130,28 @@ import Diagram from '../components/Diagram.astro'
               <td class="p-4 text-text-secondary">Ciphertext reveals no information about plaintext without the pad</td>
             </tr>
             <tr>
+              <td class="p-4 font-medium">Message Authentication</td>
+              <td class="p-4 text-text-secondary">256-bit Wegman-Carter MAC provides information-theoretic authentication (~2^-128 forgery probability)</td>
+            </tr>
+            <tr>
               <td class="p-4 font-medium">Forward Secrecy</td>
               <td class="p-4 text-text-secondary">Compromise after message sent cannot reveal that message's content</td>
             </tr>
             <tr>
               <td class="p-4 font-medium">Future Secrecy</td>
-              <td class="p-4 text-text-secondary">No computational advances can break past encrypted messages</td>
+              <td class="p-4 text-text-secondary">No computational advances can break past encrypted messages or forge new ones</td>
+            </tr>
+            <tr>
+              <td class="p-4 font-medium">Traffic Analysis Protection</td>
+              <td class="p-4 text-text-secondary">Mandatory 32-byte message padding prevents size-based fingerprinting</td>
             </tr>
             <tr>
               <td class="p-4 font-medium">Pad Non-Reuse</td>
               <td class="p-4 text-text-secondary">Core library enforces strict single-use semantics for all pad bytes</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">Integrity Detection</td>
-              <td class="p-4 text-text-secondary">Frame checksums detect accidental corruption during transfer</td>
+              <td class="p-4 font-medium">Ceremony Protection</td>
+              <td class="p-4 text-text-secondary">Mandatory passphrase encrypts QR frames against visual observation</td>
             </tr>
             <tr>
               <td class="p-4 font-medium">Human Verification</td>
@@ -221,17 +229,17 @@ import Diagram from '../components/Diagram.astro'
         </div>
 
         <!-- Traffic Analysis -->
-        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+        <div class="bg-bg-card border border-warning/30 rounded-xl p-5">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
-              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <div class="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
               </svg>
             </div>
             <h3 class="font-semibold">Traffic Analysis</h3>
           </div>
           <p class="text-text-secondary text-sm mb-2">Timing patterns, metadata, correlation attacks</p>
-          <p class="text-text-muted text-xs">ASH does not provide anonymity or hide that you're using ASH.</p>
+          <p class="text-text-muted text-xs">32-byte padding protects short message sizes. Timing and metadata still visible. No anonymity.</p>
         </div>
 
         <!-- Physical Coercion -->
@@ -328,26 +336,33 @@ import Diagram from '../components/Diagram.astro'
         <div class="p-4 flex gap-4">
           <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
           <div>
+            <h4 class="font-medium mb-1">Share the passphrase securely</h4>
+            <p class="text-text-secondary text-sm">The mandatory passphrase must be exchanged verbally or through another secure channel. Do not send it digitally.</p>
+          </div>
+        </div>
+        <div class="p-4 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+          <div>
             <h4 class="font-medium mb-1">Choose a private location</h4>
             <p class="text-text-secondary text-sm">The ceremony must be performed where visual observation is not possible — no cameras, mirrors, or observers.</p>
           </div>
         </div>
         <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
           <div>
             <h4 class="font-medium mb-1">Trust your conversation partner</h4>
             <p class="text-text-secondary text-sm">ASH cannot prevent screenshots or betrayal. Only communicate with people you trust.</p>
           </div>
         </div>
         <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
           <div>
             <h4 class="font-medium mb-1">Maintain device security</h4>
             <p class="text-text-secondary text-sm">Keep your device updated, avoid installing untrusted software, and use device encryption.</p>
           </div>
         </div>
         <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">6</span>
           <div>
             <h4 class="font-medium mb-1">Understand the limitations</h4>
             <p class="text-text-secondary text-sm">Read this document. Know what ASH protects against and what it does not.</p>
@@ -359,6 +374,31 @@ import Diagram from '../components/Diagram.astro'
     <!-- Implementation Notes -->
     <section class="mb-12">
       <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Implementation Notes</h2>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-bg-card border border-border rounded-xl p-5">
+          <h3 class="font-semibold mb-2">Message Authentication</h3>
+          <p class="text-text-secondary text-sm mb-3">
+            Every message is authenticated using a <strong class="text-white">Wegman-Carter MAC</strong> with 256-bit tags. This provides information-theoretic authentication — mathematically proven unforgeable.
+          </p>
+          <div class="text-xs text-text-muted space-y-1">
+            <p>• Dual GF(2^128) polynomial evaluation</p>
+            <p>• 64 bytes from pad per message (r₁, r₂, s₁, s₂)</p>
+            <p>• Forgery probability: ~2^-128</p>
+          </div>
+        </div>
+        <div class="bg-bg-card border border-border rounded-xl p-5">
+          <h3 class="font-semibold mb-2">Traffic Analysis Protection</h3>
+          <p class="text-text-secondary text-sm mb-3">
+            All messages are padded to a minimum of <strong class="text-white">32 bytes</strong>. This prevents size-based fingerprinting of short messages.
+          </p>
+          <div class="text-xs text-text-muted space-y-1">
+            <p>• "yes", "no", "ok" → all 32 bytes</p>
+            <p>• Format: [marker][length][content][zeros]</p>
+            <p>• Pad consumption: 64 + padded_length per message</p>
+          </div>
+        </div>
+      </div>
 
       <div class="grid md:grid-cols-3 gap-6">
         <div>
@@ -376,7 +416,7 @@ import Diagram from '../components/Diagram.astro'
         <div>
           <h3 class="font-semibold mb-2">Supply Chain</h3>
           <p class="text-text-secondary text-sm">
-            The core library has zero external dependencies to minimize supply chain attack surface. All cryptographic primitives are implemented directly.
+            The core library has zero external dependencies to minimize supply chain attack surface. All cryptographic primitives implemented directly: XOR, GF(2^128), CRC-32.
           </p>
         </div>
       </div>

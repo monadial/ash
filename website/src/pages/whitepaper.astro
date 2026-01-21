@@ -16,6 +16,7 @@ const tocItems = [
   ]},
   { id: 'ceremony', title: 'Ceremony Protocol', children: [
     { id: 'ceremony-flow', title: 'Ceremony Flow' },
+    { id: 'passphrase', title: 'Mandatory Passphrase' },
     { id: 'mnemonic', title: 'Mnemonic Verification' },
     { id: 'pad-sizes', title: 'Pad Sizes' },
   ]},
@@ -23,8 +24,9 @@ const tocItems = [
     { id: 'basic-frame', title: 'Basic Frame' },
     { id: 'extended-frame', title: 'Extended Frame' },
   ]},
-  { id: 'messages', title: 'Message Format', children: [
-    { id: 'message-structure', title: 'Message Structure' },
+  { id: 'messages', title: 'Messaging Protocol', children: [
+    { id: 'message-frame', title: 'Authenticated Message Frame' },
+    { id: 'encryption-flow', title: 'Encryption Pipeline' },
     { id: 'bidirectional', title: 'Bidirectional Consumption' },
     { id: 'message-types', title: 'Message Types' },
   ]},
@@ -142,6 +144,9 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 <li>• Strict pad single-use semantics enforcement</li>
                 <li>• Bidirectional pad consumption (Initiator/Responder)</li>
                 <li>• OTP encryption and decryption</li>
+                <li>• <strong class="text-white">Wegman-Carter 256-bit message authentication</strong></li>
+                <li>• <strong class="text-white">GF(2^128) polynomial hashing</strong></li>
+                <li>• <strong class="text-white">Mandatory 32-byte message padding</strong></li>
                 <li>• Ceremony rules and frame encoding/decoding</li>
                 <li>• CRC-32 integrity validation</li>
                 <li>• Authorization token derivation</li>
@@ -226,14 +231,23 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                   <div class="flex items-start gap-4">
                     <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
                     <div>
-                      <h4 class="font-medium mb-1">QR Transfer</h4>
-                      <p class="text-text-secondary text-sm">Sender displays QR codes sequentially. Receiver scans each frame, validates CRC, and acknowledges.</p>
+                      <h4 class="font-medium mb-1">Passphrase Exchange</h4>
+                      <p class="text-text-secondary text-sm">Both parties agree on a shared passphrase (minimum 4 characters). This encrypts QR frames to protect against visual observation.</p>
                     </div>
                   </div>
                 </div>
                 <div class="p-4">
                   <div class="flex items-start gap-4">
                     <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+                    <div>
+                      <h4 class="font-medium mb-1">QR Transfer</h4>
+                      <p class="text-text-secondary text-sm">Sender displays passphrase-encrypted QR codes. Receiver scans frames, decrypts, validates CRC, and acknowledges.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="p-4">
+                  <div class="flex items-start gap-4">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
                     <div>
                       <h4 class="font-medium mb-1">Mnemonic Verification</h4>
                       <p class="text-text-secondary text-sm">Both devices display 6-word checksum. Users verbally confirm match to detect tampering.</p>
@@ -242,7 +256,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 </div>
                 <div class="p-4">
                   <div class="flex items-start gap-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
+                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">6</span>
                     <div>
                       <h4 class="font-medium mb-1">Activation</h4>
                       <p class="text-text-secondary text-sm">Tokens derived from pad. Conversation becomes active. Messaging available.</p>
@@ -251,6 +265,36 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 </div>
               </div>
             </div>
+          </div>
+
+          <div id="passphrase" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Mandatory Passphrase Protection</h3>
+            <p class="text-text-secondary mb-4">
+              Every ceremony requires a <strong class="text-white">mandatory passphrase</strong> that encrypts QR frames during transfer. This protects against visual observation attacks.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden mb-4">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Property</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Requirement</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr><td class="p-3">Minimum length</td><td class="p-3 text-text-secondary">4 characters</td></tr>
+                  <tr><td class="p-3">Exchange method</td><td class="p-3 text-text-secondary">Verbal (spoken between parties)</td></tr>
+                  <tr><td class="p-3">Key derivation</td><td class="p-3 text-text-secondary">SHA-256 hash of passphrase</td></tr>
+                  <tr><td class="p-3">Frame encryption</td><td class="p-3 text-text-secondary">XOR with derived key stream</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <InfoBox>
+              <p class="text-sm">
+                <strong class="text-white">Defense in depth:</strong> The passphrase adds a second layer of protection. Even if QR codes are visually captured, the attacker cannot reconstruct the pad without the passphrase. Both parties must enter the same passphrase for the ceremony to succeed.
+              </p>
+            </InfoBox>
           </div>
 
           <div id="mnemonic" class="mb-8">
@@ -285,26 +329,33 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           <div id="pad-sizes" class="mb-8">
             <h3 class="text-xl font-semibold mb-4">Pad Size Options</h3>
 
-            <div class="bg-bg-card border border-border rounded-lg overflow-x-auto">
+            <p class="text-text-secondary mb-4">
+              ASH supports both preset sizes and <strong class="text-white">custom pad sizes</strong> from 32 KB to 10 MB. Larger pads support more messages but require longer ceremony transfer times.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-x-auto mb-4">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b border-border bg-bg-elevated">
                     <th class="text-left p-3 text-text-muted font-medium">Size</th>
                     <th class="text-left p-3 text-text-muted font-medium">Bytes</th>
-                    <th class="text-left p-3 text-text-muted font-medium">Capacity</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Capacity*</th>
                     <th class="text-left p-3 text-text-muted font-medium">Frames</th>
-                    <th class="text-left p-3 text-text-muted font-medium">Transfer</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-border">
-                  <tr><td class="p-3">Tiny (32 KB)</td><td class="p-3 text-text-secondary">32,768</td><td class="p-3 text-text-secondary">~25 messages</td><td class="p-3 text-text-secondary">~37</td><td class="p-3 text-text-secondary">30-45 sec</td></tr>
-                  <tr><td class="p-3">Small (64 KB)</td><td class="p-3 text-text-secondary">65,536</td><td class="p-3 text-text-secondary">~50 messages</td><td class="p-3 text-text-secondary">~74</td><td class="p-3 text-text-secondary">1-2 min</td></tr>
-                  <tr><td class="p-3">Medium (256 KB)</td><td class="p-3 text-text-secondary">262,144</td><td class="p-3 text-text-secondary">~200 messages</td><td class="p-3 text-text-secondary">~295</td><td class="p-3 text-text-secondary">~5 min</td></tr>
-                  <tr><td class="p-3">Large (512 KB)</td><td class="p-3 text-text-secondary">524,288</td><td class="p-3 text-text-secondary">~400 messages</td><td class="p-3 text-text-secondary">~590</td><td class="p-3 text-text-secondary">~10 min</td></tr>
-                  <tr><td class="p-3">Huge (1 MB)</td><td class="p-3 text-text-secondary">1,048,576</td><td class="p-3 text-text-secondary">~800 messages</td><td class="p-3 text-text-secondary">~1179</td><td class="p-3 text-text-secondary">~20 min</td></tr>
+                  <tr><td class="p-3">Small (64 KB)</td><td class="p-3 text-text-secondary">65,536</td><td class="p-3 text-text-secondary">~400 messages</td><td class="p-3 text-text-secondary">~44</td></tr>
+                  <tr><td class="p-3">Medium (256 KB)</td><td class="p-3 text-text-secondary">262,144</td><td class="p-3 text-text-secondary">~1,600 messages</td><td class="p-3 text-text-secondary">~175</td></tr>
+                  <tr><td class="p-3">Large (512 KB)</td><td class="p-3 text-text-secondary">524,288</td><td class="p-3 text-text-secondary">~3,200 messages</td><td class="p-3 text-text-secondary">~350</td></tr>
+                  <tr><td class="p-3">Huge (1 MB)</td><td class="p-3 text-text-secondary">1,048,576</td><td class="p-3 text-text-secondary">~6,400 messages</td><td class="p-3 text-text-secondary">~700</td></tr>
+                  <tr><td class="p-3">Custom</td><td class="p-3 text-text-secondary">32 KB – 10 MB</td><td class="p-3 text-text-secondary">User-specified</td><td class="p-3 text-text-secondary">Variable</td></tr>
                 </tbody>
               </table>
             </div>
+
+            <p class="text-text-muted text-xs">
+              * Message capacity calculated as: (pad_bytes - 160) / 96 bytes per message (64 bytes auth key + 32 bytes minimum padded message)
+            </p>
           </div>
         </section>
 
@@ -373,29 +424,34 @@ Flags: Bit 0 = ENCRYPTED, Bit 1 = METADATA`}
           </div>
         </section>
 
-        <!-- Message Format -->
+        <!-- Messaging Protocol -->
         <section id="messages">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Message Format Specification</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Messaging Protocol</h2>
 
           <p class="text-text-secondary mb-6">
-            Unlike the QR frame format (used during ceremony), encrypted messages use a minimal structure. The goal is simplicity: plaintext XOR'd with pad bytes produces ciphertext that is sent to the relay.
+            ASH messages combine <strong class="text-white">OTP encryption</strong>, <strong class="text-white">Wegman-Carter authentication</strong>, and <strong class="text-white">mandatory padding</strong> into a single authenticated frame. Every message provides both information-theoretic confidentiality and information-theoretic authentication.
           </p>
 
-          <div id="message-structure" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Message Structure</h3>
+          <div id="message-frame" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Authenticated Message Frame</h3>
 
             <p class="text-text-secondary mb-4">
-              Each message consists of plaintext encrypted with OTP and transmitted as an opaque blob. There is no envelope, header, or framing around individual messages.
+              All messages use this single frame format. The relay receives and stores these frames as opaque blobs.
             </p>
 
-            <Diagram title="Message Encryption">
-{`Plaintext:     "Hello"        (UTF-8 bytes: 48 65 6C 6C 6F)
-                  ⊕               (XOR)
-Pad bytes:     A3 F1 2B 9E 07   (from shared pad)
-                  =
-Ciphertext:    EB 94 47 F2 68   (5 bytes)
+            <Diagram title="Message Frame Structure">
+{`┌──────────┬──────────┬──────────┬──────────────────┬──────────────────┐
+│ Version  │   Type   │  Length  │   Ciphertext     │   Auth Tag       │
+│  (1 B)   │  (1 B)   │ (2 B BE) │   (N bytes)      │   (32 bytes)     │
+└──────────┴──────────┴──────────┴──────────────────┴──────────────────┘
+     │          │          │              │                   │
+     │          │          │              │                   └─ Wegman-Carter 256-bit MAC
+     │          │          │              └─ OTP-encrypted padded plaintext
+     │          │          └─ Ciphertext length (big-endian)
+     │          └─ Message type: 0x00=text, 0x01=location
+     └─ Protocol version (currently 1)
 
-API payload:   { "ciphertext": "65STR+ho" }  (base64 encoded)`}
+Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
             </Diagram>
 
             <div class="bg-bg-card border border-border rounded-lg overflow-hidden mt-4">
@@ -403,21 +459,412 @@ API payload:   { "ciphertext": "65STR+ho" }  (base64 encoded)`}
                 <thead>
                   <tr class="border-b border-border bg-bg-elevated">
                     <th class="text-left p-3 text-text-muted font-medium">Field</th>
-                    <th class="text-left p-3 text-text-muted font-medium">Format</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Size</th>
                     <th class="text-left p-3 text-text-muted font-medium">Description</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-border">
-                  <tr><td class="p-3 font-mono text-xs">conversation_id</td><td class="p-3 text-text-secondary">64 hex chars</td><td class="p-3 text-text-secondary">Identifies the conversation</td></tr>
-                  <tr><td class="p-3 font-mono text-xs">ciphertext</td><td class="p-3 text-text-secondary">base64</td><td class="p-3 text-text-secondary">Encrypted message (≤8KB)</td></tr>
-                  <tr><td class="p-3 font-mono text-xs">sequence</td><td class="p-3 text-text-secondary">integer (optional)</td><td class="p-3 text-text-secondary">Message ordering hint</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">version</td><td class="p-3 text-text-secondary">1 byte</td><td class="p-3 text-text-secondary">Protocol version (1)</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">type</td><td class="p-3 text-text-secondary">1 byte</td><td class="p-3 text-text-secondary">0x00 = text, 0x01 = location</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">length</td><td class="p-3 text-text-secondary">2 bytes</td><td class="p-3 text-text-secondary">Ciphertext length (big-endian)</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">ciphertext</td><td class="p-3 text-text-secondary">≥32 bytes</td><td class="p-3 text-text-secondary">OTP-encrypted padded plaintext</td></tr>
+                  <tr><td class="p-3 font-mono text-xs">auth_tag</td><td class="p-3 text-text-secondary">32 bytes</td><td class="p-3 text-text-secondary">Wegman-Carter 256-bit authentication tag</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4 class="font-medium mt-6 mb-3">Pad Consumption Per Message</h4>
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Component</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Size</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Purpose</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr><td class="p-3">Auth key (r₁, r₂, s₁, s₂)</td><td class="p-3 text-text-secondary">64 bytes</td><td class="p-3 text-text-secondary">Wegman-Carter MAC computation</td></tr>
+                  <tr><td class="p-3">Encryption key</td><td class="p-3 text-text-secondary">≥32 bytes</td><td class="p-3 text-text-secondary">OTP encryption (= padded plaintext length)</td></tr>
+                  <tr><td class="p-3 font-semibold">Total minimum</td><td class="p-3 text-text-secondary font-semibold">96 bytes</td><td class="p-3 text-text-secondary">Per message (64 + 32)</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="encryption-flow" class="mb-8">
+            <h3 class="text-xl font-semibold mb-4">Message Processing</h3>
+
+            <p class="text-text-secondary mb-6">
+              Messages pass through a symmetric pipeline. Sender: <strong class="text-white">Pad → Encrypt → Authenticate</strong>. Receiver: <strong class="text-white">Verify → Decrypt → Unpad</strong>.
+            </p>
+
+            <!-- Sender Section -->
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-semibold text-white">Sender: Encryption</h4>
+                <p class="text-text-muted text-sm">Pad → Encrypt → Authenticate → Send</p>
+              </div>
+            </div>
+
+            <!-- Encryption Pipeline - HTML Version -->
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden mb-8">
+              <div class="p-6 space-y-6">
+
+                <!-- Step 1: Padding -->
+                <div class="relative">
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
+                    <div>
+                      <h5 class="font-semibold text-white">Padding</h5>
+                      <p class="text-text-muted text-xs">Traffic Analysis Protection</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="text-sm text-text-secondary mb-2">Input: <code class="text-brand">"hi"</code> (2 bytes)</div>
+                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-2">
+                      <span class="px-2 py-1 bg-warning/20 text-warning rounded">00</span>
+                      <span class="px-2 py-1 bg-brand/20 text-brand-light rounded">00 02</span>
+                      <span class="px-2 py-1 bg-success/20 text-success rounded">68 69</span>
+                      <span class="px-2 py-1 bg-bg-card text-text-muted rounded">00 00 00 ...</span>
+                    </div>
+                    <div class="flex flex-wrap gap-4 text-xs text-text-muted">
+                      <span><span class="inline-block w-2 h-2 bg-warning/50 rounded mr-1"></span>marker</span>
+                      <span><span class="inline-block w-2 h-2 bg-brand/50 rounded mr-1"></span>length</span>
+                      <span><span class="inline-block w-2 h-2 bg-success/50 rounded mr-1"></span>"hi"</span>
+                      <span><span class="inline-block w-2 h-2 bg-bg-card rounded mr-1 border border-border"></span>zero padding</span>
+                    </div>
+                    <div class="text-sm text-text-secondary mt-2">Output: <strong class="text-white">32 bytes</strong> (minimum for all messages)</div>
+                  </div>
+                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ml-11 flex items-center gap-2 text-text-muted">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                  <span class="text-xs">padded plaintext</span>
+                </div>
+
+                <!-- Step 2: Encryption -->
+                <div class="relative">
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
+                    <div>
+                      <h5 class="font-semibold text-white">OTP Encryption</h5>
+                      <p class="text-text-muted text-xs">Perfect Secrecy</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="space-y-2 font-mono text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="text-text-muted w-24">Plaintext:</span>
+                        <span class="text-text-secondary">00 00 02 68 69 00 00 ...</span>
+                        <span class="text-text-muted">(32 bytes)</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-text-muted w-24"></span>
+                        <span class="text-brand text-lg">⊕</span>
+                        <span class="text-text-muted text-xs">XOR</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-text-muted w-24">Pad key:</span>
+                        <span class="text-success">A3 F1 2B 9E 07 C4 D8 ...</span>
+                        <span class="text-text-muted">(32 bytes from pad)</span>
+                      </div>
+                      <div class="flex items-center gap-2 pt-2 border-t border-border">
+                        <span class="text-text-muted w-24">Ciphertext:</span>
+                        <span class="text-warning">A3 F1 29 F6 6E C4 D8 ...</span>
+                        <span class="text-text-muted">(32 bytes)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ml-11 flex items-center gap-2 text-text-muted">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                  <span class="text-xs">ciphertext</span>
+                </div>
+
+                <!-- Step 3: Authentication -->
+                <div class="relative">
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+                    <div>
+                      <h5 class="font-semibold text-white">Wegman-Carter MAC</h5>
+                      <p class="text-text-muted text-xs">Information-Theoretic Authentication</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="text-sm text-text-secondary mb-3">Auth key from pad (64 bytes):</div>
+                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
+                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₁ (16B)</span>
+                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₂ (16B)</span>
+                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₁ (16B)</span>
+                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₂ (16B)</span>
+                    </div>
+                    <div class="text-xs text-text-muted mb-2">Polynomial evaluation in GF(2^128):</div>
+                    <div class="font-mono text-xs text-text-secondary space-y-1 mb-3">
+                      <div>Tag₁ = Σ(blockᵢ · r₁<sup>n-i</sup>) ⊕ s₁</div>
+                      <div>Tag₂ = Σ(blockᵢ · r₂<sup>n-i</sup>) ⊕ s₂</div>
+                    </div>
+                    <div class="text-sm text-text-secondary">Output: <strong class="text-white">Tag₁ ∥ Tag₂</strong> = 256-bit (32 bytes)</div>
+                  </div>
+                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ml-11 flex items-center gap-2 text-text-muted">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                  <span class="text-xs">authentication tag</span>
+                </div>
+
+                <!-- Step 4: Frame Assembly -->
+                <div>
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+                    <div>
+                      <h5 class="font-semibold text-white">Frame Assembly</h5>
+                      <p class="text-text-muted text-xs">Final Output</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
+                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">01</span>
+                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00</span>
+                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00 20</span>
+                      <span class="px-4 py-1.5 bg-warning/20 text-warning rounded">ciphertext (32B)</span>
+                      <span class="px-4 py-1.5 bg-brand/20 text-brand-light rounded">auth tag (32B)</span>
+                    </div>
+                    <div class="flex flex-wrap gap-4 text-xs text-text-muted mb-3">
+                      <span>version</span>
+                      <span>type</span>
+                      <span>length</span>
+                      <span><span class="inline-block w-2 h-2 bg-warning/50 rounded mr-1"></span>encrypted</span>
+                      <span><span class="inline-block w-2 h-2 bg-brand/50 rounded mr-1"></span>MAC</span>
+                    </div>
+                    <div class="text-sm text-success font-medium">Total: 68 bytes sent to relay</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Receiver Section -->
+            <div class="flex items-center gap-3 mb-4">
+              <div class="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="font-semibold text-white">Receiver: Decryption</h4>
+                <p class="text-text-muted text-sm">Receive → Verify → Decrypt → Unpad</p>
+              </div>
+            </div>
+
+            <!-- Decryption Pipeline - HTML Version -->
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden mb-6">
+              <div class="p-6 space-y-6">
+
+                <!-- Step 1: Receive Frame -->
+                <div class="relative">
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
+                    <div>
+                      <h5 class="font-semibold text-white">Receive Frame</h5>
+                      <p class="text-text-muted text-xs">Parse authenticated message</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
+                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">01</span>
+                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00</span>
+                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00 20</span>
+                      <span class="px-4 py-1.5 bg-warning/20 text-warning rounded">ciphertext (32B)</span>
+                      <span class="px-4 py-1.5 bg-brand/20 text-brand-light rounded">auth tag (32B)</span>
+                    </div>
+                    <div class="text-sm text-text-secondary">Extract: header, ciphertext, and authentication tag</div>
+                  </div>
+                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ml-11 flex items-center gap-2 text-text-muted">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                  <span class="text-xs">ciphertext + received tag</span>
+                </div>
+
+                <!-- Step 2: Verify MAC -->
+                <div class="relative">
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
+                    <div>
+                      <h5 class="font-semibold text-white">Verify Wegman-Carter MAC</h5>
+                      <p class="text-text-muted text-xs">Reject if tampered</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="text-sm text-text-secondary mb-3">Consume auth key from pad (64 bytes):</div>
+                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
+                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₁ (16B)</span>
+                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₂ (16B)</span>
+                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₁ (16B)</span>
+                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₂ (16B)</span>
+                    </div>
+                    <div class="font-mono text-xs text-text-secondary space-y-1 mb-3">
+                      <div>Computed Tag = Σ(blockᵢ · r<sup>n-i</sup>) ⊕ s</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <div class="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded text-xs">
+                        <svg class="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                        <span class="text-success">computed_tag == received_tag → valid</span>
+                      </div>
+                      <div class="flex items-center gap-2 px-3 py-1.5 bg-danger/10 border border-danger/30 rounded text-xs">
+                        <svg class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        <span class="text-danger">mismatch → reject</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ml-11 flex items-center gap-2 text-text-muted">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                  <span class="text-xs">verified ciphertext</span>
+                </div>
+
+                <!-- Step 3: Decrypt -->
+                <div class="relative">
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+                    <div>
+                      <h5 class="font-semibold text-white">OTP Decryption</h5>
+                      <p class="text-text-muted text-xs">XOR is symmetric</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="space-y-2 font-mono text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="text-text-muted w-24">Ciphertext:</span>
+                        <span class="text-warning">A3 F1 29 F6 6E C4 D8 ...</span>
+                        <span class="text-text-muted">(32 bytes)</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-text-muted w-24"></span>
+                        <span class="text-brand text-lg">⊕</span>
+                        <span class="text-text-muted text-xs">XOR (same operation)</span>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-text-muted w-24">Pad key:</span>
+                        <span class="text-success">A3 F1 2B 9E 07 C4 D8 ...</span>
+                        <span class="text-text-muted">(32 bytes from pad)</span>
+                      </div>
+                      <div class="flex items-center gap-2 pt-2 border-t border-border">
+                        <span class="text-text-muted w-24">Plaintext:</span>
+                        <span class="text-text-secondary">00 00 02 68 69 00 00 ...</span>
+                        <span class="text-text-muted">(32 bytes padded)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="ml-11 flex items-center gap-2 text-text-muted">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                  <span class="text-xs">padded plaintext</span>
+                </div>
+
+                <!-- Step 4: Remove Padding -->
+                <div>
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+                    <div>
+                      <h5 class="font-semibold text-white">Remove Padding</h5>
+                      <p class="text-text-muted text-xs">Extract original message</p>
+                    </div>
+                  </div>
+                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
+                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
+                      <span class="px-2 py-1 bg-warning/20 text-warning rounded">00</span>
+                      <span class="px-2 py-1 bg-brand/20 text-brand-light rounded">00 02</span>
+                      <span class="px-2 py-1 bg-success/20 text-success rounded">68 69</span>
+                      <span class="px-2 py-1 bg-bg-card text-text-muted rounded line-through">00 00 00 ...</span>
+                    </div>
+                    <div class="flex flex-wrap gap-4 text-xs text-text-muted mb-3">
+                      <span><span class="inline-block w-2 h-2 bg-warning/50 rounded mr-1"></span>marker (0x00)</span>
+                      <span><span class="inline-block w-2 h-2 bg-brand/50 rounded mr-1"></span>length = 2</span>
+                      <span><span class="inline-block w-2 h-2 bg-success/50 rounded mr-1"></span>content</span>
+                      <span><span class="inline-block w-2 h-2 bg-bg-card rounded mr-1 border border-border"></span>discard padding</span>
+                    </div>
+                    <div class="text-sm text-success font-medium">Output: <code class="bg-success/20 px-2 py-0.5 rounded">"hi"</code> (2 bytes)</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <h4 class="font-medium mt-6 mb-3">Wegman-Carter MAC: GF(2^128) Polynomial Hashing</h4>
+
+            <p class="text-text-secondary mb-4">
+              The authentication tag is computed using dual polynomial evaluation over the Galois Field GF(2^128). This provides <strong class="text-white">information-theoretic authentication</strong> — mathematically proven unforgeable without the pad.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Property</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Value</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr><td class="p-3">Tag size</td><td class="p-3 text-text-secondary">256 bits (32 bytes)</td></tr>
+                  <tr><td class="p-3">Auth key</td><td class="p-3 text-text-secondary">64 bytes: r₁ (16) + r₂ (16) + s₁ (16) + s₂ (16)</td></tr>
+                  <tr><td class="p-3">Field polynomial</td><td class="p-3 text-text-secondary font-mono text-xs">x^128 + x^7 + x^2 + x + 1</td></tr>
+                  <tr><td class="p-3">Forgery probability</td><td class="p-3 text-text-secondary">~2^-128 (negligible)</td></tr>
+                  <tr><td class="p-3">Security level</td><td class="p-3 text-text-secondary">Information-theoretic (unconditional)</td></tr>
                 </tbody>
               </table>
             </div>
 
             <InfoBox class="mt-4">
               <p class="text-sm">
-                <strong class="text-white">Design rationale:</strong> No message envelope or metadata is included in the ciphertext itself. Message length equals ciphertext length equals pad bytes consumed. The relay sees only opaque bytes.
+                <strong class="text-white">Why dual polynomials?</strong> Using two independent evaluations (r₁, r₂) with separate OTP masks (s₁, s₂) provides 256-bit security. A single polynomial would only give ~2^-64 forgery resistance.
+              </p>
+            </InfoBox>
+
+            <h4 class="font-medium mt-6 mb-3">Traffic Analysis Protection</h4>
+
+            <p class="text-text-secondary mb-4">
+              All messages are padded to <strong class="text-white">minimum 32 bytes</strong> before encryption. Without this, short messages would be distinguishable by size.
+            </p>
+
+            <Diagram title="Padding Effect">
+{`Without padding (vulnerable to traffic analysis):
+  "yes"           → 3 bytes   ┐
+  "no"            → 2 bytes   ├─ Distinguishable!
+  "I'll be there" → 13 bytes  ┘
+
+With mandatory 32-byte padding:
+  "yes"           → 32 bytes  ┐
+  "no"            → 32 bytes  ├─ All identical size
+  "I'll be there" → 32 bytes  ┘
+
+Padding format: [0x00 marker][2-byte length][content][zero fill to 32]`}
+            </Diagram>
+
+            <InfoBox variant="warning" class="mt-4">
+              <p class="text-sm">
+                <strong>Attack prevented:</strong> Without padding, an adversary observing encrypted message sizes could fingerprint "yes/no" responses, detect typing patterns, or infer conversation topics from message length sequences.
               </p>
             </InfoBox>
           </div>
@@ -511,19 +958,23 @@ Remaining: 50 bytes (indices 20-69)`}
             <Diagram title="Message Flow">
 {`Sender                      Relay (RAM)                     Receiver
   │                              │                              │
-  │  1. Consume pad bytes        │                              │
-  │  2. XOR plaintext            │                              │
-  │  3. Base64 encode            │                              │
+  │  1. Pad message to 32 bytes  │                              │
+  │  2. Consume 64+N pad bytes   │                              │
+  │  3. OTP encrypt              │                              │
+  │  4. Compute Wegman-Carter tag│                              │
+  │  5. Assemble frame           │                              │
   │                              │                              │
-  │  POST /v1/messages ──────────►  (store in RAM, start TTL)   │
+  │  POST /v1/messages ──────────►  (store frame, start TTL)    │
   │  ◄── {blob_id} ──────────────│                              │
   │                              │                              │
   │                              │  SSE: new message ───────────►
-  │                              │                    (decrypt)  │
+  │                              │                 1. Verify tag │
+  │                              │                 2. Decrypt    │
+  │                              │                 3. Unpad      │
   │                              │  ◄── POST /v1/ack ───────────│
   │  ◄── SSE: delivered ─────────│  (delete from RAM)           │
   │                              │                              │
-  │  4. Zero used pad bytes      │                              │`}
+  │  6. Zero used pad bytes      │                              │`}
             </Diagram>
           </div>
         </section>

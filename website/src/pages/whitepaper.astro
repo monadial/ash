@@ -344,18 +344,48 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-border">
-                  <tr><td class="p-3">Small (64 KB)</td><td class="p-3 text-text-secondary">65,536</td><td class="p-3 text-text-secondary">~400 messages</td><td class="p-3 text-text-secondary">~44</td></tr>
-                  <tr><td class="p-3">Medium (256 KB)</td><td class="p-3 text-text-secondary">262,144</td><td class="p-3 text-text-secondary">~1,600 messages</td><td class="p-3 text-text-secondary">~175</td></tr>
-                  <tr><td class="p-3">Large (512 KB)</td><td class="p-3 text-text-secondary">524,288</td><td class="p-3 text-text-secondary">~3,200 messages</td><td class="p-3 text-text-secondary">~350</td></tr>
-                  <tr><td class="p-3">Huge (1 MB)</td><td class="p-3 text-text-secondary">1,048,576</td><td class="p-3 text-text-secondary">~6,400 messages</td><td class="p-3 text-text-secondary">~700</td></tr>
+                  <tr><td class="p-3">Small (64 KB)</td><td class="p-3 text-text-secondary">65,536</td><td class="p-3 text-text-secondary">~680 messages</td><td class="p-3 text-text-secondary">~44</td></tr>
+                  <tr><td class="p-3">Medium (256 KB)</td><td class="p-3 text-text-secondary">262,144</td><td class="p-3 text-text-secondary">~2,700 messages</td><td class="p-3 text-text-secondary">~175</td></tr>
+                  <tr><td class="p-3">Large (512 KB)</td><td class="p-3 text-text-secondary">524,288</td><td class="p-3 text-text-secondary">~5,400 messages</td><td class="p-3 text-text-secondary">~350</td></tr>
+                  <tr><td class="p-3">Huge (1 MB)</td><td class="p-3 text-text-secondary">1,048,576</td><td class="p-3 text-text-secondary">~10,900 messages</td><td class="p-3 text-text-secondary">~700</td></tr>
                   <tr><td class="p-3">Custom</td><td class="p-3 text-text-secondary">32 KB – 10 MB</td><td class="p-3 text-text-secondary">User-specified</td><td class="p-3 text-text-secondary">Variable</td></tr>
                 </tbody>
               </table>
             </div>
 
-            <p class="text-text-muted text-xs">
-              * Message capacity calculated as: (pad_bytes - 160) / 96 bytes per message (64 bytes auth key + 32 bytes minimum padded message)
+            <p class="text-text-muted text-xs mb-4">
+              * Message capacity = (pad_bytes - 160) / 96. Each message consumes minimum 96 bytes from the pad.
             </p>
+
+            <!-- Pad Consumption Breakdown -->
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+              <div class="px-4 py-2 border-b border-border bg-bg-elevated">
+                <span class="text-xs font-medium text-text-secondary">Pad Consumption Breakdown</span>
+              </div>
+              <div class="p-4 space-y-3">
+                <div class="text-sm">
+                  <span class="text-text-muted">Reserved (once):</span>
+                  <span class="text-text-secondary ml-2">160 bytes for tokens (conversation ID + auth + burn)</span>
+                </div>
+                <div class="text-sm">
+                  <span class="text-text-muted">Per message:</span>
+                </div>
+                <div class="ml-4 space-y-2">
+                  <div class="flex items-center gap-3 text-sm">
+                    <span class="px-2 py-1 bg-brand/20 text-brand-light rounded font-mono text-xs">64 B</span>
+                    <span class="text-text-secondary">Wegman-Carter auth key (r₁ + r₂ + s₁ + s₂)</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-sm">
+                    <span class="px-2 py-1 bg-success/20 text-success rounded font-mono text-xs">≥32 B</span>
+                    <span class="text-text-secondary">OTP encryption key (= padded message length)</span>
+                  </div>
+                  <div class="flex items-center gap-3 text-sm border-t border-border pt-2 mt-2">
+                    <span class="px-2 py-1 bg-warning/20 text-warning rounded font-mono text-xs font-semibold">≥96 B</span>
+                    <span class="text-white font-medium">Minimum total per message</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

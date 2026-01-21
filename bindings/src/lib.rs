@@ -35,10 +35,10 @@ pub enum AshError {
     InvalidMetadataUrl,
     #[error("Pad too small for tokens")]
     PadTooSmallForTokens,
-    #[error("Pad size too small")]
-    PadSizeTooSmall,
-    #[error("Pad size too large")]
-    PadSizeTooBig,
+    #[error("Authentication failed")]
+    AuthenticationFailed,
+    #[error("Invalid padding")]
+    InvalidPadding,
 }
 
 impl From<ash_core::Error> for AshError {
@@ -55,40 +55,63 @@ impl From<ash_core::Error> for AshError {
             ash_core::Error::MetadataUrlTooLong { .. } => AshError::MetadataUrlTooLong,
             ash_core::Error::InvalidMetadataUrl => AshError::InvalidMetadataUrl,
             ash_core::Error::PadTooSmallForTokens { .. } => AshError::PadTooSmallForTokens,
-            ash_core::Error::PadSizeTooSmall { .. } => AshError::PadSizeTooSmall,
-            ash_core::Error::PadSizeTooBig { .. } => AshError::PadSizeTooBig,
-            // Message auth errors (not exposed via FFI ceremony, but map them)
-            ash_core::Error::AuthenticationFailed => AshError::CrcMismatch,
+            // Message auth errors
+            ash_core::Error::AuthenticationFailed => AshError::AuthenticationFailed,
             ash_core::Error::PayloadTooLarge { .. } => AshError::EmptyPayload,
             ash_core::Error::FrameTooShort { .. } => AshError::FountainBlockTooShort,
             ash_core::Error::UnsupportedFrameVersion { .. } => AshError::UnsupportedMetadataVersion,
             ash_core::Error::InvalidMessageType { .. } => AshError::InvalidMetadataUrl,
             ash_core::Error::FrameLengthMismatch { .. } => AshError::LengthMismatch,
+            ash_core::Error::InvalidPadding { .. } => AshError::InvalidPadding,
         }
     }
 }
 
 // === Pad Size Constants ===
 
-/// Minimum pad size in bytes (32 KB)
-pub const MIN_PAD_SIZE: u64 = ash_core::MIN_PAD_SIZE as u64;
-
-/// Maximum pad size in bytes (1 GB)
-pub const MAX_PAD_SIZE: u64 = ash_core::MAX_PAD_SIZE as u64;
-
-/// Get minimum pad size in bytes
-pub fn get_min_pad_size() -> u64 {
-    MIN_PAD_SIZE
+/// Available pad sizes
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PadSize {
+    /// 32 KB - approximately 25 short messages
+    Tiny,
+    /// 64 KB - approximately 50 short messages
+    Small,
+    /// 256 KB - approximately 200 short messages
+    Medium,
+    /// 512 KB - approximately 400 short messages
+    Large,
+    /// 1 MB - approximately 800 short messages
+    Huge,
 }
 
-/// Get maximum pad size in bytes
-pub fn get_max_pad_size() -> u64 {
-    MAX_PAD_SIZE
+impl PadSize {
+    /// Get the size in bytes.
+    pub fn bytes(&self) -> u64 {
+        match self {
+            PadSize::Tiny => 32 * 1024,
+            PadSize::Small => 64 * 1024,
+            PadSize::Medium => 256 * 1024,
+            PadSize::Large => 512 * 1024,
+            PadSize::Huge => 1024 * 1024,
+        }
+    }
 }
 
-/// Validate that a pad size is within allowed bounds
-pub fn validate_pad_size(size: u64) -> bool {
-    size >= MIN_PAD_SIZE && size <= MAX_PAD_SIZE
+impl From<PadSize> for ash_core::PadSize {
+    fn from(size: PadSize) -> Self {
+        match size {
+            PadSize::Tiny => ash_core::PadSize::Tiny,
+            PadSize::Small => ash_core::PadSize::Small,
+            PadSize::Medium => ash_core::PadSize::Medium,
+            PadSize::Large => ash_core::PadSize::Large,
+            PadSize::Huge => ash_core::PadSize::Huge,
+        }
+    }
+}
+
+/// Get pad size in bytes for a given size
+pub fn get_pad_size_bytes(size: PadSize) -> u64 {
+    size.bytes()
 }
 
 // === Role Enum ===
@@ -117,10 +140,10 @@ pub struct Pad {
 }
 
 impl Pad {
-    /// Create pad from entropy bytes.
-    /// The entropy length determines the pad size (must be 32KB - 1GB).
-    pub fn from_entropy(entropy: Vec<u8>) -> Result<Self, AshError> {
-        let pad = ash_core::Pad::new(&entropy)?;
+    /// Create pad from entropy bytes with a specific size.
+    /// The entropy length must match the specified pad size.
+    pub fn from_entropy(entropy: Vec<u8>, size: PadSize) -> Result<Self, AshError> {
+        let pad = ash_core::Pad::new(&entropy, size.into())?;
         Ok(Self {
             inner: Mutex::new(pad),
         })
@@ -220,7 +243,7 @@ pub struct CeremonyMetadata {
     pub version: u8,
     pub ttl_seconds: u64,
     pub disappearing_messages_seconds: u32,
-    pub conversation_flags: u16,
+    pub notification_flags: u16,
     pub relay_url: String,
 }
 
@@ -230,7 +253,7 @@ impl From<ash_core::CeremonyMetadata> for CeremonyMetadata {
             version: m.version,
             ttl_seconds: m.ttl_seconds,
             disappearing_messages_seconds: m.disappearing_messages_seconds,
-            conversation_flags: m.conversation_flags.bits(),
+            notification_flags: m.notification_flags.bits(),
             relay_url: m.relay_url,
         }
     }
@@ -241,7 +264,7 @@ impl From<CeremonyMetadata> for ash_core::CeremonyMetadata {
         ash_core::CeremonyMetadata::with_flags(
             m.ttl_seconds,
             m.disappearing_messages_seconds,
-            ash_core::ConversationFlags::from_bits(m.conversation_flags),
+            ash_core::NotificationFlags::from_bits(m.notification_flags),
             m.relay_url,
         )
         .unwrap_or_default()
@@ -318,7 +341,7 @@ impl FountainFrameReceiver {
     /// Create a new receiver.
     /// Passphrase is required and must match the sender's passphrase.
     pub fn new(passphrase: String) -> Self {
-        let receiver = ash_core::frame::FountainFrameReceiver::new(&passphrase);
+        let receiver = ash_core::frame::FountainFrameReceiver::new(Some(&passphrase));
         Self {
             inner: Mutex::new(receiver),
         }
@@ -386,21 +409,33 @@ pub fn create_fountain_generator(
         &core_metadata,
         &pad_bytes,
         block_size as usize,
-        &passphrase,
+        Some(&passphrase),
     )?;
     Ok(std::sync::Arc::new(FountainFrameGenerator {
         inner: Mutex::new(generator),
     }))
 }
 
-/// Encrypt plaintext using OTP
+/// Encrypt plaintext using OTP (XOR).
+///
+/// Note: For authenticated encryption, use MessageFrame in the iOS app.
+/// This raw XOR function is exposed for legacy compatibility.
 pub fn encrypt(key: Vec<u8>, plaintext: Vec<u8>) -> Result<Vec<u8>, AshError> {
-    Ok(ash_core::otp::encrypt(&key, &plaintext)?)
+    if key.len() != plaintext.len() {
+        return Err(AshError::LengthMismatch);
+    }
+    Ok(key.iter().zip(plaintext.iter()).map(|(k, p)| k ^ p).collect())
 }
 
-/// Decrypt ciphertext using OTP
+/// Decrypt ciphertext using OTP (XOR).
+///
+/// Note: For authenticated decryption, use MessageFrame in the iOS app.
+/// This raw XOR function is exposed for legacy compatibility.
 pub fn decrypt(key: Vec<u8>, ciphertext: Vec<u8>) -> Result<Vec<u8>, AshError> {
-    Ok(ash_core::otp::decrypt(&key, &ciphertext)?)
+    if key.len() != ciphertext.len() {
+        return Err(AshError::LengthMismatch);
+    }
+    Ok(key.iter().zip(ciphertext.iter()).map(|(k, c)| k ^ c).collect())
 }
 
 /// Generate 6-word mnemonic checksum
@@ -481,26 +516,27 @@ mod tests {
     #[test]
     fn test_pad_roundtrip() {
         // Use minimum pad size (32KB)
-        let entropy = vec![0xAB; MIN_PAD_SIZE as usize];
-        let pad = Pad::from_entropy(entropy).unwrap();
+        let size = PadSize::Tiny;
+        let entropy = vec![0xAB; size.bytes() as usize];
+        let pad = Pad::from_entropy(entropy, size).unwrap();
 
-        assert_eq!(pad.remaining(), MIN_PAD_SIZE);
+        assert_eq!(pad.remaining(), size.bytes());
         assert!(!pad.is_exhausted());
 
         let consumed = pad.consume(100, Role::Initiator).unwrap();
         assert_eq!(consumed.len(), 100);
-        assert_eq!(pad.remaining(), MIN_PAD_SIZE - 100);
+        assert_eq!(pad.remaining(), size.bytes() - 100);
     }
 
     #[test]
     fn test_pad_size_validation() {
-        // Too small
+        // Wrong entropy size for specified pad size
         let small_entropy = vec![0xAB; 1000];
-        assert!(Pad::from_entropy(small_entropy).is_err());
+        assert!(Pad::from_entropy(small_entropy, PadSize::Tiny).is_err());
 
-        // Valid minimum
-        let min_entropy = vec![0xAB; MIN_PAD_SIZE as usize];
-        assert!(Pad::from_entropy(min_entropy).is_ok());
+        // Valid: entropy matches pad size
+        let valid_entropy = vec![0xAB; PadSize::Tiny.bytes() as usize];
+        assert!(Pad::from_entropy(valid_entropy, PadSize::Tiny).is_ok());
     }
 
     #[test]
@@ -509,7 +545,7 @@ mod tests {
             version: 1,
             ttl_seconds: 300,
             disappearing_messages_seconds: 0,
-            conversation_flags: 0x000B, // Default: new message + expiring + delivery failed
+            notification_flags: 0x000B, // Default: new message + expiring + delivery failed
             relay_url: "https://relay.test".to_string(),
         };
         let pad = vec![0x42; 2000];
@@ -551,11 +587,11 @@ mod tests {
     }
 
     #[test]
-    fn test_pad_size_constants() {
-        assert_eq!(get_min_pad_size(), 32 * 1024);
-        assert_eq!(get_max_pad_size(), 1024 * 1024 * 1024);
-        assert!(validate_pad_size(32 * 1024));
-        assert!(validate_pad_size(1024 * 1024));
-        assert!(!validate_pad_size(1000));
+    fn test_pad_sizes() {
+        assert_eq!(PadSize::Tiny.bytes(), 32 * 1024);
+        assert_eq!(PadSize::Small.bytes(), 64 * 1024);
+        assert_eq!(PadSize::Medium.bytes(), 256 * 1024);
+        assert_eq!(PadSize::Large.bytes(), 512 * 1024);
+        assert_eq!(PadSize::Huge.bytes(), 1024 * 1024);
     }
 }

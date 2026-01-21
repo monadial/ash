@@ -169,6 +169,12 @@ pub enum Error {
         /// Actual content length.
         actual: usize,
     },
+
+    /// Invalid message padding format.
+    InvalidPadding {
+        /// Description of what's wrong.
+        reason: String,
+    },
 }
 
 impl fmt::Display for Error {
@@ -266,6 +272,9 @@ impl fmt::Display for Error {
                     "frame length mismatch: header declares {} bytes, got {}",
                     declared, actual
                 )
+            }
+            Error::InvalidPadding { reason } => {
+                write!(f, "invalid padding: {}", reason)
             }
         }
     }

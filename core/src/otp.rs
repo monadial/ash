@@ -27,7 +27,8 @@ use crate::error::{Error, Result};
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
+/// // Note: otp module is internal. Use MessageFrame for authenticated encryption.
 /// use ash_core::otp;
 ///
 /// let key = [0xAB, 0xCD, 0xEF];

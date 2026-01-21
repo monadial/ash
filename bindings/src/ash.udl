@@ -4,16 +4,10 @@
 // Fountain code based QR transfer for reliable ceremony.
 
 namespace ash {
-    // === Pad Size Constants ===
+    // === Pad Size Operations ===
 
-    /// Get minimum pad size in bytes (32 KB)
-    u64 get_min_pad_size();
-
-    /// Get maximum pad size in bytes (1 GB)
-    u64 get_max_pad_size();
-
-    /// Validate that a pad size is within allowed bounds (32KB - 1GB)
-    boolean validate_pad_size(u64 size);
+    /// Get pad size in bytes for a given PadSize
+    u64 get_pad_size_bytes(PadSize size);
 
     // === Fountain Ceremony Operations ===
 
@@ -87,6 +81,20 @@ namespace ash {
     void secure_zero_bytes(sequence<u8> data);
 };
 
+/// Available pad sizes
+enum PadSize {
+    /// 32 KB - approximately 25 short messages
+    "Tiny",
+    /// 64 KB - approximately 50 short messages
+    "Small",
+    /// 256 KB - approximately 200 short messages
+    "Medium",
+    /// 512 KB - approximately 400 short messages
+    "Large",
+    /// 1 MB - approximately 800 short messages
+    "Huge",
+};
+
 /// Role in the conversation, determining pad consumption direction.
 ///
 /// The role is established during the ceremony:
@@ -124,10 +132,10 @@ enum AshError {
     "InvalidMetadataUrl",
     /// Pad is too small to derive authorization tokens
     "PadTooSmallForTokens",
-    /// Pad size is below minimum (32 KB)
-    "PadSizeTooSmall",
-    /// Pad size exceeds maximum (1 GB)
-    "PadSizeTooBig",
+    /// Message authentication failed
+    "AuthenticationFailed",
+    /// Invalid message padding
+    "InvalidPadding",
 };
 
 /// Ceremony metadata transferred via QR frame 0
@@ -139,7 +147,7 @@ dictionary CeremonyMetadata {
     u64 ttl_seconds;
     /// Disappearing messages timeout in seconds (0 = off)
     u32 disappearing_messages_seconds;
-    /// Conversation flags (16-bit bitfield) encoding various settings:
+    /// Notification flags (16-bit bitfield) encoding various settings:
     ///
     /// Notification flags (bits 0-7):
     /// - Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
@@ -157,7 +165,7 @@ dictionary CeremonyMetadata {
     /// - Bits 12-15: Conversation accent color (16 colors)
     ///
     /// Default: 0x000B (new message + expiring + delivery failed)
-    u16 conversation_flags;
+    u16 notification_flags;
     /// Relay server URL
     string relay_url;
 };
@@ -190,10 +198,10 @@ dictionary FountainCeremonyResult {
 ///
 /// This allows both parties to send messages without coordination.
 interface Pad {
-    /// Create pad from entropy bytes.
-    /// The entropy length determines the pad size (must be 32KB - 1GB).
+    /// Create pad from entropy bytes with a specific size.
+    /// The entropy length must match the specified pad size.
     [Throws=AshError, Name=from_entropy]
-    constructor(sequence<u8> entropy);
+    constructor(sequence<u8> entropy, PadSize size);
 
     /// Create pad from raw bytes (for reconstruction)
     [Name=from_bytes]

@@ -67,6 +67,15 @@ use crate::error::{Error, Result};
 use crate::mac::{compute_tag, verify_tag, AuthKey, TAG_SIZE};
 use crate::otp;
 
+/// Minimum padded message size (32 bytes).
+pub const MIN_PADDED_SIZE: usize = 32;
+
+/// Padding marker byte (0x00).
+pub const PADDING_MARKER: u8 = 0x00;
+
+/// Maximum message content length (65535 bytes = u16::MAX).
+pub const MAX_MESSAGE_CONTENT_LEN: usize = u16::MAX as usize;
+
 /// Frame format version.
 pub const FRAME_VERSION: u8 = 1;
 
@@ -302,6 +311,117 @@ impl MessageFrame {
 /// `total = 64 (auth) + plaintext_len (encryption)`
 pub const fn pad_consumption(plaintext_len: usize) -> usize {
     crate::mac::AUTH_KEY_SIZE + plaintext_len
+}
+
+/// Pad a message to minimum 32 bytes for traffic analysis protection.
+///
+/// # Format
+///
+/// ```text
+/// [0x00 marker][2-byte length BE][content][zero padding to 32 bytes]
+/// ```
+///
+/// # Arguments
+///
+/// * `message` - Original message bytes
+///
+/// # Returns
+///
+/// Padded message (minimum 32 bytes, larger if message exceeds 29 bytes).
+///
+/// # Example
+///
+/// ```
+/// use ash_core::message::pad_message;
+///
+/// let padded = pad_message(b"hi").unwrap();
+/// assert_eq!(padded.len(), 32);
+/// assert_eq!(&padded[0..5], &[0x00, 0x00, 0x02, b'h', b'i']);
+/// ```
+pub fn pad_message(message: &[u8]) -> Result<Vec<u8>> {
+    if message.len() > u16::MAX as usize {
+        return Err(Error::PayloadTooLarge {
+            size: message.len(),
+            max: u16::MAX as usize,
+        });
+    }
+
+    let content_len = message.len();
+    let total_needed = 1 + 2 + content_len; // marker + length + content
+    let padded_size = total_needed.max(MIN_PADDED_SIZE);
+
+    let mut padded = vec![0u8; padded_size];
+
+    // [0x00 marker]
+    padded[0] = PADDING_MARKER;
+
+    // [2-byte length BE]
+    let len_bytes = (content_len as u16).to_be_bytes();
+    padded[1] = len_bytes[0];
+    padded[2] = len_bytes[1];
+
+    // [content]
+    padded[3..3 + content_len].copy_from_slice(message);
+
+    // Remaining bytes are already zero (padding)
+
+    Ok(padded)
+}
+
+/// Remove padding from a message.
+///
+/// # Arguments
+///
+/// * `padded` - Padded message bytes
+///
+/// # Returns
+///
+/// Original message bytes.
+///
+/// # Errors
+///
+/// - `InvalidPadding` if the padding format is invalid
+///
+/// # Example
+///
+/// ```
+/// use ash_core::message::{pad_message, unpad_message};
+///
+/// let original = b"Hello!";
+/// let padded = pad_message(original).unwrap();
+/// let recovered = unpad_message(&padded).unwrap();
+/// assert_eq!(recovered, original);
+/// ```
+pub fn unpad_message(padded: &[u8]) -> Result<Vec<u8>> {
+    if padded.len() < 3 {
+        return Err(Error::InvalidPadding {
+            reason: "padded message too short (< 3 bytes)".to_string(),
+        });
+    }
+
+    // Check marker
+    if padded[0] != PADDING_MARKER {
+        return Err(Error::InvalidPadding {
+            reason: format!("invalid marker byte: expected 0x00, got 0x{:02X}", padded[0]),
+        });
+    }
+
+    // Read length
+    let content_len = u16::from_be_bytes([padded[1], padded[2]]) as usize;
+
+    // Validate length
+    if 3 + content_len > padded.len() {
+        return Err(Error::InvalidPadding {
+            reason: format!(
+                "content length {} exceeds available data {}",
+                content_len,
+                padded.len() - 3
+            ),
+        });
+    }
+
+    // Extract content
+    Ok(padded[3..3 + content_len].to_vec())
 }
 
 #[cfg(test)]

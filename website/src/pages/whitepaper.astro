@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro'
 import TableOfContents from '../components/TableOfContents.astro'
 import Diagram from '../components/Diagram.astro'
 import InfoBox from '../components/InfoBox.astro'
+import PolyHashDemo from '../components/PolyHashDemo.tsx'
 
 const tocItems = [
   { id: 'overview', title: 'Protocol Overview', children: [
@@ -968,6 +969,16 @@ Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
                   <p class="text-text-muted text-xs mt-2">ASH uses dual evaluation (r₁, r₂ with s₁, s₂) to produce a 256-bit tag.</p>
                 </div>
               </div>
+            </div>
+
+            <!-- Live Demo -->
+            <div class="mb-6">
+              <h5 class="font-semibold text-white mb-3">Try It Yourself</h5>
+              <p class="text-text-secondary text-sm mb-4">
+                This interactive demo uses the actual ASH Rust cryptographic core compiled to WebAssembly.
+                Type a message, see how the polynomial is constructed, and verify the authentication tag.
+              </p>
+              <PolyHashDemo client:load />
             </div>
 
             <!-- Why It's Secure -->

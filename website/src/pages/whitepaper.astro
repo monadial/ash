@@ -496,7 +496,7 @@ Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
             <h3 class="text-xl font-semibold mb-4">Message Processing</h3>
 
             <p class="text-text-secondary mb-6">
-              Messages pass through a symmetric pipeline. Sender: <strong class="text-white">Pad → Encrypt → Authenticate</strong>. Receiver: <strong class="text-white">Verify → Decrypt → Unpad</strong>.
+              Every message passes through a symmetric pipeline that provides both confidentiality and authentication.
             </p>
 
             <!-- Sender Section -->

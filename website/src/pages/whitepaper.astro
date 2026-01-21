@@ -8,6 +8,7 @@ import PaddingDemo from '../components/PaddingDemo.tsx'
 import MnemonicDemo from '../components/MnemonicDemo.tsx'
 import TokenDemo from '../components/TokenDemo.tsx'
 import PolyHashDemo from '../components/PolyHashDemo.tsx'
+import MessagePipelineDemo from '../components/MessagePipelineDemo.tsx'
 
 const tocItems = [
   { id: 'overview', title: 'Protocol Overview', children: [
@@ -860,7 +861,13 @@ Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
               </div>
             </div>
 
-            <h4 class="font-medium mt-6 mb-3">Wegman-Carter MAC: GF(2^128) Polynomial Hashing</h4>
+            <h4 class="font-medium mt-6 mb-3">Live Pipeline Demo</h4>
+            <p class="text-text-secondary text-sm mb-4">
+              Watch the actual encryption pipeline in action. This demo uses the Rust FFI to process messages through padding, OTP encryption, and Wegman-Carter authentication — the same code that runs on devices.
+            </p>
+            <MessagePipelineDemo client:load />
+
+            <h4 class="font-medium mt-8 mb-3">Wegman-Carter MAC: GF(2^128) Polynomial Hashing</h4>
 
             <p class="text-text-secondary mb-4">
               The authentication tag is computed using dual polynomial evaluation over the Galois Field GF(2^128). This provides <strong class="text-white">information-theoretic authentication</strong> — mathematically proven unforgeable without the pad.

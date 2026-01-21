@@ -13,55 +13,114 @@ enum CeremonyRole: String, Sendable {
     case receiver  // Scans QR codes from sender
 }
 
-/// Extension to add UI-friendly properties to the FFI PadSize enum
-extension PadSize: CaseIterable, Identifiable {
-    public static var allCases: [PadSize] { [.tiny, .small, .medium, .large, .huge] }
+/// Pad size selection for ceremony UI.
+/// This is a Swift-side enum for UI purposes, separate from core constraints.
+/// Core accepts any size between 32KB and 1GB.
+enum PadSizeOption: String, CaseIterable, Identifiable {
+    case small = "small"       // 64 KB
+    case medium = "medium"     // 256 KB
+    case large = "large"       // 512 KB
+    case huge = "huge"         // 1 MB
+    case custom = "custom"     // User-specified size
 
-    public var id: String { displayName }
+    var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .tiny: return "Tiny"
         case .small: return "Small"
         case .medium: return "Medium"
         case .large: return "Large"
         case .huge: return "Huge"
+        case .custom: return "Custom"
         }
     }
 
-    var bytes: UInt64 {
+    /// Preset size in bytes (nil for custom)
+    var presetBytes: UInt64? {
         switch self {
-        case .tiny: return 32 * 1024       // 32 KB
         case .small: return 64 * 1024      // 64 KB
         case .medium: return 256 * 1024    // 256 KB
         case .large: return 512 * 1024     // 512 KB
         case .huge: return 1024 * 1024     // 1 MB
+        case .custom: return nil
+        }
+    }
+
+    /// Human-readable size description
+    var sizeDescription: String {
+        switch self {
+        case .small: return "64 KB"
+        case .medium: return "256 KB"
+        case .large: return "512 KB"
+        case .huge: return "1 MB"
+        case .custom: return "Custom"
         }
     }
 
     /// User-friendly description
     var description: String {
-        "~\(estimatedMessages) messages, ~\(approximateFrames) QR frames"
+        guard let bytes = presetBytes else {
+            return "Choose your own size"
+        }
+        return "~\(estimatedMessages(for: bytes)) messages, ~\(approximateFrames(for: bytes)) QR frames"
     }
 
     /// Approximate QR frames needed for transfer
-    var approximateFrames: Int {
+    func approximateFrames(for bytes: UInt64) -> Int {
         // Extended frame format: 6 bytes header + 4 bytes CRC = 10 bytes overhead
         // Max payload 900 bytes → effective payload ~890 bytes
         // +1 for metadata frame (frame 0)
-        let effectivePayload = 890
-        return Int((bytes + UInt64(effectivePayload) - 1) / UInt64(effectivePayload)) + 1
+        let effectivePayload: UInt64 = 890
+        return Int((bytes + effectivePayload - 1) / effectivePayload) + 1
     }
 
-    /// Estimated number of messages this pad can support
+    /// Estimated number of messages this pad can support.
+    /// Formula: usable_bytes / (auth_overhead + avg_message_size)
+    /// where auth_overhead = 64 bytes (Wegman-Carter MAC)
+    /// and avg_message_size = 100 bytes (typical short message)
+    func estimatedMessages(for bytes: UInt64) -> Int {
+        let reservedForTokens: UInt64 = 160  // First 160 bytes for token derivation
+        let authOverhead: UInt64 = 64        // MAC overhead per message
+        let avgMessageSize: UInt64 = 100     // Typical message size
+        let bytesPerMessage = authOverhead + avgMessageSize
+        let usableBytes = bytes > reservedForTokens ? bytes - reservedForTokens : 0
+        return Int(usableBytes / bytesPerMessage)
+    }
+
+    /// Estimated messages for preset sizes
     var estimatedMessages: Int {
-        switch self {
-        case .tiny: return 50
-        case .small: return 100
-        case .medium: return 500
-        case .large: return 1000
-        case .huge: return 2000
+        guard let bytes = presetBytes else { return 0 }
+        return estimatedMessages(for: bytes)
+    }
+
+    /// Approximate QR frames for preset sizes
+    var approximateFrames: Int {
+        guard let bytes = presetBytes else { return 0 }
+        return approximateFrames(for: bytes)
+    }
+}
+
+/// Pad size limits from core
+enum PadSizeLimits {
+    /// Minimum pad size (32 KB)
+    static let minimumBytes: UInt64 = 32 * 1024
+    /// Maximum pad size (10 MB for UI, core supports up to 1 GB)
+    static let maximumBytes: UInt64 = 10 * 1024 * 1024
+
+    /// Format bytes as human-readable string
+    static func formatBytes(_ bytes: UInt64) -> String {
+        if bytes >= 1024 * 1024 {
+            return String(format: "%.1f MB", Double(bytes) / (1024.0 * 1024.0))
+        } else if bytes >= 1024 {
+            return String(format: "%.0f KB", Double(bytes) / 1024.0)
+        } else {
+            return "\(bytes) bytes"
         }
+    }
+
+    /// Validate pad size
+    static func isValid(_ bytes: UInt64) -> Bool {
+        bytes >= minimumBytes && bytes <= maximumBytes
     }
 }
 
@@ -137,24 +196,33 @@ struct ConsentState: Equatable {
 struct CeremonyState: Equatable {
     var phase: CeremonyPhase = .idle
     var role: CeremonyRole = .sender
-    var selectedPadSize: PadSize = .medium
+    var selectedPadSizeOption: PadSizeOption = .medium
+    var customPadSizeBytes: UInt64 = 256 * 1024  // Default custom size
     var entropyProgress: Double = 0.0
     var collectedEntropy: [UInt8] = []
     var generatedPad: [UInt8]? = nil
     var scannedFrames: Set<Int> = []
     var totalFrames: Int = 0
 
-    /// Optional passphrase for QR frame encryption (spoken between parties)
-    var passphrase: String? = nil
+    /// Required passphrase for QR frame encryption (spoken between parties)
+    var passphrase: String = ""
 
-    /// Whether passphrase encryption is enabled
-    var isPassphraseEnabled: Bool = false
+    /// Get the actual pad size in bytes
+    var padSizeBytes: UInt64 {
+        selectedPadSizeOption.presetBytes ?? customPadSizeBytes
+    }
 
     /// Optional custom name for the conversation
     var conversationName: String? = nil
 
     /// Disappearing messages setting (client-side display TTL)
     var disappearingMessages: DisappearingMessages = .off
+
+    /// Whether message padding is enabled (hides message length)
+    var messagePaddingEnabled: Bool = false
+
+    /// Minimum message size when padding is enabled
+    var messagePaddingSize: MessagePaddingSize = .bytes32
 
     /// Consent checkboxes state
     var consent: ConsentState = ConsentState()

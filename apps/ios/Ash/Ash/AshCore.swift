@@ -808,6 +808,12 @@ public protocol FountainFrameReceiverProtocol : AnyObject {
      */
     func sourceCount()  -> UInt32
     
+    /**
+     * Number of unique blocks received (excluding duplicates).
+     * This is more useful for progress tracking.
+     */
+    func uniqueBlocksReceived()  -> UInt32
+    
 }
 
 /**
@@ -855,14 +861,13 @@ open class FountainFrameReceiver:
     }
     /**
      * Create a new receiver.
-     *
-     * If passphrase was used for encryption, same passphrase must be provided.
+     * Passphrase is required and must match the sender's passphrase.
      */
-public convenience init(passphrase: String?) {
+public convenience init(passphrase: String) {
     let pointer =
         try! rustCall() {
     uniffi_ash_bindings_fn_constructor_fountainframereceiver_new(
-        FfiConverterOptionString.lower(passphrase),$0
+        FfiConverterString.lower(passphrase),$0
     )
 }
     self.init(unsafeFromRawPointer: pointer)
@@ -941,6 +946,17 @@ open func progress() -> Double {
 open func sourceCount() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_method_fountainframereceiver_source_count(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Number of unique blocks received (excluding duplicates).
+     * This is more useful for progress tracking.
+     */
+open func uniqueBlocksReceived() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_unique_blocks_received(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -1170,13 +1186,13 @@ public static func fromBytesWithState(bytes: [UInt8], consumedFront: UInt64, con
 }
     
     /**
-     * Create pad from entropy bytes
+     * Create pad from entropy bytes.
+     * The entropy length determines the pad size (must be 32KB - 1GB).
      */
-public static func fromEntropy(entropy: [UInt8], size: PadSize)throws  -> Pad {
+public static func fromEntropy(entropy: [UInt8])throws  -> Pad {
     return try  FfiConverterTypePad.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_constructor_pad_from_entropy(
-        FfiConverterSequenceUInt8.lower(entropy),
-        FfiConverterTypePadSize.lower(size),$0
+        FfiConverterSequenceUInt8.lower(entropy),$0
     )
 })
 }
@@ -1497,15 +1513,26 @@ public struct CeremonyMetadata {
      */
     public let disappearingMessagesSeconds: UInt32
     /**
-     * Push notification preferences (16-bit bitfield)
-     * Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
-     * Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires (5min, 1min)
-     * Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
-     * Bit 8: NOTIFY_DELIVERY_FAILED (0x0100) - notify sender if message TTL expires unread
-     * Bit 9: NOTIFY_MESSAGE_READ (0x0200) - reserved for future read receipts
-     * Default: 0x0103 (new message + expiring + delivery failed)
+     * Conversation flags (16-bit bitfield) encoding various settings:
+     *
+     * Notification flags (bits 0-7):
+     * - Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
+     * - Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires
+     * - Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
+     * - Bit 3: NOTIFY_DELIVERY_FAILED (0x0008) - notify sender if TTL expires unread
+     * - Bit 4: NOTIFY_MESSAGE_READ (0x0010) - reserved for read receipts
+     * - Bits 5-7: Reserved for future notification types
+     *
+     * Security flags (bits 8-11):
+     * - Bit 8: Persistence consent (local message storage)
+     * - Bits 9-11: Message padding settings (enabled + size)
+     *
+     * UI flags (bits 12-15):
+     * - Bits 12-15: Conversation accent color (16 colors)
+     *
+     * Default: 0x000B (new message + expiring + delivery failed)
      */
-    public let notificationFlags: UInt16
+    public let conversationFlags: UInt16
     /**
      * Relay server URL
      */
@@ -1524,21 +1551,32 @@ public struct CeremonyMetadata {
          * Disappearing messages timeout in seconds (0 = off)
          */disappearingMessagesSeconds: UInt32, 
         /**
-         * Push notification preferences (16-bit bitfield)
-         * Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
-         * Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires (5min, 1min)
-         * Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
-         * Bit 8: NOTIFY_DELIVERY_FAILED (0x0100) - notify sender if message TTL expires unread
-         * Bit 9: NOTIFY_MESSAGE_READ (0x0200) - reserved for future read receipts
-         * Default: 0x0103 (new message + expiring + delivery failed)
-         */notificationFlags: UInt16, 
+         * Conversation flags (16-bit bitfield) encoding various settings:
+         *
+         * Notification flags (bits 0-7):
+         * - Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
+         * - Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires
+         * - Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
+         * - Bit 3: NOTIFY_DELIVERY_FAILED (0x0008) - notify sender if TTL expires unread
+         * - Bit 4: NOTIFY_MESSAGE_READ (0x0010) - reserved for read receipts
+         * - Bits 5-7: Reserved for future notification types
+         *
+         * Security flags (bits 8-11):
+         * - Bit 8: Persistence consent (local message storage)
+         * - Bits 9-11: Message padding settings (enabled + size)
+         *
+         * UI flags (bits 12-15):
+         * - Bits 12-15: Conversation accent color (16 colors)
+         *
+         * Default: 0x000B (new message + expiring + delivery failed)
+         */conversationFlags: UInt16, 
         /**
          * Relay server URL
          */relayUrl: String) {
         self.version = version
         self.ttlSeconds = ttlSeconds
         self.disappearingMessagesSeconds = disappearingMessagesSeconds
-        self.notificationFlags = notificationFlags
+        self.conversationFlags = conversationFlags
         self.relayUrl = relayUrl
     }
 }
@@ -1556,7 +1594,7 @@ extension CeremonyMetadata: Equatable, Hashable {
         if lhs.disappearingMessagesSeconds != rhs.disappearingMessagesSeconds {
             return false
         }
-        if lhs.notificationFlags != rhs.notificationFlags {
+        if lhs.conversationFlags != rhs.conversationFlags {
             return false
         }
         if lhs.relayUrl != rhs.relayUrl {
@@ -1569,7 +1607,7 @@ extension CeremonyMetadata: Equatable, Hashable {
         hasher.combine(version)
         hasher.combine(ttlSeconds)
         hasher.combine(disappearingMessagesSeconds)
-        hasher.combine(notificationFlags)
+        hasher.combine(conversationFlags)
         hasher.combine(relayUrl)
     }
 }
@@ -1585,7 +1623,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
                 version: FfiConverterUInt8.read(from: &buf), 
                 ttlSeconds: FfiConverterUInt64.read(from: &buf), 
                 disappearingMessagesSeconds: FfiConverterUInt32.read(from: &buf), 
-                notificationFlags: FfiConverterUInt16.read(from: &buf), 
+                conversationFlags: FfiConverterUInt16.read(from: &buf), 
                 relayUrl: FfiConverterString.read(from: &buf)
         )
     }
@@ -1594,7 +1632,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
         FfiConverterUInt8.write(value.version, into: &buf)
         FfiConverterUInt64.write(value.ttlSeconds, into: &buf)
         FfiConverterUInt32.write(value.disappearingMessagesSeconds, into: &buf)
-        FfiConverterUInt16.write(value.notificationFlags, into: &buf)
+        FfiConverterUInt16.write(value.conversationFlags, into: &buf)
         FfiConverterString.write(value.relayUrl, into: &buf)
     }
 }
@@ -1772,6 +1810,16 @@ public enum AshError {
      */
     case PadTooSmallForTokens(message: String)
     
+    /**
+     * Pad size is below minimum (32 KB)
+     */
+    case PadSizeTooSmall(message: String)
+    
+    /**
+     * Pad size exceeds maximum (1 GB)
+     */
+    case PadSizeTooBig(message: String)
+    
 }
 
 
@@ -1832,6 +1880,14 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
+        case 12: return .PadSizeTooSmall(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 13: return .PadSizeTooBig(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
 
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1865,6 +1921,10 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(10))
         case .PadTooSmallForTokens(_ /* message is ignored*/):
             writeInt(&buf, Int32(11))
+        case .PadSizeTooSmall(_ /* message is ignored*/):
+            writeInt(&buf, Int32(12))
+        case .PadSizeTooBig(_ /* message is ignored*/):
+            writeInt(&buf, Int32(13))
 
         
         }
@@ -1879,109 +1939,6 @@ extension AshError: Foundation.LocalizedError {
         String(reflecting: self)
     }
 }
-
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
-/**
- * Pad size options
- */
-
-public enum PadSize {
-    
-    /**
-     * 32 KB - ~25 messages, ~25 QR frames
-     */
-    case tiny
-    /**
-     * 64 KB - ~50 messages, ~45 QR frames
-     */
-    case small
-    /**
-     * 256 KB - ~200 messages, ~177 QR frames
-     */
-    case medium
-    /**
-     * 512 KB - ~400 messages, ~353 QR frames
-     */
-    case large
-    /**
-     * 1 MB - ~800 messages, ~705 QR frames
-     */
-    case huge
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public struct FfiConverterTypePadSize: FfiConverterRustBuffer {
-    typealias SwiftType = PadSize
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PadSize {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-        
-        case 1: return .tiny
-        
-        case 2: return .small
-        
-        case 3: return .medium
-        
-        case 4: return .large
-        
-        case 5: return .huge
-        
-        default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: PadSize, into buf: inout [UInt8]) {
-        switch value {
-        
-        
-        case .tiny:
-            writeInt(&buf, Int32(1))
-        
-        
-        case .small:
-            writeInt(&buf, Int32(2))
-        
-        
-        case .medium:
-            writeInt(&buf, Int32(3))
-        
-        
-        case .large:
-            writeInt(&buf, Int32(4))
-        
-        
-        case .huge:
-            writeInt(&buf, Int32(5))
-        
-        }
-    }
-}
-
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypePadSize_lift(_ buf: RustBuffer) throws -> PadSize {
-    return try FfiConverterTypePadSize.lift(buf)
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-public func FfiConverterTypePadSize_lower(_ value: PadSize) -> RustBuffer {
-    return FfiConverterTypePadSize.lower(value)
-}
-
-
-
-extension PadSize: Equatable, Hashable {}
-
-
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -2063,30 +2020,6 @@ extension Role: Equatable, Hashable {}
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
-    typealias SwiftType = String?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterString.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterString.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
 fileprivate struct FfiConverterOptionTypeFountainCeremonyResult: FfiConverterRustBuffer {
     typealias SwiftType = FountainCeremonyResult?
 
@@ -2162,14 +2095,15 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
  *
  * This is the main entry point for initiators. The generator produces
  * unlimited encoded blocks that can be displayed as QR codes.
+ * Passphrase is required for encrypting the QR frames.
  */
-public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8], blockSize: UInt32, passphrase: String?)throws  -> FountainFrameGenerator {
+public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8], blockSize: UInt32, passphrase: String)throws  -> FountainFrameGenerator {
     return try  FfiConverterTypeFountainFrameGenerator.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_create_fountain_generator(
         FfiConverterTypeCeremonyMetadata.lower(metadata),
         FfiConverterSequenceUInt8.lower(padBytes),
         FfiConverterUInt32.lower(blockSize),
-        FfiConverterOptionString.lower(passphrase),$0
+        FfiConverterString.lower(passphrase),$0
     )
 })
 }
@@ -2259,6 +2193,15 @@ public nonisolated func generateMnemonicWithCount(padBytes: [UInt8], wordCount: 
 })
 }
 /**
+ * Get maximum pad size in bytes (1 GB)
+ */
+public func getMaxPadSize() -> UInt64 {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_max_pad_size($0
+    )
+})
+}
+/**
  * Get maximum passphrase length
  */
 public func getMaxPassphraseLength() -> UInt32 {
@@ -2268,11 +2211,41 @@ public func getMaxPassphraseLength() -> UInt32 {
 })
 }
 /**
+ * Get minimum pad size in bytes (32 KB)
+ */
+public func getMinPadSize() -> UInt64 {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_min_pad_size($0
+    )
+})
+}
+/**
  * Get minimum passphrase length
  */
 public func getMinPassphraseLength() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_get_min_passphrase_length($0
+    )
+})
+}
+/**
+ * Securely zero a byte array using volatile writes.
+ * This prevents the compiler from optimizing away the zeroing.
+ * Use this for wiping sensitive data from memory.
+ */
+public func secureZeroBytes(data: [UInt8]) {try! rustCall() {
+    uniffi_ash_bindings_fn_func_secure_zero_bytes(
+        FfiConverterSequenceUInt8.lower(data),$0
+    )
+}
+}
+/**
+ * Validate that a pad size is within allowed bounds (32KB - 1GB)
+ */
+public func validatePadSize(size: UInt64) -> Bool {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_validate_pad_size(
+        FfiConverterUInt64.lower(size),$0
     )
 })
 }
@@ -2302,7 +2275,7 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_create_fountain_generator() != 21416) {
+    if (uniffi_ash_bindings_checksum_func_create_fountain_generator() != 18935) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_decrypt() != 24750) {
@@ -2329,10 +2302,22 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_func_generate_mnemonic_with_count() != 38577) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ash_bindings_checksum_func_get_max_pad_size() != 9742) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ash_bindings_checksum_func_get_max_passphrase_length() != 19825) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ash_bindings_checksum_func_get_min_pad_size() != 25389) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ash_bindings_checksum_func_get_min_passphrase_length() != 46202) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_secure_zero_bytes() != 4018) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_validate_pad_size() != 32786) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_validate_passphrase() != 11471) {
@@ -2369,6 +2354,9 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_method_fountainframereceiver_source_count() != 43225) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_unique_blocks_received() != 24723) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_method_pad_as_bytes() != 57196) {
@@ -2410,7 +2398,7 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_method_pad_zero_bytes_at() != 25947) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_constructor_fountainframereceiver_new() != 36123) {
+    if (uniffi_ash_bindings_checksum_constructor_fountainframereceiver_new() != 53774) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_constructor_pad_from_bytes() != 21075) {
@@ -2419,7 +2407,7 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_constructor_pad_from_bytes_with_state() != 25438) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_constructor_pad_from_entropy() != 28891) {
+    if (uniffi_ash_bindings_checksum_constructor_pad_from_entropy() != 25338) {
         return InitializationResult.apiChecksumMismatch
     }
 

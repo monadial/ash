@@ -11,7 +11,8 @@ import Security
 protocol CryptoServiceProtocol: Sendable {
     func encrypt(plaintext: [UInt8], key: [UInt8]) throws -> [UInt8]
     func decrypt(ciphertext: [UInt8], key: [UInt8]) throws -> [UInt8]
-    func generateSecurePad(userEntropy: [UInt8], size: PadSize) throws -> [UInt8]
+    /// Generate a secure pad of the specified size (32KB - 10MB)
+    func generateSecurePad(userEntropy: [UInt8], sizeBytes: Int) throws -> [UInt8]
     func generateMnemonic(from padBytes: [UInt8], wordCount: Int) -> [String]
 }
 
@@ -41,11 +42,18 @@ final class CryptoService: CryptoServiceProtocol, Sendable {
         }
     }
 
-    func generateSecurePad(userEntropy: [UInt8], size: PadSize) throws -> [UInt8] {
-        let byteCount = Int(size.bytes)
+    func generateSecurePad(userEntropy: [UInt8], sizeBytes: Int) throws -> [UInt8] {
+        // Validate size is within allowed bounds (32KB - 10MB)
+        let minSize = Int(PadSizeLimits.minimumBytes)
+        let maxSize = Int(PadSizeLimits.maximumBytes)
 
-        var randomBytes = [UInt8](repeating: 0, count: byteCount)
-        let status = SecRandomCopyBytes(kSecRandomDefault, byteCount, &randomBytes)
+        guard sizeBytes >= minSize && sizeBytes <= maxSize else {
+            Log.error(.crypto, "Invalid pad size: \(sizeBytes) bytes (must be \(minSize)-\(maxSize))")
+            throw CryptoError.invalidData
+        }
+
+        var randomBytes = [UInt8](repeating: 0, count: sizeBytes)
+        let status = SecRandomCopyBytes(kSecRandomDefault, sizeBytes, &randomBytes)
 
         guard status == errSecSuccess else {
             Log.error(.crypto, "SecRandomCopyBytes failed: \(status)")
@@ -53,12 +61,12 @@ final class CryptoService: CryptoServiceProtocol, Sendable {
         }
 
         if !userEntropy.isEmpty {
-            for i in 0..<byteCount {
+            for i in 0..<sizeBytes {
                 randomBytes[i] ^= userEntropy[i % userEntropy.count]
             }
         }
 
-        Log.debug(.crypto, "Generated \(byteCount) byte pad with \(userEntropy.count) entropy bytes")
+        Log.debug(.crypto, "Generated \(sizeBytes) byte pad with \(userEntropy.count) entropy bytes")
         return randomBytes
     }
 

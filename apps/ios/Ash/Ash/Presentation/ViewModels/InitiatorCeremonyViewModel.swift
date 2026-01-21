@@ -24,11 +24,12 @@ final class InitiatorCeremonyViewModel {
     private(set) var sourceBlockCount: Int = 0
 
     // Configuration state
-    var selectedPadSize: PadSize = .medium
+    var selectedPadSizeOption: PadSizeOption = .medium
+    var customPadSizeKB: Double = 256  // Custom size in KB (default 256 KB)
     var entropyProgress: Double = 0.0
     var collectedEntropy: [UInt8] = []
 
-    var isPassphraseEnabled: Bool = false
+    /// Required passphrase for QR frame encryption
     var passphrase: String = ""
 
     var conversationName: String = ""
@@ -54,6 +55,12 @@ final class InitiatorCeremonyViewModel {
     /// Disappearing messages setting (client-side display TTL)
     var disappearingMessages: DisappearingMessages = .off
 
+    /// Whether message padding is enabled (hides message length)
+    var messagePaddingEnabled: Bool = false
+
+    /// Minimum message size when padding is enabled
+    var messagePaddingSize: MessagePaddingSize = .bytes32
+
     // MARK: - Notification Preferences
 
     /// Notify when new message arrives (receiver)
@@ -65,14 +72,19 @@ final class InitiatorCeremonyViewModel {
     /// Notify if message TTL expires unread (sender)
     var notifyDeliveryFailed: Bool = true
 
-    /// Computed notification flags for metadata
-    var notificationFlags: UInt16 {
+    /// Computed conversation flags for ceremony metadata
+    var conversationFlags: UInt16 {
         var flags: UInt16 = 0
-        if notifyNewMessage { flags |= NotificationFlagsConstants.notifyNewMessage }
-        if notifyMessageExpiring { flags |= NotificationFlagsConstants.notifyMessageExpiring }
-        if notifyMessageExpired { flags |= NotificationFlagsConstants.notifyMessageExpired }
-        if notifyDeliveryFailed { flags |= NotificationFlagsConstants.notifyDeliveryFailed }
-        if willPersistMessages { flags |= NotificationFlagsConstants.persistenceConsent }
+        if notifyNewMessage { flags |= ConversationFlagsConstants.notifyNewMessage }
+        if notifyMessageExpiring { flags |= ConversationFlagsConstants.notifyMessageExpiring }
+        if notifyMessageExpired { flags |= ConversationFlagsConstants.notifyMessageExpired }
+        if notifyDeliveryFailed { flags |= ConversationFlagsConstants.notifyDeliveryFailed }
+        if willPersistMessages { flags |= ConversationFlagsConstants.persistenceConsent }
+        flags = ConversationFlagsConstants.encodePadding(
+            enabled: messagePaddingEnabled,
+            size: messagePaddingSize,
+            into: flags
+        )
         return flags
     }
 
@@ -102,10 +114,26 @@ final class InitiatorCeremonyViewModel {
 
     // MARK: - Computed Properties
 
+    /// Passphrase is valid if it meets the minimum requirements (4+ chars)
     var isPassphraseValid: Bool {
-        guard isPassphraseEnabled else { return true }
         guard !passphrase.isEmpty else { return false }
         return validatePassphrase(passphrase: passphrase)
+    }
+
+    /// Computed pad size in bytes
+    var padSizeBytes: UInt64 {
+        if let preset = selectedPadSizeOption.presetBytes {
+            return preset
+        }
+        // Custom size: convert from KB, clamped to valid range
+        let bytes = UInt64(customPadSizeKB * 1024)
+        return min(max(bytes, PadSizeLimits.minimumBytes), PadSizeLimits.maximumBytes)
+    }
+
+    /// Whether custom pad size is valid
+    var isCustomPadSizeValid: Bool {
+        guard selectedPadSizeOption == .custom else { return true }
+        return PadSizeLimits.isValid(UInt64(customPadSizeKB * 1024))
     }
 
     /// Whether Face ID/biometric lock is enabled in settings
@@ -149,10 +177,15 @@ final class InitiatorCeremonyViewModel {
 
     // MARK: - Pad Size Selection
 
-    func selectPadSize(_ size: PadSize) {
+    func selectPadSizeOption(_ option: PadSizeOption) {
         dependencies.hapticService.selection()
-        selectedPadSize = size
-        Log.debug(.ceremony, "Pad size selected: \(size.displayName) (\(size.bytes) bytes)")
+        selectedPadSizeOption = option
+        Log.debug(.ceremony, "Pad size option selected: \(option.displayName)")
+    }
+
+    func setCustomPadSize(_ sizeKB: Double) {
+        customPadSizeKB = sizeKB
+        Log.debug(.ceremony, "Custom pad size set: \(sizeKB) KB")
     }
 
     func proceedToOptions() {
@@ -239,34 +272,34 @@ final class InitiatorCeremonyViewModel {
         phase = .generatingPad
 
         let entropy = collectedEntropy
-        let padSizeBytes = Int(selectedPadSize.bytes)
-        Log.info(.ceremony, "Generating pad: \(padSizeBytes) bytes from \(entropy.count) entropy bytes")
+        let padSize = Int(padSizeBytes)
+        Log.info(.ceremony, "Generating pad: \(padSize) bytes from \(entropy.count) entropy bytes")
 
         do {
             let padBytes = try await dependencies.performCeremonyUseCase.generatePadBytes(
                 entropy: entropy,
-                sizeBytes: padSizeBytes
+                sizeBytes: Int(padSizeBytes)
             )
             generatedPadBytes = padBytes
 
             let disappearingSeconds = UInt32(disappearingMessages.seconds ?? 0)
-            // Encode color into notification flags (uses bits 12-15)
-            let flagsWithColor = NotificationFlagsConstants.encodeColor(selectedColor, into: notificationFlags)
+            // Encode color into conversation flags (uses bits 12-15)
+            let flagsWithColor = ConversationFlagsConstants.encodeColor(selectedColor, into: conversationFlags)
             let metadata = CeremonyMetadataSwift(
                 ttlSeconds: serverRetention.seconds,
                 disappearingMessagesSeconds: disappearingSeconds,
-                notificationFlags: flagsWithColor,
+                conversationFlags: flagsWithColor,
                 relayURL: selectedRelayURL
             )
 
-            Log.debug(.ceremony, "Creating fountain generator: serverTTL=\(serverRetention.displayName), disappearing=\(disappearingMessages.displayName), notifications=0x\(String(flagsWithColor, radix: 16)), color=\(selectedColor.rawValue), passphrase=\(isPassphraseEnabled)")
+            Log.debug(.ceremony, "Creating fountain generator: serverTTL=\(serverRetention.displayName), disappearing=\(disappearingMessages.displayName), flags=0x\(String(flagsWithColor, radix: 16)), color=\(selectedColor.rawValue)")
 
-            let passphraseToUse = isPassphraseEnabled ? passphrase : nil
+            // Passphrase is required for ceremony encryption
             let generator = try await dependencies.performCeremonyUseCase.createFountainGenerator(
                 padBytes: padBytes,
                 metadata: metadata,
                 blockSize: fountainBlockSize,
-                passphrase: passphraseToUse
+                passphrase: passphrase
             )
 
             fountainGenerator = generator
@@ -400,6 +433,8 @@ final class InitiatorCeremonyViewModel {
                 messageRetention: serverRetention,
                 disappearingMessages: disappearingMessages,
                 accentColor: selectedColor,
+                messagePaddingEnabled: messagePaddingEnabled,
+                messagePaddingSize: messagePaddingSize,
                 persistenceConsent: willPersistMessages
             )
 

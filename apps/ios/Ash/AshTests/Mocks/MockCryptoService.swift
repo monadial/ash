@@ -56,20 +56,14 @@ final class MockCryptoService: CryptoServiceProtocol, @unchecked Sendable {
         return zip(ciphertext, key).map { $0 ^ $1 }
     }
 
-    func generateSecurePad(userEntropy: [UInt8], size: PadSize) throws -> [UInt8] {
+    func generateSecurePad(userEntropy: [UInt8], sizeBytes: Int) throws -> [UInt8] {
         // Return predictable bytes for testing (0, 1, 2, 3, ...)
-        let byteCount = Int(size.bytes)
-        return (0..<byteCount).map { UInt8($0 % 256) }
+        return (0..<sizeBytes).map { UInt8($0 % 256) }
     }
 
     func generateMnemonic(from padBytes: [UInt8], wordCount: Int) -> [String] {
         // Return predictable mnemonic for testing
         return Array(repeating: "test", count: wordCount)
-    }
-
-    func createFrames(from padBytes: [UInt8], maxPayload: UInt32) throws -> [Frame] {
-        // Not needed for SendMessageUseCase tests
-        return []
     }
 
     // MARK: - Test Helpers

@@ -5,157 +5,157 @@
 //  Unit tests for Ceremony domain entities
 //
 
-import Testing
+import XCTest
 import Foundation
 @testable import Ash
 
 // MARK: - CeremonyRole Tests
 
-struct CeremonyRoleTests {
+final class CeremonyRoleTests: XCTestCase {
 
-    @Test func rawValues_areCorrect() {
-        #expect(CeremonyRole.sender.rawValue == "sender")
-        #expect(CeremonyRole.receiver.rawValue == "receiver")
+    func testRawValues_areCorrect() {
+        XCTAssertEqual(CeremonyRole.sender.rawValue, "sender")
+        XCTAssertEqual(CeremonyRole.receiver.rawValue, "receiver")
     }
 }
 
 // MARK: - CeremonyError Tests
 
-struct CeremonyErrorTests {
+final class CeremonyErrorTests: XCTestCase {
 
-    @Test func localizedDescription_insufficientEntropy() {
+    func testLocalizedDescription_insufficientEntropy() {
         let error = CeremonyError.insufficientEntropy
-        #expect(error.localizedDescription.contains("randomness"))
+        XCTAssertTrue(error.localizedDescription.contains("randomness"))
     }
 
-    @Test func localizedDescription_qrGenerationFailed() {
+    func testLocalizedDescription_qrGenerationFailed() {
         let error = CeremonyError.qrGenerationFailed
-        #expect(error.localizedDescription.contains("QR"))
+        XCTAssertTrue(error.localizedDescription.contains("QR"))
     }
 
-    @Test func localizedDescription_qrScanFailed() {
+    func testLocalizedDescription_qrScanFailed() {
         let error = CeremonyError.qrScanFailed
-        #expect(error.localizedDescription.contains("scan"))
+        XCTAssertTrue(error.localizedDescription.contains("scan"))
     }
 
-    @Test func localizedDescription_frameDecodingFailed() {
+    func testLocalizedDescription_frameDecodingFailed() {
         let error = CeremonyError.frameDecodingFailed
-        #expect(error.localizedDescription.contains("Invalid"))
+        XCTAssertTrue(error.localizedDescription.contains("Invalid"))
     }
 
-    @Test func localizedDescription_checksumMismatch() {
+    func testLocalizedDescription_checksumMismatch() {
         let error = CeremonyError.checksumMismatch
-        #expect(error.localizedDescription.contains("Checksum"))
+        XCTAssertTrue(error.localizedDescription.contains("Checksum"))
     }
 
-    @Test func localizedDescription_padReconstructionFailed() {
+    func testLocalizedDescription_padReconstructionFailed() {
         let error = CeremonyError.padReconstructionFailed
-        #expect(error.localizedDescription.contains("reconstruct"))
+        XCTAssertTrue(error.localizedDescription.contains("reconstruct"))
     }
 
-    @Test func localizedDescription_cancelled() {
+    func testLocalizedDescription_cancelled() {
         let error = CeremonyError.cancelled
-        #expect(error.localizedDescription.contains("cancelled"))
+        XCTAssertTrue(error.localizedDescription.contains("cancelled"))
     }
 
-    @Test func equatable_sameErrors_areEqual() {
-        #expect(CeremonyError.cancelled == CeremonyError.cancelled)
-        #expect(CeremonyError.qrScanFailed == CeremonyError.qrScanFailed)
+    func testEquatable_sameErrors_areEqual() {
+        XCTAssertEqual(CeremonyError.cancelled, CeremonyError.cancelled)
+        XCTAssertEqual(CeremonyError.qrScanFailed, CeremonyError.qrScanFailed)
     }
 }
 
 // MARK: - CeremonyPhase Tests
 
-struct CeremonyPhaseTests {
+final class CeremonyPhaseTests: XCTestCase {
 
-    @Test func equatable_idle() {
-        #expect(CeremonyPhase.idle == CeremonyPhase.idle)
+    func testEquatable_idle() {
+        XCTAssertEqual(CeremonyPhase.idle, CeremonyPhase.idle)
     }
 
-    @Test func equatable_selectingRole() {
-        #expect(CeremonyPhase.selectingRole == CeremonyPhase.selectingRole)
+    func testEquatable_selectingRole() {
+        XCTAssertEqual(CeremonyPhase.selectingRole, CeremonyPhase.selectingRole)
     }
 
-    @Test func equatable_selectingPadSize() {
-        #expect(CeremonyPhase.selectingPadSize == CeremonyPhase.selectingPadSize)
+    func testEquatable_selectingPadSize() {
+        XCTAssertEqual(CeremonyPhase.selectingPadSize, CeremonyPhase.selectingPadSize)
     }
 
-    @Test func equatable_collectingEntropy() {
-        #expect(CeremonyPhase.collectingEntropy == CeremonyPhase.collectingEntropy)
+    func testEquatable_collectingEntropy() {
+        XCTAssertEqual(CeremonyPhase.collectingEntropy, CeremonyPhase.collectingEntropy)
     }
 
-    @Test func equatable_generatingPad() {
-        #expect(CeremonyPhase.generatingPad == CeremonyPhase.generatingPad)
+    func testEquatable_generatingPad() {
+        XCTAssertEqual(CeremonyPhase.generatingPad, CeremonyPhase.generatingPad)
     }
 
-    @Test func equatable_generatingQRCodes_sameValues() {
+    func testEquatable_generatingQRCodes_sameValues() {
         let phase1 = CeremonyPhase.generatingQRCodes(progress: 0.5, total: 10)
         let phase2 = CeremonyPhase.generatingQRCodes(progress: 0.5, total: 10)
-        #expect(phase1 == phase2)
+        XCTAssertEqual(phase1, phase2)
     }
 
-    @Test func equatable_generatingQRCodes_differentValues() {
+    func testEquatable_generatingQRCodes_differentValues() {
         let phase1 = CeremonyPhase.generatingQRCodes(progress: 0.5, total: 10)
         let phase2 = CeremonyPhase.generatingQRCodes(progress: 0.8, total: 10)
-        #expect(phase1 != phase2)
+        XCTAssertNotEqual(phase1, phase2)
     }
 
-    @Test func equatable_transferring_sameValues() {
+    func testEquatable_transferring_sameValues() {
         let phase1 = CeremonyPhase.transferring(currentFrame: 5, totalFrames: 10)
         let phase2 = CeremonyPhase.transferring(currentFrame: 5, totalFrames: 10)
-        #expect(phase1 == phase2)
+        XCTAssertEqual(phase1, phase2)
     }
 
-    @Test func equatable_transferring_differentValues() {
+    func testEquatable_transferring_differentValues() {
         let phase1 = CeremonyPhase.transferring(currentFrame: 5, totalFrames: 10)
         let phase2 = CeremonyPhase.transferring(currentFrame: 6, totalFrames: 10)
-        #expect(phase1 != phase2)
+        XCTAssertNotEqual(phase1, phase2)
     }
 
-    @Test func equatable_verifying_sameMnemonic() {
+    func testEquatable_verifying_sameMnemonic() {
         let phase1 = CeremonyPhase.verifying(mnemonic: ["a", "b", "c"])
         let phase2 = CeremonyPhase.verifying(mnemonic: ["a", "b", "c"])
-        #expect(phase1 == phase2)
+        XCTAssertEqual(phase1, phase2)
     }
 
-    @Test func equatable_failed_sameError() {
+    func testEquatable_failed_sameError() {
         let phase1 = CeremonyPhase.failed(.cancelled)
         let phase2 = CeremonyPhase.failed(.cancelled)
-        #expect(phase1 == phase2)
+        XCTAssertEqual(phase1, phase2)
     }
 
-    @Test func equatable_failed_differentError() {
+    func testEquatable_failed_differentError() {
         let phase1 = CeremonyPhase.failed(.cancelled)
         let phase2 = CeremonyPhase.failed(.qrScanFailed)
-        #expect(phase1 != phase2)
+        XCTAssertNotEqual(phase1, phase2)
     }
 }
 
 // MARK: - CeremonyState Tests
 
-struct CeremonyStateTests {
+final class CeremonyStateTests: XCTestCase {
 
-    @Test func init_hasDefaultValues() {
+    func testInit_hasDefaultValues() {
         let state = CeremonyState()
 
-        #expect(state.phase == .idle)
-        #expect(state.role == .sender)
-        #expect(state.selectedPadSize == .medium)
-        #expect(state.entropyProgress == 0.0)
-        #expect(state.collectedEntropy.isEmpty)
-        #expect(state.generatedPad == nil)
-        #expect(state.scannedFrames.isEmpty)
-        #expect(state.totalFrames == 0)
+        XCTAssertEqual(state.phase, .idle)
+        XCTAssertEqual(state.role, .sender)
+        XCTAssertEqual(state.selectedPadSizeOption, .medium)
+        XCTAssertEqual(state.entropyProgress, 0.0)
+        XCTAssertTrue(state.collectedEntropy.isEmpty)
+        XCTAssertNil(state.generatedPad)
+        XCTAssertTrue(state.scannedFrames.isEmpty)
+        XCTAssertEqual(state.totalFrames, 0)
     }
 
-    @Test func isInProgress_idle_returnsFalse() {
+    func testIsInProgress_idle_returnsFalse() {
         var state = CeremonyState()
         state.phase = .idle
 
-        #expect(state.isInProgress == false)
+        XCTAssertFalse(state.isInProgress)
     }
 
-    @Test func isInProgress_completed_returnsFalse() {
+    func testIsInProgress_completed_returnsFalse() {
         var state = CeremonyState()
         let padBytes = [UInt8](repeating: 0xAB, count: 1000)
         let conversation = Conversation.fromCeremony(
@@ -168,45 +168,45 @@ struct CeremonyStateTests {
         )
         state.phase = .completed(conversation: conversation)
 
-        #expect(state.isInProgress == false)
+        XCTAssertFalse(state.isInProgress)
     }
 
-    @Test func isInProgress_failed_returnsFalse() {
+    func testIsInProgress_failed_returnsFalse() {
         var state = CeremonyState()
         state.phase = .failed(.cancelled)
 
-        #expect(state.isInProgress == false)
+        XCTAssertFalse(state.isInProgress)
     }
 
-    @Test func isInProgress_selectingRole_returnsTrue() {
+    func testIsInProgress_selectingRole_returnsTrue() {
         var state = CeremonyState()
         state.phase = .selectingRole
 
-        #expect(state.isInProgress == true)
+        XCTAssertTrue(state.isInProgress)
     }
 
-    @Test func isInProgress_collectingEntropy_returnsTrue() {
+    func testIsInProgress_collectingEntropy_returnsTrue() {
         var state = CeremonyState()
         state.phase = .collectingEntropy
 
-        #expect(state.isInProgress == true)
+        XCTAssertTrue(state.isInProgress)
     }
 
-    @Test func isInProgress_transferring_returnsTrue() {
+    func testIsInProgress_transferring_returnsTrue() {
         var state = CeremonyState()
         state.phase = .transferring(currentFrame: 1, totalFrames: 10)
 
-        #expect(state.isInProgress == true)
+        XCTAssertTrue(state.isInProgress)
     }
 
-    @Test func canCancel_idle_returnsFalse() {
+    func testCanCancel_idle_returnsFalse() {
         var state = CeremonyState()
         state.phase = .idle
 
-        #expect(state.canCancel == false)
+        XCTAssertFalse(state.canCancel)
     }
 
-    @Test func canCancel_completed_returnsFalse() {
+    func testCanCancel_completed_returnsFalse() {
         var state = CeremonyState()
         let padBytes = [UInt8](repeating: 0xAB, count: 1000)
         let conversation = Conversation.fromCeremony(
@@ -219,24 +219,24 @@ struct CeremonyStateTests {
         )
         state.phase = .completed(conversation: conversation)
 
-        #expect(state.canCancel == false)
+        XCTAssertFalse(state.canCancel)
     }
 
-    @Test func canCancel_inProgress_returnsTrue() {
+    func testCanCancel_inProgress_returnsTrue() {
         var state = CeremonyState()
         state.phase = .collectingEntropy
 
-        #expect(state.canCancel == true)
+        XCTAssertTrue(state.canCancel)
     }
 
-    @Test func canCancel_failed_returnsTrue() {
+    func testCanCancel_failed_returnsTrue() {
         var state = CeremonyState()
         state.phase = .failed(.cancelled)
 
-        #expect(state.canCancel == true)
+        XCTAssertTrue(state.canCancel)
     }
 
-    @Test func reset_restoresDefaultState() {
+    func testReset_restoresDefaultState() {
         var state = CeremonyState()
         state.phase = .collectingEntropy
         state.role = .receiver
@@ -246,318 +246,196 @@ struct CeremonyStateTests {
 
         state.reset()
 
-        #expect(state.phase == .idle)
-        #expect(state.role == .sender)
-        #expect(state.entropyProgress == 0.0)
-        #expect(state.collectedEntropy.isEmpty)
-        #expect(state.totalFrames == 0)
+        XCTAssertEqual(state.phase, .idle)
+        XCTAssertEqual(state.role, .sender)
+        XCTAssertEqual(state.entropyProgress, 0.0)
+        XCTAssertTrue(state.collectedEntropy.isEmpty)
+        XCTAssertEqual(state.totalFrames, 0)
     }
 }
 
-// MARK: - PadSize Extension Tests
+// MARK: - PadSizeOption Extension Tests
 
-struct PadSizeExtensionTests {
+final class PadSizeOptionExtensionTests: XCTestCase {
 
-    @Test func allCases_containsFiveSizes() {
-        #expect(PadSize.allCases.count == 5)
-        #expect(PadSize.allCases.contains(.tiny))
-        #expect(PadSize.allCases.contains(.small))
-        #expect(PadSize.allCases.contains(.medium))
-        #expect(PadSize.allCases.contains(.large))
-        #expect(PadSize.allCases.contains(.huge))
+    func testAllCases_containsFiveSizes() {
+        XCTAssertEqual(PadSizeOption.allCases.count, 5)
+        XCTAssertTrue(PadSizeOption.allCases.contains(.small))
+        XCTAssertTrue(PadSizeOption.allCases.contains(.medium))
+        XCTAssertTrue(PadSizeOption.allCases.contains(.large))
+        XCTAssertTrue(PadSizeOption.allCases.contains(.huge))
+        XCTAssertTrue(PadSizeOption.allCases.contains(.custom))
     }
 
-    @Test func displayName_allSizes() {
-        #expect(PadSize.tiny.displayName == "Tiny")
-        #expect(PadSize.small.displayName == "Small")
-        #expect(PadSize.medium.displayName == "Medium")
-        #expect(PadSize.large.displayName == "Large")
-        #expect(PadSize.huge.displayName == "Huge")
+    func testDisplayName_allSizes() {
+        XCTAssertEqual(PadSizeOption.small.displayName, "Small")
+        XCTAssertEqual(PadSizeOption.medium.displayName, "Medium")
+        XCTAssertEqual(PadSizeOption.large.displayName, "Large")
+        XCTAssertEqual(PadSizeOption.huge.displayName, "Huge")
+        XCTAssertEqual(PadSizeOption.custom.displayName, "Custom")
     }
 
-    @Test func bytes_allSizes() {
-        #expect(PadSize.tiny.bytes == 32 * 1024)    // 32 KB
-        #expect(PadSize.small.bytes == 64 * 1024)   // 64 KB
-        #expect(PadSize.medium.bytes == 256 * 1024) // 256 KB
-        #expect(PadSize.large.bytes == 512 * 1024)  // 512 KB
-        #expect(PadSize.huge.bytes == 1024 * 1024)  // 1 MB
+    func testPresetBytes_allSizes() {
+        XCTAssertEqual(PadSizeOption.small.presetBytes, 64 * 1024)   // 64 KB
+        XCTAssertEqual(PadSizeOption.medium.presetBytes, 256 * 1024) // 256 KB
+        XCTAssertEqual(PadSizeOption.large.presetBytes, 512 * 1024)  // 512 KB
+        XCTAssertEqual(PadSizeOption.huge.presetBytes, 1024 * 1024)  // 1 MB
+        XCTAssertNil(PadSizeOption.custom.presetBytes)
     }
 
-    @Test func description_containsMessages() {
-        #expect(PadSize.tiny.description.contains("messages"))
-        #expect(PadSize.small.description.contains("messages"))
-        #expect(PadSize.medium.description.contains("messages"))
-        #expect(PadSize.large.description.contains("messages"))
-        #expect(PadSize.huge.description.contains("messages"))
+    func testDescription_containsMessages() {
+        XCTAssertTrue(PadSizeOption.small.description.contains("messages"))
+        XCTAssertTrue(PadSizeOption.medium.description.contains("messages"))
+        XCTAssertTrue(PadSizeOption.large.description.contains("messages"))
+        XCTAssertTrue(PadSizeOption.huge.description.contains("messages"))
     }
 
-    @Test func description_containsFrames() {
-        #expect(PadSize.tiny.description.contains("frames"))
-        #expect(PadSize.small.description.contains("frames"))
-        #expect(PadSize.medium.description.contains("frames"))
-        #expect(PadSize.large.description.contains("frames"))
-        #expect(PadSize.huge.description.contains("frames"))
+    func testDescription_containsFrames() {
+        XCTAssertTrue(PadSizeOption.small.description.contains("frames"))
+        XCTAssertTrue(PadSizeOption.medium.description.contains("frames"))
+        XCTAssertTrue(PadSizeOption.large.description.contains("frames"))
+        XCTAssertTrue(PadSizeOption.huge.description.contains("frames"))
     }
 
-    @Test func approximateFrames_calculatesCorrectly() {
-        // ~890 bytes effective payload per frame + 1 for metadata frame
-        // Tiny: 32KB / 890 + 1 = 37 + 1 = 38
-        // Small: 64KB / 890 + 1 = 74 + 1 = 75
-        // Medium: 256KB / 890 + 1 = 295 + 1 = 296
-        // Large: 512KB / 890 + 1 = 589 + 1 = 590
-        // Huge: 1MB / 890 + 1 = 1179 + 1 = 1180
-        #expect(PadSize.tiny.approximateFrames == 38)
-        #expect(PadSize.small.approximateFrames == 75)
-        #expect(PadSize.medium.approximateFrames == 296)
-        #expect(PadSize.large.approximateFrames == 590)
-        #expect(PadSize.huge.approximateFrames == 1180)
-    }
-
-    @Test func id_usesDisplayName() {
-        #expect(PadSize.tiny.id == "Tiny")
-        #expect(PadSize.small.id == "Small")
-        #expect(PadSize.medium.id == "Medium")
-        #expect(PadSize.large.id == "Large")
-        #expect(PadSize.huge.id == "Huge")
+    func testId_usesRawValue() {
+        XCTAssertEqual(PadSizeOption.small.id, "small")
+        XCTAssertEqual(PadSizeOption.medium.id, "medium")
+        XCTAssertEqual(PadSizeOption.large.id, "large")
+        XCTAssertEqual(PadSizeOption.huge.id, "huge")
+        XCTAssertEqual(PadSizeOption.custom.id, "custom")
     }
 }
 
-// MARK: - Ceremony Frame Count Tests (FFI Integration)
+// MARK: - Ceremony Fountain Code Tests (FFI Integration)
 
-struct CeremonyFrameCountTests {
-    /// Max payload per QR frame (same as CeremonyViewModel)
-    private let maxPayloadPerFrame: UInt32 = 900
+final class CeremonyFountainCodeTests: XCTestCase {
+    /// Block size for fountain codes
+    private let blockSize: UInt32 = 900
+    private let testPassphrase = "test-passphrase"
 
-    @Test func frameCount_smallPad_matchesEstimate() throws {
-        // Generate a small pad worth of random bytes
-        let padBytes = [UInt8](repeating: 0xAB, count: Int(PadSize.small.bytes))
-
-        // Create ceremony metadata
-        let metadata = CeremonyMetadata(
-            version: 1,
-            ttlSeconds: 172800, // 48 hours
-            disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103, // default flags
-            relayUrl: "https://relay.ash.test"
-        )
-
-        // Create ceremony frames (frame 0 = metadata, frames 1-N = pad data)
-        let frames = try createCeremonyFrames(
-            metadata: metadata,
-            padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
-        )
-
-        let actualCount = frames.count
-        let estimatedCount = PadSize.small.approximateFrames
-
-        // Should be within 5% or 2 frames of estimate
-        let tolerance = max(2, estimatedCount / 20)
-        #expect(abs(actualCount - estimatedCount) <= tolerance,
-                "Small: \(actualCount) actual vs \(estimatedCount) estimated (tolerance: \(tolerance))")
-    }
-
-    @Test func frameCount_mediumPad_matchesEstimate() throws {
-        let padBytes = [UInt8](repeating: 0xCD, count: Int(PadSize.medium.bytes))
+    func testFountainGenerator_createsFrames() throws {
+        let padBytes = [UInt8](repeating: 0xAB, count: Int(PadSizeOption.small.presetBytes ?? 64 * 1024))
 
         let metadata = CeremonyMetadata(
             version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103,
+            conversationFlags: 0x000B,
             relayUrl: "https://relay.ash.test"
         )
 
-        let frames = try createCeremonyFrames(
+        let generator = try createFountainGenerator(
             metadata: metadata,
             padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
+            blockSize: blockSize,
+            passphrase: testPassphrase
         )
 
-        let actualCount = frames.count
-        let estimatedCount = PadSize.medium.approximateFrames
+        XCTAssertGreaterThan(generator.sourceCount(), 0)
+        XCTAssertGreaterThan(generator.totalSize(), 0)
 
-        let tolerance = max(2, estimatedCount / 20)
-        #expect(abs(actualCount - estimatedCount) <= tolerance,
-                "Medium: \(actualCount) actual vs \(estimatedCount) estimated (tolerance: \(tolerance))")
+        // Generate a frame
+        let frame = generator.nextFrame()
+        XCTAssertGreaterThan(frame.count, 0)
     }
 
-    @Test func frameCount_largePad_matchesEstimate() throws {
-        let padBytes = [UInt8](repeating: 0xEF, count: Int(PadSize.large.bytes))
+    func testFountainRoundtrip_smallPad() throws {
+        let padBytes = [UInt8](repeating: 0xCD, count: 10000)
 
         let metadata = CeremonyMetadata(
             version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103,
+            conversationFlags: 0x000B,
             relayUrl: "https://relay.ash.test"
         )
 
-        let frames = try createCeremonyFrames(
+        let generator = try createFountainGenerator(
             metadata: metadata,
             padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
+            blockSize: blockSize,
+            passphrase: testPassphrase
         )
 
-        let actualCount = frames.count
-        let estimatedCount = PadSize.large.approximateFrames
+        let receiver = FountainFrameReceiver(passphrase: testPassphrase)
 
-        let tolerance = max(2, estimatedCount / 20)
-        #expect(abs(actualCount - estimatedCount) <= tolerance,
-                "Large: \(actualCount) actual vs \(estimatedCount) estimated (tolerance: \(tolerance))")
+        while !receiver.isComplete() {
+            let frame = generator.nextFrame()
+            _ = try receiver.addFrame(frameBytes: frame)
+        }
+
+        let result = receiver.getResult()
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.pad, padBytes)
+        XCTAssertEqual(result?.metadata.ttlSeconds, 172800)
+        XCTAssertEqual(result?.metadata.relayUrl, "https://relay.ash.test")
     }
 
-    @Test func frameCount_tinyPad_matchesEstimate() throws {
-        let padBytes = [UInt8](repeating: 0x11, count: Int(PadSize.tiny.bytes))
+    func testFountainRoundtrip_withPassphrase() throws {
+        let padBytes = [UInt8](repeating: 0x42, count: 5000)
 
         let metadata = CeremonyMetadata(
             version: 1,
-            ttlSeconds: 172800,
+            ttlSeconds: 604800,
             disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103,
+            conversationFlags: 0x000B,
             relayUrl: "https://relay.ash.test"
         )
 
-        let frames = try createCeremonyFrames(
+        let generator = try createFountainGenerator(
             metadata: metadata,
             padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
+            blockSize: blockSize,
+            passphrase: "custom-passphrase"
         )
 
-        let actualCount = frames.count
-        let estimatedCount = PadSize.tiny.approximateFrames
+        let receiver = FountainFrameReceiver(passphrase: "custom-passphrase")
 
-        let tolerance = max(2, estimatedCount / 20)
-        #expect(abs(actualCount - estimatedCount) <= tolerance,
-                "Tiny: \(actualCount) actual vs \(estimatedCount) estimated (tolerance: \(tolerance))")
+        while !receiver.isComplete() {
+            let frame = generator.nextFrame()
+            _ = try receiver.addFrame(frameBytes: frame)
+        }
+
+        let result = receiver.getResult()
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.pad, padBytes)
     }
 
-    @Test func frameCount_hugePad_matchesEstimate() throws {
-        let padBytes = [UInt8](repeating: 0xFF, count: Int(PadSize.huge.bytes))
-
-        let metadata = CeremonyMetadata(
-            version: 1,
-            ttlSeconds: 172800,
-            disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103,
-            relayUrl: "https://relay.ash.test"
-        )
-
-        let frames = try createCeremonyFrames(
-            metadata: metadata,
-            padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
-        )
-
-        let actualCount = frames.count
-        let estimatedCount = PadSize.huge.approximateFrames
-
-        let tolerance = max(2, estimatedCount / 20)
-        #expect(abs(actualCount - estimatedCount) <= tolerance,
-                "Huge: \(actualCount) actual vs \(estimatedCount) estimated (tolerance: \(tolerance))")
-    }
-
-    @Test func frameCount_withPassphrase_sameAsWithout() throws {
-        // Passphrase encryption shouldn't change frame count significantly
-        let padBytes = [UInt8](repeating: 0x42, count: Int(PadSize.small.bytes))
-
-        let metadata = CeremonyMetadata(
-            version: 1,
-            ttlSeconds: 604800, // 7 days
-            disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103,
-            relayUrl: "https://relay.ash.test"
-        )
-
-        let framesWithout = try createCeremonyFrames(
-            metadata: metadata,
-            padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
-        )
-
-        let framesWith = try createCeremonyFrames(
-            metadata: metadata,
-            padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: "test-passphrase"
-        )
-
-        print("Without passphrase: \(framesWithout.count) frames")
-        print("With passphrase: \(framesWith.count) frames")
-
-        // Should be the same or very close (encryption adds minimal overhead)
-        #expect(abs(framesWithout.count - framesWith.count) <= 1)
-    }
-
-    @Test func frameCount_metadataFrameIsFirst() throws {
-        let padBytes = [UInt8](repeating: 0x00, count: 10000)
-
-        let metadata = CeremonyMetadata(
-            version: 1,
-            ttlSeconds: 3600,
-            disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103,
-            relayUrl: "https://test.relay"
-        )
-
-        let frames = try createCeremonyFrames(
-            metadata: metadata,
-            padBytes: padBytes,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
-        )
-
-        #expect(frames.count > 1, "Should have at least metadata frame + 1 data frame")
-
-        // Decode the first frame and verify it has metadata flag
-        let firstFrame = frames[0]
-        // Extended frame format: [magic 0xA5][flags][index][total][payload][crc]
-        #expect(firstFrame[0] == 0xA5, "First byte should be extended magic")
-
-        let flags = firstFrame[1]
-        let metadataFlag: UInt8 = 0b0000_0010
-        #expect((flags & metadataFlag) != 0, "Frame 0 should have metadata flag set")
-    }
-
-    @Test func frameCount_roundtrip_preservesData() throws {
+    func testFountainRoundtrip_preservesMetadata() throws {
         let originalPad = [UInt8]((0..<1000).map { UInt8($0 % 256) })
 
         let metadata = CeremonyMetadata(
             version: 1,
             ttlSeconds: 86400,
-            disappearingMessagesSeconds: 0,
-            notificationFlags: 0x0103,
+            disappearingMessagesSeconds: 3600,
+            conversationFlags: 0x000B,
             relayUrl: "https://roundtrip.test"
         )
 
-        // Encode
-        let frames = try createCeremonyFrames(
+        let generator = try createFountainGenerator(
             metadata: metadata,
             padBytes: originalPad,
-            maxPayload: maxPayloadPerFrame,
-            passphrase: nil
+            blockSize: blockSize,
+            passphrase: testPassphrase
         )
 
-        // Decode
-        let result = try decodeCeremonyFrames(
-            encodedFrames: frames,
-            passphrase: nil
-        )
+        let receiver = FountainFrameReceiver(passphrase: testPassphrase)
+
+        while !receiver.isComplete() {
+            let frame = generator.nextFrame()
+            _ = try receiver.addFrame(frameBytes: frame)
+        }
+
+        let result = receiver.getResult()
+        XCTAssertNotNil(result)
 
         // Verify metadata
-        #expect(result.metadata.ttlSeconds == 86400)
-        #expect(result.metadata.disappearingMessagesSeconds == 0)
-        #expect(result.metadata.relayUrl == "https://roundtrip.test")
+        XCTAssertEqual(result?.metadata.ttlSeconds, 86400)
+        XCTAssertEqual(result?.metadata.disappearingMessagesSeconds, 3600)
+        XCTAssertEqual(result?.metadata.relayUrl, "https://roundtrip.test")
+        XCTAssertEqual(result?.metadata.conversationFlags, 0x000B)
 
         // Verify pad data
-        #expect(result.pad == originalPad, "Pad data should match after roundtrip")
-
-        print("Roundtrip: \(originalPad.count) bytes -> \(frames.count) frames -> \(result.pad.count) bytes")
+        XCTAssertEqual(result?.pad, originalPad, "Pad data should match after roundtrip")
     }
 }

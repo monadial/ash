@@ -30,7 +30,7 @@ final class ReceiverCeremonyViewModel {
     private(set) var progress: Double = 0.0
 
     // Configuration state
-    var isPassphraseEnabled: Bool = false
+    /// Required passphrase for QR frame decryption (must match sender's passphrase)
     var passphrase: String = ""
     var conversationName: String = ""
 
@@ -39,6 +39,12 @@ final class ReceiverCeremonyViewModel {
 
     /// Persistence consent decoded from initiator's metadata
     private(set) var receivedPersistenceConsent: Bool = false
+
+    /// Message padding enabled decoded from initiator's metadata
+    private(set) var receivedMessagePaddingEnabled: Bool = false
+
+    /// Message padding size decoded from initiator's metadata
+    private(set) var receivedMessagePaddingSize: MessagePaddingSize = .bytes32
 
     // MARK: - Initialization
 
@@ -49,8 +55,8 @@ final class ReceiverCeremonyViewModel {
 
     // MARK: - Computed Properties
 
+    /// Passphrase is valid if it meets the minimum requirements (4+ chars)
     var isPassphraseValid: Bool {
-        guard isPassphraseEnabled else { return true }
         guard !passphrase.isEmpty else { return false }
         return validatePassphrase(passphrase: passphrase)
     }
@@ -114,11 +120,10 @@ final class ReceiverCeremonyViewModel {
 
     func startScanning() {
         dependencies.hapticService.medium()
-        Log.info(.ceremony, "Starting QR scan (passphrase: \(isPassphraseEnabled ? "enabled" : "disabled"))")
+        Log.info(.ceremony, "Starting QR scan with passphrase")
 
-        // Create fountain receiver with passphrase
-        let passphraseToUse = isPassphraseEnabled ? passphrase : nil
-        fountainReceiver = dependencies.performCeremonyUseCase.createFountainReceiver(passphrase: passphraseToUse)
+        // Create fountain receiver with required passphrase
+        fountainReceiver = dependencies.performCeremonyUseCase.createFountainReceiver(passphrase: passphrase)
 
         phase = .transferring(currentFrame: 0, totalFrames: 0)
     }
@@ -183,20 +188,25 @@ final class ReceiverCeremonyViewModel {
         let metadata = CeremonyMetadataSwift(
             ttlSeconds: result.metadata.ttlSeconds,
             disappearingMessagesSeconds: result.metadata.disappearingMessagesSeconds,
-            notificationFlags: result.metadata.notificationFlags,
+            conversationFlags: result.metadata.conversationFlags,
             relayURL: result.metadata.relayUrl
         )
         receivedMetadata = metadata
         generatedPadBytes = result.pad
 
-        // Decode color from notification flags (bits 12-15) and apply it
-        let decodedColor = NotificationFlagsConstants.decodeColor(from: result.metadata.notificationFlags)
+        // Decode color from conversation flags (bits 12-15) and apply it
+        let decodedColor = ConversationFlagsConstants.decodeColor(from: result.metadata.conversationFlags)
         selectedColor = decodedColor
 
-        // Decode persistence consent from notification flags (bit 4)
-        receivedPersistenceConsent = NotificationFlagsConstants.hasPersistenceConsent(result.metadata.notificationFlags)
+        // Decode persistence consent from conversation flags (bit 4)
+        receivedPersistenceConsent = ConversationFlagsConstants.hasPersistenceConsent(result.metadata.conversationFlags)
 
-        Log.info(.ceremony, "Decoded metadata: ttl=\(metadata.ttlSeconds)s, disappearing=\(metadata.disappearingMessagesSeconds)s, color=\(decodedColor.rawValue), persistence=\(receivedPersistenceConsent)")
+        // Decode message padding settings from conversation flags (bits 5-7)
+        receivedMessagePaddingEnabled = ConversationFlagsConstants.hasMessagePadding(result.metadata.conversationFlags)
+        receivedMessagePaddingSize = ConversationFlagsConstants.decodePaddingSize(from: result.metadata.conversationFlags)
+
+        let paddingDesc = receivedMessagePaddingEnabled ? receivedMessagePaddingSize.displayName : "off"
+        Log.info(.ceremony, "Decoded metadata: ttl=\(metadata.ttlSeconds)s, disappearing=\(metadata.disappearingMessagesSeconds)s, color=\(decodedColor.rawValue), padding=\(paddingDesc), persistence=\(receivedPersistenceConsent)")
 
         // Generate mnemonic for verification
         let mnemonic = generateMnemonic(padBytes: result.pad)
@@ -244,6 +254,8 @@ final class ReceiverCeremonyViewModel {
                 messageRetention: messageRetention,
                 disappearingMessages: disappearingMessages,
                 accentColor: selectedColor,
+                messagePaddingEnabled: receivedMessagePaddingEnabled,
+                messagePaddingSize: receivedMessagePaddingSize,
                 persistenceConsent: receivedPersistenceConsent
             )
 
@@ -276,6 +288,8 @@ final class ReceiverCeremonyViewModel {
         progress = 0.0
         selectedColor = .indigo
         receivedPersistenceConsent = false
+        receivedMessagePaddingEnabled = false
+        receivedMessagePaddingSize = .bytes32
     }
 
     func cancel() {

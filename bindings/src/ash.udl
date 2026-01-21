@@ -4,18 +4,30 @@
 // Fountain code based QR transfer for reliable ceremony.
 
 namespace ash {
+    // === Pad Size Constants ===
+
+    /// Get minimum pad size in bytes (32 KB)
+    u64 get_min_pad_size();
+
+    /// Get maximum pad size in bytes (1 GB)
+    u64 get_max_pad_size();
+
+    /// Validate that a pad size is within allowed bounds (32KB - 1GB)
+    boolean validate_pad_size(u64 size);
+
     // === Fountain Ceremony Operations ===
 
     /// Create a fountain frame generator for ceremony QR display.
     ///
     /// This is the main entry point for initiators. The generator produces
     /// unlimited encoded blocks that can be displayed as QR codes.
+    /// Passphrase is required for encrypting the QR frames.
     [Throws=AshError]
     FountainFrameGenerator create_fountain_generator(
         CeremonyMetadata metadata,
         sequence<u8> pad_bytes,
         u32 block_size,
-        string? passphrase
+        string passphrase
     );
 
     // === OTP Operations ===
@@ -75,20 +87,6 @@ namespace ash {
     void secure_zero_bytes(sequence<u8> data);
 };
 
-/// Pad size options
-enum PadSize {
-    /// 32 KB - ~25 messages, ~25 QR frames
-    "Tiny",
-    /// 64 KB - ~50 messages, ~45 QR frames
-    "Small",
-    /// 256 KB - ~200 messages, ~177 QR frames
-    "Medium",
-    /// 512 KB - ~400 messages, ~353 QR frames
-    "Large",
-    /// 1 MB - ~800 messages, ~705 QR frames
-    "Huge",
-};
-
 /// Role in the conversation, determining pad consumption direction.
 ///
 /// The role is established during the ceremony:
@@ -126,6 +124,10 @@ enum AshError {
     "InvalidMetadataUrl",
     /// Pad is too small to derive authorization tokens
     "PadTooSmallForTokens",
+    /// Pad size is below minimum (32 KB)
+    "PadSizeTooSmall",
+    /// Pad size exceeds maximum (1 GB)
+    "PadSizeTooBig",
 };
 
 /// Ceremony metadata transferred via QR frame 0
@@ -137,14 +139,25 @@ dictionary CeremonyMetadata {
     u64 ttl_seconds;
     /// Disappearing messages timeout in seconds (0 = off)
     u32 disappearing_messages_seconds;
-    /// Push notification preferences (16-bit bitfield)
-    /// Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
-    /// Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires (5min, 1min)
-    /// Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
-    /// Bit 8: NOTIFY_DELIVERY_FAILED (0x0100) - notify sender if message TTL expires unread
-    /// Bit 9: NOTIFY_MESSAGE_READ (0x0200) - reserved for future read receipts
-    /// Default: 0x0103 (new message + expiring + delivery failed)
-    u16 notification_flags;
+    /// Conversation flags (16-bit bitfield) encoding various settings:
+    ///
+    /// Notification flags (bits 0-7):
+    /// - Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
+    /// - Bit 1: NOTIFY_MESSAGE_EXPIRING (0x0002) - notify before message expires
+    /// - Bit 2: NOTIFY_MESSAGE_EXPIRED (0x0004) - notify when message expires
+    /// - Bit 3: NOTIFY_DELIVERY_FAILED (0x0008) - notify sender if TTL expires unread
+    /// - Bit 4: NOTIFY_MESSAGE_READ (0x0010) - reserved for read receipts
+    /// - Bits 5-7: Reserved for future notification types
+    ///
+    /// Security flags (bits 8-11):
+    /// - Bit 8: Persistence consent (local message storage)
+    /// - Bits 9-11: Message padding settings (enabled + size)
+    ///
+    /// UI flags (bits 12-15):
+    /// - Bits 12-15: Conversation accent color (16 colors)
+    ///
+    /// Default: 0x000B (new message + expiring + delivery failed)
+    u16 conversation_flags;
     /// Relay server URL
     string relay_url;
 };
@@ -177,9 +190,10 @@ dictionary FountainCeremonyResult {
 ///
 /// This allows both parties to send messages without coordination.
 interface Pad {
-    /// Create pad from entropy bytes
+    /// Create pad from entropy bytes.
+    /// The entropy length determines the pad size (must be 32KB - 1GB).
     [Throws=AshError, Name=from_entropy]
-    constructor(sequence<u8> entropy, PadSize size);
+    constructor(sequence<u8> entropy);
 
     /// Create pad from raw bytes (for reconstruction)
     [Name=from_bytes]
@@ -276,9 +290,8 @@ interface FountainFrameGenerator {
 /// Can decode from ANY sufficient subset of blocks.
 interface FountainFrameReceiver {
     /// Create a new receiver.
-    ///
-    /// If passphrase was used for encryption, same passphrase must be provided.
-    constructor(string? passphrase);
+    /// Passphrase is required and must match the sender's passphrase.
+    constructor(string passphrase);
 
     /// Add a scanned QR frame.
     ///

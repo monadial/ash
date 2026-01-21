@@ -14,36 +14,65 @@
 import Foundation
 import CryptoKit
 
-/// Notification flag constants for push notification preferences
-/// These match the Rust core definitions
-enum NotificationFlagsConstants {
-    // Receiver notifications (bits 0-2)
+/// Conversation flags encode various settings exchanged during ceremony.
+/// These flags are embedded in the QR metadata and shared between both parties.
+///
+/// Bit layout:
+/// - Bits 0-2:   Receiver notifications (new message, expiring, expired)
+/// - Bits 3-4:   Sender notifications (delivery failed, message read)
+/// - Bits 5-7:   Reserved for future notification types
+/// - Bit 8:      Persistence consent (local message storage)
+/// - Bits 9-11:  Message padding settings (enabled flag + size)
+/// - Bits 12-15: Conversation accent color
+enum ConversationFlagsConstants {
+
+    // MARK: - Notification Flags (Receiver) - Bits 0-2
+
+    /// Notify receiver when new message arrives
     static let notifyNewMessage: UInt16 = 1 << 0
+    /// Notify receiver before message expires (5min and 1min warnings)
     static let notifyMessageExpiring: UInt16 = 1 << 1
+    /// Notify receiver when message expires
     static let notifyMessageExpired: UInt16 = 1 << 2
 
-    // Persistence consent (bit 4)
-    /// User consented to local message persistence (requires Face ID + disappearing messages)
-    static let persistenceConsent: UInt16 = 1 << 4
+    // MARK: - Notification Flags (Sender) - Bits 3-4
 
-    // Sender notifications (bits 8-9)
-    static let notifyDeliveryFailed: UInt16 = 1 << 8
-    static let notifyMessageRead: UInt16 = 1 << 9
+    /// Notify sender if message TTL expires unread
+    static let notifyDeliveryFailed: UInt16 = 1 << 3
+    /// Reserved: notify sender when message is read (future read receipts)
+    static let notifyMessageRead: UInt16 = 1 << 4
 
-    /// Default: new message + expiring + delivery failed
+    // Bits 5-7: Reserved for future notification types
+
+    /// Default notification flags: new message + expiring + delivery failed
     static let defaultFlags: UInt16 = notifyNewMessage | notifyMessageExpiring | notifyDeliveryFailed
 
-    // Color encoding in bits 12-15 (4 bits for up to 16 colors)
+    // MARK: - Security Flags - Bits 8-11
+
+    /// User consented to local message persistence (requires Face ID + disappearing messages)
+    static let persistenceConsent: UInt16 = 1 << 8
+
+    /// Message padding enabled flag (bit 9)
+    static let messagePaddingEnabled: UInt16 = 1 << 9
+    /// Message padding size encoding (bits 10-11): 00=32, 01=64, 10=128, 11=256 bytes
+    static let paddingSizeShift: UInt16 = 10
+    static let paddingSizeMask: UInt16 = 0x0C00  // bits 10-11
+
+    // MARK: - UI Flags - Bits 12-15
+
+    /// Color encoding shift (4 bits for up to 16 colors)
     static let colorShift: UInt16 = 12
     static let colorMask: UInt16 = 0xF000  // bits 12-15
 
-    /// Encode color index into notification flags
+    // MARK: - Color Encoding/Decoding
+
+    /// Encode color index into flags
     static func encodeColor(_ color: ConversationColor, into flags: UInt16) -> UInt16 {
         let colorIndex = UInt16(ConversationColor.allCases.firstIndex(of: color) ?? 0)
         return (flags & ~colorMask) | (colorIndex << colorShift)
     }
 
-    /// Decode color from notification flags
+    /// Decode color from flags
     static func decodeColor(from flags: UInt16) -> ConversationColor {
         let colorIndex = Int((flags & colorMask) >> colorShift)
         let allColors = ConversationColor.allCases
@@ -51,37 +80,75 @@ enum NotificationFlagsConstants {
         return allColors[colorIndex]
     }
 
+    // MARK: - Persistence Consent
+
     /// Check if persistence consent flag is set
     static func hasPersistenceConsent(_ flags: UInt16) -> Bool {
         (flags & persistenceConsent) != 0
     }
+
+    // MARK: - Message Padding Encoding/Decoding
+
+    /// Encode message padding settings into flags
+    static func encodePadding(enabled: Bool, size: MessagePaddingSize, into flags: UInt16) -> UInt16 {
+        var result = flags & ~(messagePaddingEnabled | paddingSizeMask)
+        if enabled {
+            result |= messagePaddingEnabled
+            // Encode size: 32=0, 64=1, 128=2, 256=3
+            let sizeIndex: UInt16 = switch size {
+            case .bytes32: 0
+            case .bytes64: 1
+            case .bytes128: 2
+            case .bytes256: 3
+            }
+            result |= (sizeIndex << paddingSizeShift)
+        }
+        return result
+    }
+
+    /// Check if message padding is enabled
+    static func hasMessagePadding(_ flags: UInt16) -> Bool {
+        (flags & messagePaddingEnabled) != 0
+    }
+
+    /// Decode message padding size from flags
+    static func decodePaddingSize(from flags: UInt16) -> MessagePaddingSize {
+        let sizeIndex = Int((flags & paddingSizeMask) >> paddingSizeShift)
+        return switch sizeIndex {
+        case 0: .bytes32
+        case 1: .bytes64
+        case 2: .bytes128
+        case 3: .bytes256
+        default: .bytes32
+        }
+    }
 }
 
 /// Ceremony metadata that gets transferred via QR
-/// Contains TTL, disappearing messages setting, notification preferences, and relay URL
+/// Contains TTL, disappearing messages, conversation flags, and relay URL
 struct CeremonyMetadataSwift: Sendable {
     let ttlSeconds: UInt64
     let disappearingMessagesSeconds: UInt32
-    let notificationFlags: UInt16
+    let conversationFlags: UInt16
     let relayURL: String
 
     init(
         ttlSeconds: UInt64 = MessageTTL.defaultSeconds,
         disappearingMessagesSeconds: UInt32 = 0,
-        notificationFlags: UInt16 = NotificationFlagsConstants.defaultFlags,
+        conversationFlags: UInt16 = ConversationFlagsConstants.defaultFlags,
         relayURL: String
     ) {
         self.ttlSeconds = ttlSeconds
         self.disappearingMessagesSeconds = disappearingMessagesSeconds
-        self.notificationFlags = notificationFlags
+        self.conversationFlags = conversationFlags
         self.relayURL = relayURL
     }
 
-    // Helper methods for checking flags
-    var notifyNewMessage: Bool { (notificationFlags & NotificationFlagsConstants.notifyNewMessage) != 0 }
-    var notifyMessageExpiring: Bool { (notificationFlags & NotificationFlagsConstants.notifyMessageExpiring) != 0 }
-    var notifyMessageExpired: Bool { (notificationFlags & NotificationFlagsConstants.notifyMessageExpired) != 0 }
-    var notifyDeliveryFailed: Bool { (notificationFlags & NotificationFlagsConstants.notifyDeliveryFailed) != 0 }
+    // Helper methods for checking notification flags
+    var notifyNewMessage: Bool { (conversationFlags & ConversationFlagsConstants.notifyNewMessage) != 0 }
+    var notifyMessageExpiring: Bool { (conversationFlags & ConversationFlagsConstants.notifyMessageExpiring) != 0 }
+    var notifyMessageExpired: Bool { (conversationFlags & ConversationFlagsConstants.notifyMessageExpired) != 0 }
+    var notifyDeliveryFailed: Bool { (conversationFlags & ConversationFlagsConstants.notifyDeliveryFailed) != 0 }
 }
 
 /// Result of decoding fountain ceremony frames
@@ -98,15 +165,17 @@ protocol PerformCeremonyUseCaseProtocol: Sendable {
 
     /// Create a fountain frame generator for QR display
     /// The generator produces unlimited blocks - display cycles through them
+    /// Passphrase is required for encrypting QR frames
     func createFountainGenerator(
         padBytes: [UInt8],
         metadata: CeremonyMetadataSwift,
         blockSize: UInt32,
-        passphrase: String?
+        passphrase: String
     ) async throws -> FountainFrameGenerator
 
     /// Create a fountain frame receiver for QR scanning
-    func createFountainReceiver(passphrase: String?) -> FountainFrameReceiver
+    /// Passphrase is required and must match the sender's passphrase
+    func createFountainReceiver(passphrase: String) -> FountainFrameReceiver
 
     /// Generate mnemonic checksum for verification
     func generateMnemonic(from padBytes: [UInt8]) async -> [String]
@@ -121,6 +190,8 @@ protocol PerformCeremonyUseCaseProtocol: Sendable {
     ///   - messageRetention: Server TTL setting for unread messages
     ///   - disappearingMessages: Display TTL setting for messages (client-side)
     ///   - accentColor: Accent color for the conversation UI
+    ///   - messagePaddingEnabled: Whether message padding is enabled
+    ///   - messagePaddingSize: Minimum message size when padding is enabled
     ///   - persistenceConsent: User consented to local message persistence
     func finalizeCeremony(
         padBytes: [UInt8],
@@ -131,6 +202,8 @@ protocol PerformCeremonyUseCaseProtocol: Sendable {
         messageRetention: MessageRetention,
         disappearingMessages: DisappearingMessages,
         accentColor: ConversationColor,
+        messagePaddingEnabled: Bool,
+        messagePaddingSize: MessagePaddingSize,
         persistenceConsent: Bool
     ) async throws -> Conversation
 }
@@ -162,42 +235,27 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
     }
 
     func generatePadBytes(entropy: [UInt8], sizeBytes: Int) async throws -> [UInt8] {
-        // Determine PadSize from target bytes
-        // Sizes: Tiny=32KB, Small=64KB, Medium=256KB, Large=512KB, Huge=1MB
-        let padSize: PadSize
-        switch sizeBytes {
-        case ..<48_000:          // < 48KB → Tiny (32KB)
-            padSize = .tiny
-        case ..<128_000:         // < 128KB → Small (64KB)
-            padSize = .small
-        case ..<384_000:         // < 384KB → Medium (256KB)
-            padSize = .medium
-        case ..<768_000:         // < 768KB → Large (512KB)
-            padSize = .large
-        default:                 // >= 768KB → Huge (1MB)
-            padSize = .huge
-        }
-
         // Generate secure random pad mixed with user entropy
-        return try cryptoService.generateSecurePad(userEntropy: entropy, size: padSize)
+        // Pad size is variable (32KB - 1GB), validated by core
+        return try cryptoService.generateSecurePad(userEntropy: entropy, sizeBytes: sizeBytes)
     }
 
     func createFountainGenerator(
         padBytes: [UInt8],
         metadata: CeremonyMetadataSwift,
         blockSize: UInt32,
-        passphrase: String?
+        passphrase: String
     ) async throws -> FountainFrameGenerator {
         // Create CeremonyMetadata for FFI
         let ffiMetadata = CeremonyMetadata(
             version: 1,
             ttlSeconds: metadata.ttlSeconds,
             disappearingMessagesSeconds: metadata.disappearingMessagesSeconds,
-            notificationFlags: metadata.notificationFlags,
+            conversationFlags: metadata.conversationFlags,
             relayUrl: metadata.relayURL
         )
 
-        // Create fountain generator via FFI
+        // Create fountain generator via FFI with required passphrase
         return try Ash.createFountainGenerator(
             metadata: ffiMetadata,
             padBytes: padBytes,
@@ -206,7 +264,7 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
         )
     }
 
-    func createFountainReceiver(passphrase: String?) -> FountainFrameReceiver {
+    func createFountainReceiver(passphrase: String) -> FountainFrameReceiver {
         return FountainFrameReceiver(passphrase: passphrase)
     }
 
@@ -224,15 +282,17 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
         messageRetention: MessageRetention,
         disappearingMessages: DisappearingMessages,
         accentColor: ConversationColor,
+        messagePaddingEnabled: Bool,
+        messagePaddingSize: MessagePaddingSize,
         persistenceConsent: Bool
     ) async throws -> Conversation {
-        Log.info(.ceremony, "Finalizing ceremony (\(padBytes.count) bytes, retention=\(messageRetention.displayName), disappearing=\(disappearingMessages.displayName), color=\(accentColor.rawValue), persistence=\(persistenceConsent))")
+        Log.info(.ceremony, "Finalizing ceremony (\(padBytes.count) bytes, retention=\(messageRetention.displayName), disappearing=\(disappearingMessages.displayName), color=\(accentColor.rawValue), padding=\(messagePaddingEnabled ? messagePaddingSize.displayName : "off"), persistence=\(persistenceConsent))")
 
         // Derive authorization tokens from pad bytes
         let tokens = try Ash.deriveAllTokens(padBytes: padBytes)
         Log.debug(.ceremony, "Authorization tokens derived")
 
-        // Create conversation with message retention, disappearing messages setting and accent color
+        // Create conversation with message retention, disappearing messages setting, accent color, and padding
         let conversation = Conversation.fromCeremony(
             padBytes: padBytes,
             mnemonic: mnemonic,
@@ -242,6 +302,8 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
             messageRetention: messageRetention,
             disappearingMessages: disappearingMessages,
             accentColor: accentColor,
+            messagePaddingEnabled: messagePaddingEnabled,
+            messagePaddingSize: messagePaddingSize,
             persistenceConsent: persistenceConsent,
             authToken: tokens.authToken,
             burnToken: tokens.burnToken
@@ -277,4 +339,47 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
         Log.info(.ceremony, "Ceremony complete")
         return conversation
     }
+}
+
+// MARK: - FFI Namespace
+
+/// Namespace for ash-core FFI functions
+/// Wraps global functions to avoid naming conflicts
+private enum Ash {
+    static func createFountainGenerator(
+        metadata: CeremonyMetadata,
+        padBytes: [UInt8],
+        blockSize: UInt32,
+        passphrase: String
+    ) throws -> FountainFrameGenerator {
+        try _createFountainGenerator(
+            metadata: metadata,
+            padBytes: padBytes,
+            blockSize: blockSize,
+            passphrase: passphrase
+        )
+    }
+
+    static func deriveAllTokens(padBytes: [UInt8]) throws -> AuthTokens {
+        try _deriveAllTokens(padBytes: padBytes)
+    }
+}
+
+// Private wrappers to call global FFI functions
+private func _createFountainGenerator(
+    metadata: CeremonyMetadata,
+    padBytes: [UInt8],
+    blockSize: UInt32,
+    passphrase: String
+) throws -> FountainFrameGenerator {
+    try createFountainGenerator(
+        metadata: metadata,
+        padBytes: padBytes,
+        blockSize: blockSize,
+        passphrase: passphrase
+    )
+}
+
+private func _deriveAllTokens(padBytes: [UInt8]) throws -> AuthTokens {
+    try deriveAllTokens(padBytes: padBytes)
 }

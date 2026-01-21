@@ -331,6 +331,11 @@ double uniffi_ash_bindings_fn_method_fountainframereceiver_progress(void*_Nonnul
 uint32_t uniffi_ash_bindings_fn_method_fountainframereceiver_source_count(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_METHOD_FOUNTAINFRAMERECEIVER_UNIQUE_BLOCKS_RECEIVED
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_METHOD_FOUNTAINFRAMERECEIVER_UNIQUE_BLOCKS_RECEIVED
+uint32_t uniffi_ash_bindings_fn_method_fountainframereceiver_unique_blocks_received(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_CLONE_PAD
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_CLONE_PAD
 void*_Nonnull uniffi_ash_bindings_fn_clone_pad(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -353,7 +358,7 @@ void*_Nonnull uniffi_ash_bindings_fn_constructor_pad_from_bytes_with_state(RustB
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_CONSTRUCTOR_PAD_FROM_ENTROPY
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_CONSTRUCTOR_PAD_FROM_ENTROPY
-void*_Nonnull uniffi_ash_bindings_fn_constructor_pad_from_entropy(RustBuffer entropy, RustBuffer size, RustCallStatus *_Nonnull out_status
+void*_Nonnull uniffi_ash_bindings_fn_constructor_pad_from_entropy(RustBuffer entropy, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_METHOD_PAD_AS_BYTES
@@ -466,9 +471,21 @@ RustBuffer uniffi_ash_bindings_fn_func_generate_mnemonic(RustBuffer pad_bytes, R
 RustBuffer uniffi_ash_bindings_fn_func_generate_mnemonic_with_count(RustBuffer pad_bytes, uint32_t word_count, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_GET_MAX_PAD_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_GET_MAX_PAD_SIZE
+uint64_t uniffi_ash_bindings_fn_func_get_max_pad_size(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_GET_MAX_PASSPHRASE_LENGTH
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_GET_MAX_PASSPHRASE_LENGTH
 uint32_t uniffi_ash_bindings_fn_func_get_max_passphrase_length(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_GET_MIN_PAD_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_GET_MIN_PAD_SIZE
+uint64_t uniffi_ash_bindings_fn_func_get_min_pad_size(RustCallStatus *_Nonnull out_status
     
 );
 #endif
@@ -481,6 +498,11 @@ uint32_t uniffi_ash_bindings_fn_func_get_min_passphrase_length(RustCallStatus *_
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_SECURE_ZERO_BYTES
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_SECURE_ZERO_BYTES
 void uniffi_ash_bindings_fn_func_secure_zero_bytes(RustBuffer data, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_VALIDATE_PAD_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_VALIDATE_PAD_SIZE
+int8_t uniffi_ash_bindings_fn_func_validate_pad_size(uint64_t size, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_FN_FUNC_VALIDATE_PASSPHRASE
@@ -822,9 +844,21 @@ uint16_t uniffi_ash_bindings_checksum_func_generate_mnemonic_with_count(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_GET_MAX_PAD_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_GET_MAX_PAD_SIZE
+uint16_t uniffi_ash_bindings_checksum_func_get_max_pad_size(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_GET_MAX_PASSPHRASE_LENGTH
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_GET_MAX_PASSPHRASE_LENGTH
 uint16_t uniffi_ash_bindings_checksum_func_get_max_passphrase_length(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_GET_MIN_PAD_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_GET_MIN_PAD_SIZE
+uint16_t uniffi_ash_bindings_checksum_func_get_min_pad_size(void
     
 );
 #endif
@@ -837,6 +871,12 @@ uint16_t uniffi_ash_bindings_checksum_func_get_min_passphrase_length(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_SECURE_ZERO_BYTES
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_SECURE_ZERO_BYTES
 uint16_t uniffi_ash_bindings_checksum_func_secure_zero_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_VALIDATE_PAD_SIZE
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_FUNC_VALIDATE_PAD_SIZE
+uint16_t uniffi_ash_bindings_checksum_func_validate_pad_size(void
     
 );
 #endif
@@ -909,6 +949,12 @@ uint16_t uniffi_ash_bindings_checksum_method_fountainframereceiver_progress(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_FOUNTAINFRAMERECEIVER_SOURCE_COUNT
 #define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_FOUNTAINFRAMERECEIVER_SOURCE_COUNT
 uint16_t uniffi_ash_bindings_checksum_method_fountainframereceiver_source_count(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_FOUNTAINFRAMERECEIVER_UNIQUE_BLOCKS_RECEIVED
+#define UNIFFI_FFIDEF_UNIFFI_ASH_BINDINGS_CHECKSUM_METHOD_FOUNTAINFRAMERECEIVER_UNIQUE_BLOCKS_RECEIVED
+uint16_t uniffi_ash_bindings_checksum_method_fountainframereceiver_unique_blocks_received(void
     
 );
 #endif

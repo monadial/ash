@@ -223,7 +223,14 @@ private struct PadSizeView: View {
     @Bindable var viewModel: InitiatorCeremonyViewModel
 
     private var canProceed: Bool {
-        !viewModel.isPassphraseEnabled || viewModel.isPassphraseValid
+        viewModel.isPassphraseValid && viewModel.isCustomPadSizeValid
+    }
+
+    /// Formatted custom pad size description
+    private var customSizeDescription: String {
+        let bytes = UInt64(viewModel.customPadSizeKB * 1024)
+        let option = PadSizeOption.custom
+        return "~\(option.estimatedMessages(for: bytes)) messages, ~\(option.approximateFrames(for: bytes)) QR frames"
     }
 
     var body: some View {
@@ -231,16 +238,16 @@ private struct PadSizeView: View {
             VStack(spacing: 0) {
                 // Header with slider icon
                 VStack(spacing: 16) {
-                    Image(systemName: "slider.horizontal.3")
+                    Image(systemName: "lock.doc")
                         .font(.system(size: 48, weight: .light))
                         .foregroundStyle(.tint)
                         .padding(20)
                         .background(Color.accentColor.opacity(0.1), in: Circle())
 
-                    Text("Pad Size")
+                    Text("Secure Pad Setup")
                         .font(.title2.bold())
 
-                    Text("Larger pads allow more messages but take longer to transfer")
+                    Text("The pad is your one-time encryption key. Larger pads support more messages but take longer to transfer via QR codes.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -251,50 +258,109 @@ private struct PadSizeView: View {
 
                 // Pad Size Cards
                 VStack(spacing: 10) {
-                    ForEach(PadSize.allCases) { size in
+                    ForEach(PadSizeOption.allCases.filter { $0 != .custom }) { option in
                         PadSizeCard(
-                            name: size.displayName,
-                            messages: "~\(size.estimatedMessages) messages",
-                            frames: "\(size.approximateFrames) frames",
-                            isSelected: viewModel.selectedPadSize == size
+                            name: option.displayName,
+                            size: option.sizeDescription,
+                            messages: "~\(option.estimatedMessages) messages",
+                            frames: "\(option.approximateFrames) frames",
+                            isSelected: viewModel.selectedPadSizeOption == option
                         ) {
-                            viewModel.selectPadSize(size)
+                            viewModel.selectPadSizeOption(option)
                         }
+                    }
+
+                    // Custom Size Card
+                    CustomPadSizeCard(
+                        sizeKB: $viewModel.customPadSizeKB,
+                        description: customSizeDescription,
+                        isSelected: viewModel.selectedPadSizeOption == .custom,
+                        isValid: viewModel.isCustomPadSizeValid
+                    ) {
+                        viewModel.selectPadSizeOption(.custom)
                     }
                 }
                 .padding(.horizontal, 20)
 
-                // Passphrase Section
+                // Info about pad usage
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("How it works", systemImage: "info.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+
+                    Text("Each message uses ~164 bytes of the pad (64 bytes for authentication + ~100 bytes average message). Once the pad is exhausted, no more messages can be sent.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+
+                // Passphrase Section (Required)
                 VStack(spacing: 0) {
-                    HStack {
-                        Image(systemName: "lock.shield")
-                            .font(.title3)
-                            .foregroundStyle(.tint)
-                            .frame(width: 32)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Passphrase Protection")
-                                .font(.subheadline.weight(.medium))
-                            Text("Encrypt QR codes with shared secret")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "lock.shield.fill")
+                                .font(.title3)
+                                .foregroundStyle(.tint)
+                                .frame(width: 32)
+                            Text("Verbal Passphrase")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text("Required")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.orange, in: Capsule())
                         }
-                        Spacer()
-                        Toggle("", isOn: $viewModel.isPassphraseEnabled)
-                            .labelsHidden()
+
+                        Text("Speak this passphrase to your contact before the ceremony. It encrypts the QR codes so they cannot be intercepted.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                     .padding(16)
 
-                    if viewModel.isPassphraseEnabled {
-                        Divider().padding(.leading, 56)
-                        SecureField("Enter passphrase", text: $viewModel.passphrase)
-                            .textFieldStyle(.roundedBorder)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
+                    Divider().padding(.leading, 56)
+
+                    SecureField("Enter a passphrase (4+ characters)", text: $viewModel.passphrase)
+                        .textFieldStyle(.roundedBorder)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                    if !viewModel.passphrase.isEmpty && !viewModel.isPassphraseValid {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text("Passphrase must be at least 4 characters")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
                     }
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
+
+                // Passphrase explanation
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Why is passphrase required?", systemImage: "questionmark.circle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+
+                    Text("Without a passphrase, anyone who photographs the QR codes could intercept your key. The passphrase ensures only your intended contact can receive the pad.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
 
                 // Continue Button
                 Button {
@@ -320,6 +386,7 @@ private struct PadSizeView: View {
 
 private struct PadSizeCard: View {
     let name: String
+    let size: String
     let messages: String
     let frames: String
     let isSelected: Bool
@@ -329,8 +396,16 @@ private struct PadSizeCard: View {
         Button(action: onTap) {
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(name)
-                        .font(.headline)
+                    HStack(spacing: 8) {
+                        Text(name)
+                            .font(.headline)
+                        Text(size)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor.opacity(0.8), in: Capsule())
+                    }
                     HStack(spacing: 12) {
                         Label(messages, systemImage: "message")
                         Label(frames, systemImage: "qrcode")
@@ -357,6 +432,80 @@ private struct PadSizeCard: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(isSelected ? Color.accentColor.opacity(0.3) : Color.clear, lineWidth: 1.5)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct CustomPadSizeCard: View {
+    @Binding var sizeKB: Double
+    let description: String
+    let isSelected: Bool
+    let isValid: Bool
+    let onTap: () -> Void
+
+    // Range: 32 KB to 10 MB
+    private let minKB: Double = 32
+    private let maxKB: Double = 10 * 1024
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Text("Custom")
+                                .font(.headline)
+                            Text(PadSizeLimits.formatBytes(UInt64(sizeKB * 1024)))
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.purple.opacity(0.8), in: Capsule())
+                        }
+                        Text(description)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.tint)
+                    } else {
+                        Circle()
+                            .stroke(Color(.systemGray3), lineWidth: 2)
+                            .frame(width: 24, height: 24)
+                    }
+                }
+
+                if isSelected {
+                    VStack(spacing: 8) {
+                        Slider(value: $sizeKB, in: minKB...maxKB, step: 32)
+                            .tint(.purple)
+
+                        HStack {
+                            Text("32 KB")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                            Spacer()
+                            Text("10 MB")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(isSelected ? Color.purple.opacity(0.12) : Color(.secondarySystemGroupedBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(isSelected ? Color.purple.opacity(0.3) : Color.clear, lineWidth: 1.5)
             )
         }
         .buttonStyle(.plain)
@@ -504,6 +653,72 @@ private struct OptionsView: View {
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
+
+                // Message Privacy Section
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "eye.slash")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Message Privacy")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    Toggle(isOn: $viewModel.messagePaddingEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Message Padding")
+                                .font(.subheadline)
+                            Text("Pad short messages to hide length")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+
+                    if viewModel.messagePaddingEnabled {
+                        Divider().padding(.leading, 16)
+
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Minimum Size")
+                                    .font(.subheadline)
+                                Text("Messages padded to at least this")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Picker("", selection: $viewModel.messagePaddingSize) {
+                                ForEach(MessagePaddingSize.allCases, id: \.self) { Text($0.displayName) }
+                            }
+                            .labelsHidden()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Divider().padding(.leading, 16)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Padding hides message length by ensuring all short messages appear the same size. For example, \"HI\" becomes \(viewModel.messagePaddingSize.rawValue) bytes.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            Text("Note: Uses more pad bytes per message.")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
 
                 // Relay Server Section
                 VStack(spacing: 0) {
@@ -1305,7 +1520,7 @@ private struct ReceiverSetupView: View {
     @Bindable var viewModel: ReceiverCeremonyViewModel
 
     private var canProceed: Bool {
-        !viewModel.isPassphraseEnabled || viewModel.isPassphraseValid
+        viewModel.isPassphraseValid
     }
 
     var body: some View {
@@ -1322,13 +1537,61 @@ private struct ReceiverSetupView: View {
                     Text("Ready to Scan")
                         .font(.title2.bold())
 
-                    Text("Point your camera at the sender's QR codes")
+                    Text("Enter the passphrase that was spoken by the sender, then point your camera at their QR codes")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top, 24)
                 .padding(.bottom, 24)
+                .padding(.horizontal, 20)
+
+                // Passphrase Section (Required)
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Image(systemName: "lock.shield.fill")
+                                .font(.title3)
+                                .foregroundStyle(.tint)
+                                .frame(width: 32)
+                            Text("Verbal Passphrase")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text("Required")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.orange, in: Capsule())
+                        }
+
+                        Text("Enter the passphrase that the sender told you verbally. Without the correct passphrase, the QR codes cannot be decoded.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    SecureField("Enter the passphrase", text: $viewModel.passphrase)
+                        .textContentType(.password)
+                        .textFieldStyle(.roundedBorder)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                    if !viewModel.passphrase.isEmpty && !viewModel.isPassphraseValid {
+                        HStack {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Text("Passphrase must be at least 4 characters")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                    }
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
 
                 // Instructions
@@ -1353,38 +1616,6 @@ private struct ReceiverSetupView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                }
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal, 20)
-
-                // Passphrase Section
-                VStack(spacing: 0) {
-                    HStack {
-                        Image(systemName: "lock.shield")
-                            .font(.title3)
-                            .foregroundStyle(.tint)
-                            .frame(width: 32)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Passphrase Protected")
-                                .font(.subheadline.weight(.medium))
-                            Text("Enable if sender used a passphrase")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Toggle("", isOn: $viewModel.isPassphraseEnabled)
-                            .labelsHidden()
-                    }
-                    .padding(16)
-
-                    if viewModel.isPassphraseEnabled {
-                        Divider().padding(.leading, 56)
-                        SecureField("Enter passphrase", text: $viewModel.passphrase)
-                            .textContentType(.password)
-                            .textFieldStyle(.roundedBorder)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                    }
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)

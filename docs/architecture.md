@@ -279,23 +279,79 @@ This design ensures:
 
 ---
 
+### Message Authentication (Wegman-Carter MAC)
+
+Every message is authenticated using a **Wegman-Carter MAC** with 256-bit tags.
+
+This provides **information-theoretic authentication** — mathematically proven unforgeable without the pad, regardless of computational power.
+
+**Authentication scheme:**
+- **Tag size:** 256 bits (32 bytes)
+- **Auth key size:** 64 bytes from pad per message (4 × 16-byte keys: r₁, r₂, s₁, s₂)
+- **Algorithm:** Dual polynomial evaluation in GF(2^128)
+- **Forgery probability:** ~2^-128 (negligible)
+
+**How it works:**
+1. Split ciphertext into 128-bit blocks
+2. Evaluate two independent polynomials over GF(2^128):
+   - Tag₁ = Σ(blockᵢ · r₁^(n-i)) + s₁
+   - Tag₂ = Σ(blockᵢ · r₂^(n-i)) + s₂
+3. Concatenate: final_tag = Tag₁ || Tag₂ (256 bits)
+
+**Security properties:**
+- **Information-theoretic:** Cannot be broken regardless of computational advances
+- **One-time:** Each auth key is used exactly once (pad consumption)
+- **Unforgeable:** Without pad bytes, attacker cannot create valid tags
+- **Tamper-evident:** Any modification invalidates the tag
+
+---
+
+### Mandatory Message Padding
+
+All messages are padded to a minimum of **32 bytes** to protect against traffic analysis.
+
+**Why padding matters:**
+Without padding, an adversary observing encrypted message sizes could:
+- Distinguish short messages ("yes", "no", "ok") from longer ones
+- Fingerprint message patterns based on size sequences
+- Infer conversation topics or emotional state from message lengths
+
+**Padding format:**
+```
+[0x00 marker][2-byte BE length][content][zero padding]
+```
+
+- **0x00 marker:** Identifies padded messages (UTF-8 never starts with null byte)
+- **Length header:** 2-byte big-endian length of original content
+- **Content:** Original plaintext bytes
+- **Zero padding:** Fills remaining bytes to reach 32-byte minimum
+
+Messages longer than 29 bytes (32 - 3 header) are not padded beyond their natural size.
+
+---
+
 ### Sending a message
 
 1. User composes message
-2. App requests pad slice from `ash-core` using their role (Initiator/Responder)
-3. Message is OTP-encrypted with consumed pad bytes
-4. Pad cursor advances (front for Initiator, back for Responder)
-5. Encrypted blob is sent to backend
+2. Message is padded to minimum 32 bytes
+3. App requests pad slice from `ash-core`: 64 bytes (auth key) + padded length (encryption key)
+4. Message is OTP-encrypted with encryption key bytes
+5. Authentication tag is computed using Wegman-Carter MAC with auth key
+6. Pad cursors advance (front for Initiator, back for Responder)
+7. Authenticated frame (header + ciphertext + tag) is sent to backend
 
 ---
 
 ### Receiving a message
 
-1. Encrypted blob is received (via SSE or polling)
+1. Authenticated frame is received (via SSE or polling)
 2. App requests pad slice from `ash-core` using the **sender's** role
-3. Blob is OTP-decrypted using the same pad bytes
-4. Plaintext is displayed briefly
-5. Plaintext is discarded
+3. Authentication tag is verified using Wegman-Carter MAC
+4. If tag is invalid, message is rejected (tampering detected)
+5. Ciphertext is OTP-decrypted using encryption key bytes
+6. Padding is stripped to recover original plaintext
+7. Plaintext is displayed briefly
+8. Plaintext is discarded
 
 ---
 

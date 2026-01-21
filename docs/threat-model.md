@@ -104,14 +104,21 @@ ASH considers the following attackers.
 - Modifies packets
 - Drops packets
 - Replays packets
+- Forges messages
 
 **Defenses**
+- **Wegman-Carter 256-bit authentication** (information-theoretic)
 - Frame integrity checks (CRC)
 - Deterministic pad consumption
 - Message ordering constraints
 
 **Residual risk**
 - Denial of service (not prevented)
+
+**Note:** Message authentication uses a 256-bit Wegman-Carter MAC with dual GF(2^128)
+polynomial hashing. This provides information-theoretic authentication — an attacker
+cannot forge valid messages regardless of computational power. Forgery probability
+is ~2^-128.
 
 ---
 
@@ -271,8 +278,12 @@ ASH provides the following guarantees **if used correctly**:
 
 - Message confidentiality against network and backend observers
 - Information-theoretic security via One-Time Pad
+- **Information-theoretic message authentication** via Wegman-Carter MAC
+- **256-bit authentication tags** using dual GF(2^128) polynomial hashing
+- **Traffic analysis protection** via mandatory 32-byte message padding
 - Pad non-reuse enforcement by design
 - Detection of accidental corruption
+- Detection of message tampering or forgery
 - Human-verifiable ceremony correctness
 - Minimal attack surface
 

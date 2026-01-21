@@ -279,6 +279,86 @@ This allows interoperability with older implementations.
 
 ---
 
+## Authenticated Message Frame Format
+
+Messages transmitted to the relay use an authenticated frame format that combines
+OTP encryption with Wegman-Carter MAC authentication.
+
+### Authenticated message structure
+
+```
++------------------+------------------+------------------+------------------+------------------+
+|   Version        |   Type           |   Length         |   Ciphertext     |   Auth Tag       |
+|   (1 byte)       |   (1 byte)       |   (2 bytes BE)   |   (N bytes)      |   (32 bytes)     |
++------------------+------------------+------------------+------------------+------------------+
+```
+
+### Field definitions
+
+| Field | Size | Description |
+|-------|------|-------------|
+| Version | 1 byte | Protocol version (currently 1) |
+| Type | 1 byte | Message type: 0x00 = text, 0x01 = location |
+| Length | 2 bytes | Ciphertext length in bytes (big-endian) |
+| Ciphertext | Variable | OTP-encrypted, padded plaintext |
+| Auth Tag | 32 bytes | Wegman-Carter 256-bit authentication tag |
+
+### Minimum frame size
+
+- Header: 4 bytes (version + type + length)
+- Minimum ciphertext: 32 bytes (mandatory padding)
+- Auth tag: 32 bytes
+- **Minimum total: 68 bytes**
+
+### Message padding format
+
+All messages are padded to a minimum of 32 bytes before encryption:
+
+```
++------------------+------------------+------------------+------------------+
+|   Format Marker  |   Content Length |   Content        |   Zero Padding   |
+|   (1 byte: 0x00) |   (2 bytes BE)   |   (N bytes)      |   (to reach 32)  |
++------------------+------------------+------------------+------------------+
+```
+
+- **Format marker:** 0x00 identifies padded message format (UTF-8 never starts with null)
+- **Content length:** Original plaintext size in bytes (big-endian u16)
+- **Content:** Original plaintext bytes
+- **Zero padding:** Fills to minimum 32 bytes total
+
+### Authentication details
+
+The authentication tag is computed using **Wegman-Carter MAC** with dual GF(2^128)
+polynomial hashing:
+
+**Pad consumption per message:**
+- Auth key: 64 bytes (r₁ || r₂ || s₁ || s₂, each 16 bytes)
+- Encryption key: padded plaintext length bytes
+- **Total: 64 + padded_length bytes**
+
+**Tag computation:**
+1. Encrypt plaintext with OTP to produce ciphertext
+2. Pad ciphertext to multiple of 16 bytes for polynomial evaluation
+3. Evaluate two polynomials over GF(2^128):
+   - Tag₁ = (∑ blockᵢ · r₁^(n-i)) + s₁
+   - Tag₂ = (∑ blockᵢ · r₂^(n-i)) + s₂
+4. Final tag = Tag₁ || Tag₂ (256 bits / 32 bytes)
+
+**GF(2^128) field:**
+- Polynomial: x^128 + x^7 + x^2 + x + 1
+- Carry-less multiplication with reduction
+- Provides information-theoretic authentication (~2^-128 forgery probability)
+
+### Security properties
+
+- **Information-theoretic confidentiality:** OTP encryption with perfect secrecy
+- **Information-theoretic authentication:** Wegman-Carter MAC cannot be forged
+- **Traffic analysis protection:** 32-byte padding prevents size fingerprinting
+- **Tamper detection:** Any modification invalidates the authentication tag
+- **One-time keys:** Both encryption and auth keys used exactly once
+
+---
+
 ## Future considerations (out of scope for v1)
 
 - Fountain codes for out-of-order scanning

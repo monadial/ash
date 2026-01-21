@@ -180,11 +180,13 @@ export default function PaddingDemo() {
                 </code>
                 <span className="text-text-secondary">— "{message.slice(0, 10)}{message.length > 10 ? '...' : ''}"</span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-text-muted w-32">Bytes {3 + messageBytes.length}-{padded.length - 1}:</span>
-                <code className="text-text-muted">00 00 00...</code>
-                <span className="text-text-secondary">— zero padding ({padded.length - 3 - messageBytes.length} bytes)</span>
-              </div>
+              {padded.length - 3 - messageBytes.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-text-muted w-32">Bytes {3 + messageBytes.length}-{padded.length - 1}:</span>
+                  <code className="text-text-muted">00 00 00...</code>
+                  <span className="text-text-secondary">— zero padding ({padded.length - 3 - messageBytes.length} bytes)</span>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -192,21 +194,55 @@ export default function PaddingDemo() {
         {/* Traffic Analysis Comparison */}
         <div className="bg-bg-elevated rounded-lg p-4">
           <div className="text-sm font-medium text-white mb-3">Traffic Analysis Protection</div>
-          <div className="space-y-2 text-xs">
-            <div className="flex items-center gap-3">
-              <span className="text-text-muted w-32">Without padding:</span>
-              <div className="flex-1 flex items-center gap-2">
-                <div className="h-4 bg-danger/30 rounded" style={{ width: `${Math.max(20, messageBytes.length * 5)}px` }}></div>
-                <span className="text-text-secondary">{messageBytes.length} bytes — distinguishable!</span>
-              </div>
+          <div className="space-y-3 text-xs">
+            {/* Show comparison with other common message sizes */}
+            <div className="space-y-1">
+              <div className="text-text-muted mb-2">Without padding (sizes reveal content patterns):</div>
+              {[
+                { msg: '"no"', len: 2 },
+                { msg: '"yes"', len: 3 },
+                { msg: '"ok"', len: 2 },
+                { msg: 'Your message', len: messageBytes.length },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-text-muted w-28">{item.msg}:</span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`h-3 rounded ${item.msg === 'Your message' ? 'bg-brand/50' : 'bg-danger/30'}`}
+                      style={{ width: `${Math.max(10, item.len * 4)}px` }}
+                    ></div>
+                    <span className="text-text-secondary">{item.len}B</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-text-muted w-32">With padding:</span>
-              <div className="flex-1 flex items-center gap-2">
-                <div className="h-4 bg-success/30 rounded" style={{ width: `${Math.max(padded?.length ?? minPaddedSize, minPaddedSize) * 5}px` }}></div>
-                <span className="text-text-secondary">{padded?.length ?? minPaddedSize} bytes — all messages same size</span>
-              </div>
+            <div className="space-y-1 pt-2 border-t border-border">
+              <div className="text-text-muted mb-2">With padding (minimum {minPaddedSize} bytes):</div>
+              {[
+                { msg: '"no"', len: minPaddedSize },
+                { msg: '"yes"', len: minPaddedSize },
+                { msg: '"ok"', len: minPaddedSize },
+                { msg: 'Your message', len: padded?.length ?? minPaddedSize },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-text-muted w-28">{item.msg}:</span>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`h-3 rounded ${item.msg === 'Your message' ? 'bg-brand/50' : 'bg-success/30'}`}
+                      style={{ width: `${item.len * 4}px` }}
+                    ></div>
+                    <span className="text-text-secondary">{item.len}B</span>
+                    {item.len === minPaddedSize && i < 3 && <span className="text-success">✓ same</span>}
+                  </div>
+                </div>
+              ))}
             </div>
+            {messageBytes.length > 29 && (
+              <p className="text-warning text-[10px] mt-2">
+                Note: Messages over 29 bytes exceed minimum padding. Your {messageBytes.length}B message
+                becomes {padded?.length}B (3B header + {messageBytes.length}B content).
+              </p>
+            )}
           </div>
         </div>
 

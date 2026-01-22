@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: mailto:security@ashprotocol.app
+    about: Report security vulnerabilities privately via email. Do NOT open a public issue for security bugs.
+  - name: General Support
+    url: https://ashprotocol.app/support
+    about: Get help with using ASH or ask general questions.

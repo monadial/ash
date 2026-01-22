@@ -16,23 +16,23 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
           One-Time Pad Encryption
         </span>
         <h1 class="text-5xl lg:text-6xl font-bold leading-tight mb-6">
-          The only encryption that's
-          <span class="text-transparent bg-clip-text bg-linear-to-r from-brand-light to-brand">truly unbreakable</span>
+          Messages that
+          <span class="text-transparent bg-clip-text bg-linear-to-r from-brand-light to-brand">can never be read</span>
+          by anyone else
         </h1>
         <p class="text-xl text-text-secondary mb-6 max-w-lg">
-          Perfect secrecy proven by mathematics. Not vulnerable to quantum computers. Not now. Not ever.
+          Not by hackers. Not by governments. Not by us. Not even with future technology.
         </p>
         <p class="text-text-muted mb-10 max-w-lg">
-          ASH uses the One-Time Pad cipher — the only encryption method with mathematically proven security. Unlike modern cryptography that relies on computational hardness, OTP provides information-theoretic security that no amount of computing power can break.
+          ASH uses the only encryption method that's mathematically proven to be unbreakable. It's called a One-Time Pad, and it's been trusted for the most sensitive communications since World War I.
         </p>
         <div class="flex flex-wrap gap-4">
           <Button href="#" variant="primary" size="lg">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
             Download for iOS
           </Button>
-          <Button href="https://github.com/monadial/ash" variant="secondary" size="lg" external>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-            View on GitHub
+          <Button href="/whitepaper" variant="secondary" size="lg">
+            Learn How It Works
           </Button>
         </div>
       </div>
@@ -49,44 +49,100 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
     </div>
   </section>
 
-  <!-- How It Works -->
+  <!-- Simple Explanation -->
   <section class="py-24 bg-bg-subtle border-y border-border">
+    <div class="max-w-4xl mx-auto px-6 text-center">
+      <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">The Simple Explanation</span>
+      <h2 class="text-4xl font-bold mt-4 mb-8">Why is ASH different?</h2>
+
+      <div class="grid md:grid-cols-2 gap-8 text-left">
+        <div class="bg-bg-card border border-border rounded-2xl p-6">
+          <div class="w-12 h-12 bg-danger/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-3">Other "Secure" Apps</h3>
+          <p class="text-text-secondary text-sm mb-4">
+            Apps like Signal and WhatsApp use encryption that's "very hard" to break. But "very hard" isn't impossible. With enough computing power or future technology (like quantum computers), these messages could potentially be decrypted.
+          </p>
+          <p class="text-text-muted text-xs">
+            Think of it like a really complicated lock. Today's lockpicks can't open it, but someone might invent a better lockpick tomorrow.
+          </p>
+        </div>
+
+        <div class="bg-bg-card border border-success/30 rounded-2xl p-6">
+          <div class="w-12 h-12 bg-success/20 rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold mb-3">ASH's Approach</h3>
+          <p class="text-text-secondary text-sm mb-4">
+            ASH uses a One-Time Pad, which is mathematically proven to be unbreakable. Not "really hard to break" — actually, genuinely impossible. No amount of computing power, time, or future technology can crack it.
+          </p>
+          <p class="text-text-muted text-xs">
+            Think of it like burning the message after reading. There's nothing left to decrypt, no matter how good your tools are.
+          </p>
+        </div>
+      </div>
+
+      <p class="text-text-muted mt-8 max-w-2xl mx-auto">
+        This isn't marketing speak. It's mathematics. The proof was published by Claude Shannon (the father of information theory) in 1949, and it's still uncontested.
+      </p>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="py-24">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-16">
         <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">How It Works</span>
-        <h2 class="text-4xl font-bold mt-4">Four steps to perfect secrecy</h2>
+        <h2 class="text-4xl font-bold mt-4">Four steps to unbreakable privacy</h2>
         <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
-          ASH takes a fundamentally different approach to secure messaging. Instead of relying on complex mathematical problems that might one day be solved, ASH uses a simple but provably unbreakable method.
+          ASH requires a bit more effort than regular messaging apps. But that effort is what makes it truly secure.
         </p>
       </div>
 
       <div class="grid md:grid-cols-4 gap-8">
         <div class="text-center">
           <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">1</div>
-          <h3 class="font-semibold text-lg mb-3">Meet in Person</h3>
+          <h3 class="font-semibold text-lg mb-3">Meet Your Contact</h3>
           <p class="text-text-secondary text-sm">
-            Meet your contact face-to-face. This is the foundation of trust — no servers, no third parties, just two people who can verify each other's identity directly.
+            You need to meet the person you want to message in real life. This is the foundation of security — you know exactly who you're talking to.
+          </p>
+          <p class="text-text-muted text-xs mt-2">
+            Coffee shop, office, anywhere private works.
           </p>
         </div>
         <div class="text-center">
           <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">2</div>
-          <h3 class="font-semibold text-lg mb-3">Exchange Keys</h3>
+          <h3 class="font-semibold text-lg mb-3">Scan QR Codes</h3>
           <p class="text-text-secondary text-sm">
-            Scan QR codes to share a unique encryption pad. This happens completely offline — the key material never touches the internet, making interception impossible.
+            Both phones create and scan QR codes. This shares a secret key between your devices — a key that never touches the internet.
+          </p>
+          <p class="text-text-muted text-xs mt-2">
+            Takes about 30 seconds. Confirm with a 6-word phrase.
           </p>
         </div>
         <div class="text-center">
           <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">3</div>
-          <h3 class="font-semibold text-lg mb-3">Message Securely</h3>
+          <h3 class="font-semibold text-lg mb-3">Send Messages</h3>
           <p class="text-text-secondary text-sm">
-            Each message consumes unique bytes from your shared pad. Once used, those bytes are permanently destroyed — providing perfect forward secrecy for every message.
+            Message normally through the app. Each message uses up a tiny piece of your shared key, and that piece is destroyed forever after use.
+          </p>
+          <p class="text-text-muted text-xs mt-2">
+            Depending on key size, you can send 25-800+ messages.
           </p>
         </div>
         <div class="text-center">
           <div class="w-16 h-16 bg-danger rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">4</div>
           <h3 class="font-semibold text-lg mb-3">Burn When Done</h3>
           <p class="text-text-secondary text-sm">
-            When your conversation is complete, burn the remaining key material. All evidence of the conversation is permanently destroyed — messages become mathematically unrecoverable.
+            When you're finished, burn the conversation. All remaining key material is destroyed, making it mathematically impossible to recover any messages.
+          </p>
+          <p class="text-text-muted text-xs mt-2">
+            Gone forever. No backups. No traces.
           </p>
         </div>
       </div>
@@ -94,18 +150,18 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
   </section>
 
   <!-- Interactive Protocol Demo -->
-  <section class="py-24" id="demo">
+  <section class="py-24 bg-bg-subtle border-y border-border" id="demo">
     <div class="max-w-6xl mx-auto px-6">
       <div class="text-center mb-12">
-        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Interactive Demo</span>
-        <h2 class="text-4xl font-bold mt-4">See the ASH protocol in action</h2>
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">See It In Action</span>
+        <h2 class="text-4xl font-bold mt-4">Watch real encryption happen</h2>
         <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
-          Watch how ASH uses a shared One-Time Pad for secure bidirectional communication. Alice and Bob each consume key bytes from opposite ends — ensuring their messages never collide.
+          This interactive demo shows exactly how ASH encrypts messages. Type a message and watch it get encrypted using a real One-Time Pad.
         </p>
         <p class="text-text-muted text-sm mt-2">
           <span class="inline-flex items-center gap-1.5 px-2 py-1 bg-brand-subtle rounded text-brand-light text-xs font-medium">
             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-            Powered by ASH Core (Rust → WebAssembly)
+            This runs the real ASH cryptographic code in your browser
           </span>
         </p>
       </div>
@@ -114,233 +170,210 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
     </div>
   </section>
 
-  <!-- App Screenshots -->
-  <section class="py-24 bg-bg-subtle border-y border-border">
+  <!-- Who Is This For -->
+  <section class="py-24">
     <div class="max-w-7xl mx-auto px-6">
       <div class="text-center mb-16">
-        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">The App</span>
-        <h2 class="text-4xl font-bold mt-4">Simple, focused, secure</h2>
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Who Is ASH For?</span>
+        <h2 class="text-4xl font-bold mt-4">When regular encryption isn't enough</h2>
         <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
-          ASH is designed with one purpose: private conversations that stay private. Every feature serves security, every screen is intentional. No bloat, no distractions — just bulletproof communication.
+          ASH isn't for everyday chatting — that's what Signal is for. ASH is for when the stakes are high and you need absolute certainty.
         </p>
       </div>
 
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
-        <!-- Conversations -->
-        <div class="flex flex-col">
-          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
-            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
-              <div class="text-center p-6">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
-                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                </div>
-                <p class="text-text-muted text-sm">Screenshot placeholder</p>
-              </div>
-            </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-bg-card border border-border rounded-xl p-6">
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" />
+            </svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">Conversation List</h3>
+          <h3 class="font-semibold mb-2">Journalists</h3>
           <p class="text-text-secondary text-sm">
-            Your secure conversations at a glance. See remaining pad capacity, last activity, and quickly access any conversation. Color-coded for easy identification.
+            Protecting sources who risk everything to share information. When a source's safety depends on secrecy, "probably secure" isn't good enough.
           </p>
         </div>
-
-        <!-- Ceremony -->
-        <div class="flex flex-col">
-          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
-            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
-              <div class="text-center p-6">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
-                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                  </svg>
-                </div>
-                <p class="text-text-muted text-sm">Screenshot placeholder</p>
-              </div>
-            </div>
+        <div class="bg-bg-card border border-border rounded-xl p-6">
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46" />
+            </svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">QR Ceremony</h3>
+          <h3 class="font-semibold mb-2">Whistleblowers</h3>
           <p class="text-text-secondary text-sm">
-            Exchange encryption keys face-to-face via QR codes. The ceremony is completely offline — your shared secret never touches the internet. Verify with a 6-word mnemonic.
+            Exposing wrongdoing while protecting yourself. When you're revealing secrets, you need communication that can't be compromised — even years later.
           </p>
         </div>
-
-        <!-- Chat -->
-        <div class="flex flex-col">
-          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
-            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
-              <div class="text-center p-6">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
-                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <p class="text-text-muted text-sm">Screenshot placeholder</p>
-              </div>
-            </div>
+        <div class="bg-bg-card border border-border rounded-xl p-6">
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+            </svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">Secure Chat</h3>
+          <h3 class="font-semibold mb-2">Human Rights Workers</h3>
           <p class="text-text-secondary text-sm">
-            Messages encrypted with your One-Time Pad. Each message consumes unique key bytes that are destroyed after use. See your remaining capacity and message status.
+            Operating in dangerous environments where surveillance is a matter of life and death. Activists and advocates need guarantees, not promises.
           </p>
         </div>
-
-        <!-- Entropy -->
-        <div class="flex flex-col">
-          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
-            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
-              <div class="text-center p-6">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
-                  <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                  </svg>
-                </div>
-                <p class="text-text-muted text-sm">Screenshot placeholder</p>
-              </div>
-            </div>
+        <div class="bg-bg-card border border-border rounded-xl p-6">
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+            </svg>
           </div>
-          <h3 class="font-semibold text-lg mb-2">Entropy Collection</h3>
+          <h3 class="font-semibold mb-2">Sensitive Business</h3>
           <p class="text-text-secondary text-sm">
-            Generate truly random keys by drawing on screen. Your gestures combine with system randomness to create unpredictable encryption keys. Watch entropy accumulate visually.
-          </p>
-        </div>
-
-        <!-- Verification -->
-        <div class="flex flex-col">
-          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
-            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
-              <div class="text-center p-6">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-success/20 flex items-center justify-center">
-                  <svg class="w-8 h-8 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
-                </div>
-                <p class="text-text-muted text-sm">Screenshot placeholder</p>
-              </div>
-            </div>
-          </div>
-          <h3 class="font-semibold text-lg mb-2">Mnemonic Verification</h3>
-          <p class="text-text-secondary text-sm">
-            Verify your key exchange with a human-readable 6-word checksum. Both parties see the same words — speak them aloud to confirm your shared secret matches perfectly.
-          </p>
-        </div>
-
-        <!-- Burn -->
-        <div class="flex flex-col">
-          <div class="bg-bg-card border border-border rounded-3xl p-4 mb-6 shadow-xl">
-            <div class="bg-bg-elevated rounded-2xl aspect-9/16 flex items-center justify-center">
-              <div class="text-center p-6">
-                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-danger/20 flex items-center justify-center">
-                  <svg class="w-8 h-8 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                  </svg>
-                </div>
-                <p class="text-text-muted text-sm">Screenshot placeholder</p>
-              </div>
-            </div>
-          </div>
-          <h3 class="font-semibold text-lg mb-2">Burn Everything</h3>
-          <p class="text-text-secondary text-sm">
-            Permanently destroy your conversation with one tap. All key material is wiped, making past messages mathematically unrecoverable. Both parties are notified instantly.
+            Deals, negotiations, and strategic discussions where leaks could cost millions. When confidentiality is everything, absolute security matters.
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Security -->
+  <!-- FAQ Section -->
+  <section class="py-24 bg-bg-subtle border-y border-border">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">FAQ</span>
+        <h2 class="text-4xl font-bold mt-4">Common Questions</h2>
+      </div>
+
+      <div class="space-y-4">
+        <details class="bg-bg-card border border-border rounded-xl overflow-hidden group">
+          <summary class="p-5 cursor-pointer font-medium flex items-center justify-between">
+            Why do I have to meet in person?
+            <svg class="w-5 h-5 text-text-muted group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-5 pb-5 text-text-secondary text-sm border-t border-border pt-4">
+            <p class="mb-3">This is the key to everything. When you share keys over the internet (like other apps do), someone could potentially intercept them. By meeting in person:</p>
+            <ul class="list-disc list-inside space-y-1 text-text-muted">
+              <li>You know exactly who you're sharing keys with</li>
+              <li>The keys never touch the internet</li>
+              <li>No one can intercept what doesn't travel over wires</li>
+            </ul>
+            <p class="mt-3 text-text-muted">Yes, it's less convenient. But that inconvenience is exactly what makes ASH unbreakable.</p>
+          </div>
+        </details>
+
+        <details class="bg-bg-card border border-border rounded-xl overflow-hidden group">
+          <summary class="p-5 cursor-pointer font-medium flex items-center justify-between">
+            Why can I only send a limited number of messages?
+            <svg class="w-5 h-5 text-text-muted group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-5 pb-5 text-text-secondary text-sm border-t border-border pt-4">
+            <p class="mb-3">One-Time Pad encryption requires that you use a unique piece of key for every byte of your message. Once that piece is used, it's destroyed forever.</p>
+            <p class="mb-3">When you set up ASH, you choose how much key material to create:</p>
+            <ul class="list-disc list-inside space-y-1 text-text-muted">
+              <li><strong>64KB</strong> — About 25 messages (quick conversations)</li>
+              <li><strong>256KB</strong> — About 200 messages (extended communication)</li>
+              <li><strong>1MB</strong> — About 800 messages (long-term contact)</li>
+            </ul>
+            <p class="mt-3 text-text-muted">When you run out, you meet again to create a new key. This limitation is what makes the security mathematically perfect.</p>
+          </div>
+        </details>
+
+        <details class="bg-bg-card border border-border rounded-xl overflow-hidden group">
+          <summary class="p-5 cursor-pointer font-medium flex items-center justify-between">
+            What if I lose my phone?
+            <svg class="w-5 h-5 text-text-muted group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-5 pb-5 text-text-secondary text-sm border-t border-border pt-4">
+            <p class="mb-3">If you lose your phone, your keys are gone. This is by design — there's no "forgot password" or cloud backup.</p>
+            <p class="mb-3">Here's what happens:</p>
+            <ul class="list-disc list-inside space-y-1 text-text-muted">
+              <li>You can't read old messages (they're gone with the key)</li>
+              <li>No one else can read them either (they'd need the same key)</li>
+              <li>You'll need to meet your contact again to establish a new connection</li>
+            </ul>
+            <p class="mt-3 text-text-muted">This might seem harsh, but it's actually a security feature. There's no way for anyone — including us — to recover your messages.</p>
+          </div>
+        </details>
+
+        <details class="bg-bg-card border border-border rounded-xl overflow-hidden group">
+          <summary class="p-5 cursor-pointer font-medium flex items-center justify-between">
+            Is ASH really more secure than Signal?
+            <svg class="w-5 h-5 text-text-muted group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-5 pb-5 text-text-secondary text-sm border-t border-border pt-4">
+            <p class="mb-3">Signal is an excellent app with very strong security — we recommend it for everyday use. The difference is in the type of security:</p>
+            <div class="grid sm:grid-cols-2 gap-4 my-4">
+              <div class="bg-bg-elevated rounded-lg p-3">
+                <p class="font-medium text-white text-xs mb-1">Signal's Security</p>
+                <p class="text-text-muted text-xs">Based on math problems that are "extremely hard" to solve. Secure against today's computers, but potentially vulnerable to future quantum computers.</p>
+              </div>
+              <div class="bg-success/10 border border-success/30 rounded-lg p-3">
+                <p class="font-medium text-success text-xs mb-1">ASH's Security</p>
+                <p class="text-text-muted text-xs">Based on mathematical proof that breaking it is impossible — not hard, impossible. Secure against any computer, forever.</p>
+              </div>
+            </div>
+            <p class="text-text-muted">For most people, Signal is perfect. ASH is for situations where you can't accept any risk at all.</p>
+          </div>
+        </details>
+
+        <details class="bg-bg-card border border-border rounded-xl overflow-hidden group">
+          <summary class="p-5 cursor-pointer font-medium flex items-center justify-between">
+            What about photos and videos?
+            <svg class="w-5 h-5 text-text-muted group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-5 pb-5 text-text-secondary text-sm border-t border-border pt-4">
+            <p class="mb-3">ASH only supports text messages and location sharing. Here's why:</p>
+            <ul class="list-disc list-inside space-y-1 text-text-muted">
+              <li>A single photo could be 5MB — that's more than your entire key</li>
+              <li>A video would exhaust your key almost instantly</li>
+              <li>Text is what matters most for sensitive communication</li>
+            </ul>
+            <p class="mt-3 text-text-muted">If you need to share files, use a different secure method. ASH is focused on doing one thing perfectly: secure text messaging.</p>
+          </div>
+        </details>
+
+        <details class="bg-bg-card border border-border rounded-xl overflow-hidden group">
+          <summary class="p-5 cursor-pointer font-medium flex items-center justify-between">
+            Can the government force you to decrypt messages?
+            <svg class="w-5 h-5 text-text-muted group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </summary>
+          <div class="px-5 pb-5 text-text-secondary text-sm border-t border-border pt-4">
+            <p class="mb-3">If you still have the key on your device, you could theoretically be compelled to decrypt messages (laws vary by country).</p>
+            <p class="mb-3">However, once you "burn" a conversation:</p>
+            <ul class="list-disc list-inside space-y-1 text-text-muted">
+              <li>The key is destroyed</li>
+              <li>You physically cannot decrypt the messages</li>
+              <li>No legal demand can make the impossible possible</li>
+            </ul>
+            <p class="mt-3 text-text-muted">This is why the burn feature exists — it's not just about privacy, it's about making sure messages can never be recovered by anyone.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- Security Summary -->
   <Section>
     <div class="text-center mb-16">
       <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Security</span>
-      <h2 class="text-4xl font-bold mt-4">What makes ASH different</h2>
+      <h2 class="text-4xl font-bold mt-4">What ASH protects</h2>
       <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
-        Most "secure" messaging apps rely on computational security — problems that are hard but not impossible to solve. ASH is fundamentally different. Here's what that means for you.
+        ASH provides specific, provable security guarantees. Not marketing claims — mathematical facts.
       </p>
     </div>
 
     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <FeatureCard title="Perfect Secrecy">
-        Ciphertext reveals zero information about your message. This isn't a claim — it's a mathematical proof by Claude Shannon in 1949. The gold standard of cryptography.
+        Your encrypted message reveals absolutely nothing about the original content. This is mathematically proven — not just "very secure."
+      </FeatureCard>
+      <FeatureCard title="Future-Proof">
+        Quantum computers will break most encryption. ASH is completely immune because it doesn't rely on hard math problems — it's provably unbreakable.
+      </FeatureCard>
+      <FeatureCard title="No Server Access">
+        Our servers never see your messages or keys. They just pass along encrypted data that looks like random noise to everyone — including us.
       </FeatureCard>
       <FeatureCard title="Forward Secrecy">
-        Key bytes are destroyed after each message. Even if someone compromises your device tomorrow, they cannot decrypt messages you sent today. Every message is protected independently.
-      </FeatureCard>
-      <FeatureCard title="Quantum Immune">
-        Quantum computers will break RSA, ECC, and most modern encryption. OTP is immune because it doesn't rely on mathematical hardness — it's information-theoretic security.
-      </FeatureCard>
-      <FeatureCard title="Zero Trust Backend">
-        Our servers never see your keys or plaintext. They relay encrypted blobs and nothing more. Even if we're compromised, hacked, or compelled — we have nothing to give.
+        Each message uses unique key bytes that are destroyed after use. Even if someone gets your phone tomorrow, they can't read today's messages.
       </FeatureCard>
       <FeatureCard title="No Backdoors">
-        No key recovery. No escrow. No master keys. No "lawful access" capabilities. The math doesn't allow it, and we wouldn't build it if it did. Only you can decrypt your messages.
+        There's no master key, no recovery option, no way for us (or anyone) to access your messages. The math doesn't allow it.
       </FeatureCard>
       <FeatureCard title="Open Source">
-        The core cryptographic library is public on GitHub. Zero external dependencies. Every line of security-critical code is auditable. Trust, but verify.
-      </FeatureCard>
-    </div>
-  </Section>
-
-  <!-- Comparison -->
-  <section class="py-24 bg-bg-subtle border-y border-border">
-    <div class="max-w-4xl mx-auto px-6">
-      <div class="text-center mb-16">
-        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Comparison</span>
-        <h2 class="text-4xl font-bold mt-4">Why not Signal or WhatsApp?</h2>
-        <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
-          Signal and WhatsApp are excellent apps with strong security for everyday use. But they rely on computational assumptions that may not hold forever. ASH is for when "probably secure" isn't enough.
-        </p>
-      </div>
-
-      <div class="bg-bg-card border border-border rounded-2xl overflow-hidden">
-        <div class="grid grid-cols-3 border-b border-border text-sm">
-          <div class="p-4 text-text-muted font-medium"></div>
-          <div class="p-4 text-text-muted font-medium text-center">Signal / WhatsApp</div>
-          <div class="p-4 text-brand-light font-medium text-center bg-brand-subtle">ASH</div>
-        </div>
-        {[
-          ['Security basis', 'Computational hardness', 'Mathematical proof'],
-          ['Quantum resistant', 'Vulnerable to Shor\'s algorithm', 'Completely immune'],
-          ['Key exchange', 'Remote via servers', 'In-person via QR codes'],
-          ['Server trust', 'Servers see metadata', 'Servers see only noise'],
-          ['Future security', 'Depends on unsolved problems', 'Guaranteed by information theory']
-        ].map(([label, other, ash]) => (
-          <div class="grid grid-cols-3 border-b border-border last:border-0 text-sm">
-            <div class="p-4 font-medium">{label}</div>
-            <div class="p-4 text-text-muted text-center">{other}</div>
-            <div class="p-4 text-center bg-brand-subtle">{ash}</div>
-          </div>
-        ))}
-      </div>
-
-      <p class="text-text-muted text-sm text-center mt-6">
-        This isn't about Signal being bad — it's excellent. ASH serves a different threat model for people who need absolute guarantees.
-      </p>
-    </div>
-  </section>
-
-  <!-- Use Cases -->
-  <Section>
-    <div class="text-center mb-16">
-      <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Who It's For</span>
-      <h2 class="text-4xl font-bold mt-4">When "probably secure" isn't enough</h2>
-      <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
-        ASH isn't for everyone. It requires meeting in person and has limited message capacity. But for certain situations, these trade-offs are more than worth it.
-      </p>
-    </div>
-
-    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <FeatureCard title="Journalists">
-        Protect sources who risk their careers, freedom, or lives to share information. When source protection is paramount, mathematical certainty matters.
-      </FeatureCard>
-      <FeatureCard title="Whistleblowers">
-        Communicate with trusted parties while minimizing digital footprints. When exposing wrongdoing, you need encryption that can't be broken even years later.
-      </FeatureCard>
-      <FeatureCard title="Human Rights Workers">
-        Coordinate safely in environments where surveillance is pervasive and life-threatening. When the stakes are highest, settle for nothing less than proven security.
-      </FeatureCard>
-      <FeatureCard title="High-Stakes Business">
-        Negotiate deals, discuss strategy, or share sensitive information when the cost of compromise is catastrophic. Perfect secrecy for perfect discretion.
+        The encryption code is public on GitHub. Security researchers can verify every claim we make. Trust, but verify.
       </FeatureCard>
     </div>
   </Section>
@@ -349,25 +382,34 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
   <section class="py-24 bg-bg-subtle border-y border-border">
     <div class="max-w-3xl mx-auto px-6">
       <div class="text-center mb-16">
-        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Trade-offs</span>
-        <h2 class="text-4xl font-bold mt-4">Honest about constraints</h2>
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">Being Honest</span>
+        <h2 class="text-4xl font-bold mt-4">The trade-offs</h2>
         <p class="text-text-secondary mt-4">
-          Perfect security requires real limitations. We believe in being upfront about them. These aren't bugs — they're features that make the security guarantees possible.
+          Perfect security requires real limitations. We believe in being upfront about them.
         </p>
       </div>
 
       <div class="bg-bg-card border border-border rounded-2xl overflow-hidden divide-y divide-border">
-        {[
-          ['Physical meeting required', 'Key exchange happens offline via QR codes. This prevents any network-based attack on key distribution — the foundation of OTP security.'],
-          ['Finite message capacity', 'OTP requires one key byte per message byte. Choose pad sizes from 32KB (~25 messages) to 1MB (~800 messages) during the ceremony.'],
-          ['Two people only', 'Group encryption would require sharing keys with multiple parties, exponentially increasing attack surface. ASH is strictly one-to-one.'],
-          ['Text and location only', 'Photos and videos would exhaust your pad quickly. ASH focuses on what matters most: secure text communication and emergency location sharing.']
-        ].map(([constraint, reason]) => (
-          <div class="p-5">
-            <h4 class="font-medium mb-2">{constraint}</h4>
-            <p class="text-text-muted text-sm">{reason}</p>
-          </div>
-        ))}
+        <div class="p-5">
+          <h4 class="font-medium mb-2">You must meet in person</h4>
+          <p class="text-text-muted text-sm">This is the foundation of security. If you can't meet someone face-to-face, you can't use ASH with them. It's inconvenient, but it's what makes everything else possible.</p>
+        </div>
+        <div class="p-5">
+          <h4 class="font-medium mb-2">Limited message capacity</h4>
+          <p class="text-text-muted text-sm">You can send 25-800 messages before needing to meet again and create a new key. This isn't a bug — it's how One-Time Pad encryption works.</p>
+        </div>
+        <div class="p-5">
+          <h4 class="font-medium mb-2">One-to-one only</h4>
+          <p class="text-text-muted text-sm">No group chats. Each conversation is between exactly two people. Groups would require sharing keys with multiple people, which weakens security exponentially.</p>
+        </div>
+        <div class="p-5">
+          <h4 class="font-medium mb-2">Text only</h4>
+          <p class="text-text-muted text-sm">No photos, videos, or file attachments — they'd use up your key too quickly. ASH is for important text conversations, not media sharing.</p>
+        </div>
+        <div class="p-5">
+          <h4 class="font-medium mb-2">No recovery possible</h4>
+          <p class="text-text-muted text-sm">If you lose your phone or delete the app, your keys and messages are gone forever. There's no backup, no recovery, no "forgot password." This is a feature, not a bug.</p>
+        </div>
       </div>
     </div>
   </section>
@@ -375,9 +417,12 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
   <!-- CTA -->
   <section class="py-24">
     <div class="max-w-3xl mx-auto px-6 text-center">
-      <h2 class="text-4xl font-bold mb-4">Ready for perfect secrecy?</h2>
-      <p class="text-xl text-text-secondary mb-10">
-        Download ASH and establish your first mathematically unbreakable conversation.
+      <h2 class="text-4xl font-bold mb-4">Ready for true privacy?</h2>
+      <p class="text-xl text-text-secondary mb-6">
+        Download ASH and meet someone to establish your first unbreakable conversation.
+      </p>
+      <p class="text-text-muted mb-10 text-sm">
+        Free. No ads. No tracking. Open source.
       </p>
       <div class="flex flex-wrap justify-center gap-4">
         <Button href="#" variant="primary" size="lg">
@@ -385,7 +430,7 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
           Download for iOS
         </Button>
         <Button href="/whitepaper" variant="secondary" size="lg">
-          Read the Whitepaper
+          Read the Technical Whitepaper
         </Button>
       </div>
     </div>
@@ -399,5 +444,8 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
   }
   .animate-fade-in {
     animation: fadeIn 0.2s ease-out forwards;
+  }
+  details summary::-webkit-details-marker {
+    display: none;
   }
 </style>

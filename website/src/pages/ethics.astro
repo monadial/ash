@@ -3,284 +3,308 @@ import Layout from '../layouts/Layout.astro'
 import InfoBox from '../components/InfoBox.astro'
 ---
 
-<Layout title="Ethics Statement" description="Ethical position, intended use cases, and design constraints for the ASH protocol.">
+<Layout title="Ethics" description="Our ethical position on privacy tools, intended use cases, and what ASH will never do.">
   <div class="py-16 sm:py-24">
     <!-- Header -->
     <div class="text-center mb-16">
       <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
-        Ethics Statement
+        Ethics
       </span>
-      <h1 class="text-4xl sm:text-5xl font-bold mb-4">Ethical Position</h1>
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">Why We Built This</h1>
       <p class="text-text-secondary text-lg max-w-2xl mx-auto">
-        ASH is a technical project, but it exists in a social and moral context. This document describes our ethical position and design constraints.
+        Privacy tools are powerful. They can protect journalists and activists — or be misused by bad actors. Here's how we think about this responsibility.
       </p>
     </div>
 
-    <!-- Introduction -->
-    <p class="text-text-secondary mb-12 max-w-3xl">
-      Strong privacy tools present an inherent dual-use challenge: the same properties that protect legitimate users can also shield harmful actors. We acknowledge this reality and have made deliberate design decisions in response.
-    </p>
+    <!-- Core Belief -->
+    <div class="bg-bg-card border border-brand/30 rounded-2xl p-8 mb-16 text-center">
+      <blockquote class="text-2xl font-medium text-white mb-4 max-w-2xl mx-auto">
+        "Privacy is a human right, not a privilege."
+      </blockquote>
+      <p class="text-text-secondary max-w-xl mx-auto">
+        We believe everyone deserves the ability to communicate privately. This right doesn't disappear because some people misuse it — just as the right to close your curtains doesn't disappear because some people have something to hide.
+      </p>
+    </div>
 
-    <!-- Intended Use Cases -->
+    <!-- Who This Is For -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Intended Use Cases</h2>
-
-      <p class="text-text-secondary mb-6">
-        ASH is designed for situations where confidentiality is critical and trust in infrastructure is limited:
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Who ASH Is For</h2>
+      <p class="text-text-secondary mb-8">
+        ASH is designed for people who need real privacy — not because they're doing something wrong, but because the consequences of exposure are severe.
       </p>
 
       <div class="grid md:grid-cols-2 gap-6">
         <div class="bg-bg-card border border-border rounded-xl p-6">
-          <h3 class="font-semibold mb-2">Journalistic Source Protection</h3>
-          <p class="text-text-secondary text-sm">
-            Reporters communicating with sources who require confidentiality to avoid professional, legal, or personal consequences.
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-3">Journalists & Sources</h3>
+          <p class="text-text-secondary text-sm mb-3">
+            A reporter's source might lose their job, their freedom, or their life if identified. Traditional encryption is "probably safe" — ASH is mathematically guaranteed.
+          </p>
+          <p class="text-text-muted text-xs">
+            Real example: Journalists communicating with sources in authoritarian regimes, corporate whistleblowers, or anyone whose exposure would have severe consequences.
           </p>
         </div>
+
         <div class="bg-bg-card border border-border rounded-xl p-6">
-          <h3 class="font-semibold mb-2">Whistleblower Communication</h3>
-          <p class="text-text-secondary text-sm">
-            Individuals disclosing wrongdoing to trusted parties while minimizing the risk of identification or retaliation.
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-3">Human Rights Workers</h3>
+          <p class="text-text-secondary text-sm mb-3">
+            Activists, lawyers, and advocates operating in hostile environments face surveillance that can be life-threatening. They need guarantees, not promises.
+          </p>
+          <p class="text-text-muted text-xs">
+            Real example: NGO workers documenting abuses, lawyers defending political prisoners, activists organizing in repressive states.
           </p>
         </div>
+
         <div class="bg-bg-card border border-border rounded-xl p-6">
-          <h3 class="font-semibold mb-2">Human Rights Work</h3>
-          <p class="text-text-secondary text-sm">
-            Activists, advocates, and documenters operating in environments where surveillance poses a threat to personal safety.
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-3">Personal Safety</h3>
+          <p class="text-text-secondary text-sm mb-3">
+            Some people face threats from stalkers, abusers, or others who would harm them if they could track their communications.
+          </p>
+          <p class="text-text-muted text-xs">
+            Real example: Domestic abuse survivors coordinating with support networks, witnesses in protection programs, anyone fleeing a dangerous situation.
           </p>
         </div>
+
         <div class="bg-bg-card border border-border rounded-xl p-6">
-          <h3 class="font-semibold mb-2">Personal Safety</h3>
-          <p class="text-text-secondary text-sm">
-            Individuals in situations where secure communication is necessary for their physical or psychological well-being.
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-3">Legitimate Business</h3>
+          <p class="text-text-secondary text-sm mb-3">
+            M&A negotiations, strategic planning, intellectual property — some business communications are genuinely sensitive and the cost of leaks is catastrophic.
+          </p>
+          <p class="text-text-muted text-xs">
+            Real example: Executives discussing confidential deals, lawyers handling sensitive cases, researchers protecting proprietary work.
           </p>
         </div>
       </div>
 
       <p class="text-text-muted text-sm mt-6">
-        These use cases share common characteristics: communication is infrequent, parties can meet in person, and the cost of compromise is high.
+        These use cases share something: communication is infrequent, the parties can meet in person, and the stakes are high enough to justify the extra effort ASH requires.
       </p>
     </section>
 
-    <!-- Acknowledgment of Misuse -->
+    <!-- The Hard Truth -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Acknowledgment of Misuse Potential</h2>
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">The Hard Truth About Privacy Tools</h2>
 
-      <InfoBox variant="warning" class="mb-6">
+      <InfoBox variant="warning" class="mb-8">
         <p class="text-sm">
-          We acknowledge that any strong privacy tool can be misused. This risk is real and must be stated explicitly.
+          Any tool that protects good people can also protect bad people. We acknowledge this reality honestly.
         </p>
       </InfoBox>
 
-      <p class="text-text-secondary mb-4">Potential misuse includes:</p>
+      <p class="text-text-secondary mb-6">
+        Strong encryption is a dual-use technology. The same properties that protect a journalist's source from an authoritarian government can also shield criminals from law enforcement. We don't pretend otherwise.
+      </p>
 
-      <ul class="list-disc list-inside text-text-secondary space-y-1 mb-6">
-        <li>Coordination of criminal activity</li>
-        <li>Harassment or abuse</li>
-        <li>Concealment of harmful behavior</li>
-        <li>Evasion of legitimate oversight</li>
+      <p class="text-text-secondary mb-6">
+        Some people argue that privacy tools shouldn't exist because they can be misused. We disagree. By that logic:
+      </p>
+
+      <ul class="list-disc list-inside text-text-secondary space-y-2 mb-6 pl-4">
+        <li>Curtains shouldn't exist because criminals use them</li>
+        <li>Envelopes shouldn't exist because they hide illegal mail</li>
+        <li>Locks shouldn't exist because they keep out police</li>
       </ul>
 
       <p class="text-text-secondary">
-        We do not claim that ASH prevents misuse. We do claim that ASH's design intentionally incorporates constraints that reduce certain categories of misuse while preserving utility for legitimate purposes.
+        Privacy is a normal human need. The existence of misuse doesn't eliminate the legitimate need — it just means we have to be thoughtful about how we build these tools.
       </p>
     </section>
 
-    <!-- Ethical Design Constraints -->
+    <!-- Design Choices That Matter -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Ethical Design Constraints</h2>
-
-      <p class="text-text-secondary mb-6">
-        The following design decisions deliberately limit ASH's potential for harmful use:
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">How We Limit Misuse Potential</h2>
+      <p class="text-text-secondary mb-8">
+        We can't prevent all misuse, but we've made deliberate design choices that reduce ASH's appeal for harmful purposes while preserving its value for legitimate use:
       </p>
 
       <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-border bg-bg-elevated">
-              <th class="text-left p-4 text-text-muted font-medium">Constraint</th>
-              <th class="text-left p-4 text-text-muted font-medium">Rationale</th>
+              <th class="text-left p-4 text-text-muted font-medium">Design Choice</th>
+              <th class="text-left p-4 text-text-muted font-medium">Why It Matters</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
             <tr>
-              <td class="p-4 font-medium">No network anonymity</td>
-              <td class="p-4 text-text-secondary">ASH does not hide that communication is occurring</td>
+              <td class="p-4 font-medium">Physical meeting required</td>
+              <td class="p-4 text-text-secondary">You can't set up ASH with strangers on the internet. Both parties must meet face-to-face, which limits use by people who want to remain anonymous to each other.</td>
             </tr>
             <tr>
               <td class="p-4 font-medium">One-to-one only</td>
-              <td class="p-4 text-text-secondary">No groups, channels, or broadcast capabilities</td>
+              <td class="p-4 text-text-secondary">No group chats, no channels, no way to broadcast to many people. ASH can't be used to coordinate large groups or spread content virally.</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">Physical meeting required</td>
-              <td class="p-4 text-text-secondary">Cannot be used by parties who have never met</td>
+              <td class="p-4 font-medium">Limited capacity</td>
+              <td class="p-4 text-text-secondary">You can only send a fixed number of messages before meeting again. This limits the volume of any single conversation.</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">No automation</td>
-              <td class="p-4 text-text-secondary">Every action requires explicit user participation</td>
+              <td class="p-4 font-medium">Text only</td>
+              <td class="p-4 text-text-secondary">No photos, no videos, no files. You can't use ASH to share illegal images or distribute harmful content.</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">No stealth modes</td>
-              <td class="p-4 text-text-secondary">ASH is visible when running; no hidden operation</td>
+              <td class="p-4 font-medium">No anonymity</td>
+              <td class="p-4 text-text-secondary">ASH doesn't hide that you're using it. An observer can see that communication is happening, even if they can't read the content.</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">No deniability claims</td>
-              <td class="p-4 text-text-secondary">We do not market or design for plausible deniability</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Finite capacity</td>
-              <td class="p-4 text-text-secondary">Fixed pad size limits total communication volume</td>
+              <td class="p-4 font-medium">Visible when running</td>
+              <td class="p-4 text-text-secondary">No stealth mode, no hidden operation. ASH is visibly installed and running — it's not designed to evade detection.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <p class="text-text-muted text-sm mt-6">
-        ASH favors <em>deliberate, visible, human-driven interaction</em> over convenience or scale.
+        These constraints make ASH less useful for large-scale criminal operations, anonymous abuse, or mass coordination — while keeping it useful for the one-on-one, high-stakes communications it's designed for.
       </p>
     </section>
 
-    <!-- Project Commitments -->
+    <!-- What We Will Never Do -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">What ASH Will NOT Do</h2>
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">What ASH Will Never Do</h2>
+      <p class="text-text-secondary mb-6">
+        We commit to these principles regardless of user demand, business pressure, or technical possibility:
+      </p>
 
-      <p class="text-text-secondary mb-6">The ASH project commits to the following constraints:</p>
+      <div class="space-y-3">
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-4 flex items-start gap-4">
+          <div class="w-8 h-8 rounded-lg bg-danger/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-medium mb-1">Add features designed to evade law enforcement</h4>
+            <p class="text-text-muted text-sm">We protect content, not behavior. ASH is not designed to help you avoid being caught doing something wrong.</p>
+          </div>
+        </div>
 
-      <div class="bg-bg-card border border-border rounded-xl divide-y divide-border">
-        <div class="p-4 flex items-start gap-3">
-          <span class="text-danger mt-0.5">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-4 flex items-start gap-4">
+          <div class="w-8 h-8 rounded-lg bg-danger/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </span>
-          <span class="text-text-secondary text-sm">Add features designed to evade law enforcement</span>
+          </div>
+          <div>
+            <h4 class="font-medium mb-1">Market as "untraceable" or "anonymous"</h4>
+            <p class="text-text-muted text-sm">ASH provides confidentiality, not anonymity. We're honest about what it does and doesn't protect.</p>
+          </div>
         </div>
-        <div class="p-4 flex items-start gap-3">
-          <span class="text-danger mt-0.5">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-4 flex items-start gap-4">
+          <div class="w-8 h-8 rounded-lg bg-danger/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </span>
-          <span class="text-text-secondary text-sm">Provide instructions for illegal activity</span>
+          </div>
+          <div>
+            <h4 class="font-medium mb-1">Optimize for growth or virality</h4>
+            <p class="text-text-muted text-sm">ASH is deliberately designed for small-scale, intentional use. We will never add features that encourage rapid spread.</p>
+          </div>
         </div>
-        <div class="p-4 flex items-start gap-3">
-          <span class="text-danger mt-0.5">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-4 flex items-start gap-4">
+          <div class="w-8 h-8 rounded-lg bg-danger/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </span>
-          <span class="text-text-secondary text-sm">Market the tool as "untraceable" or "anonymous"</span>
+          </div>
+          <div>
+            <h4 class="font-medium mb-1">Build backdoors or master keys</h4>
+            <p class="text-text-muted text-sm">The math doesn't allow backdoors, and we wouldn't build them if it did. There's no way for us or anyone else to decrypt your messages.</p>
+          </div>
         </div>
-        <div class="p-4 flex items-start gap-3">
-          <span class="text-danger mt-0.5">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+
+        <div class="bg-bg-card border border-danger/30 rounded-xl p-4 flex items-start gap-4">
+          <div class="w-8 h-8 rounded-lg bg-danger/20 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </span>
-          <span class="text-text-secondary text-sm">Optimize for scale, virality, or growth</span>
-        </div>
-        <div class="p-4 flex items-start gap-3">
-          <span class="text-danger mt-0.5">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </span>
-          <span class="text-text-secondary text-sm">Integrate surveillance evasion techniques</span>
-        </div>
-        <div class="p-4 flex items-start gap-3">
-          <span class="text-danger mt-0.5">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </span>
-          <span class="text-text-secondary text-sm">Accept funding that compromises these principles</span>
+          </div>
+          <div>
+            <h4 class="font-medium mb-1">Accept funding that compromises these principles</h4>
+            <p class="text-text-muted text-sm">We won't take money that comes with strings attached to our ethical position.</p>
+          </div>
         </div>
       </div>
-
-      <p class="text-text-muted text-sm mt-6">
-        If a requested feature would meaningfully increase the risk of harm, it will not be implemented — regardless of technical feasibility or user demand.
-      </p>
     </section>
 
-    <!-- Responsibility Model -->
+    <!-- Shared Responsibility -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Responsibility Model</h2>
-
-      <p class="text-text-secondary mb-6">
-        Ethical responsibility for ASH is distributed between project authors and users:
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Shared Responsibility</h2>
+      <p class="text-text-secondary mb-8">
+        Ethical use of ASH is a shared responsibility between us (the developers) and you (the users):
       </p>
 
       <div class="grid md:grid-cols-2 gap-6">
         <div class="bg-bg-card border border-border rounded-xl p-6">
-          <h3 class="font-semibold mb-4">Project Authors</h3>
-          <ul class="space-y-2 text-text-secondary text-sm">
+          <h3 class="font-semibold mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
+            </svg>
+            Our Responsibility
+          </h3>
+          <ul class="space-y-2 text-sm text-text-secondary">
             <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              Provide honest, accurate documentation
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
+              Build with ethical constraints from the start
             </li>
             <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              Make accurate security claims without exaggeration
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
+              Be honest about what ASH does and doesn't do
             </li>
             <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              Clearly communicate limitations
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
               Refuse features that increase harm potential
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
+              Make our code open source for verification
             </li>
           </ul>
         </div>
 
         <div class="bg-bg-card border border-border rounded-xl p-6">
-          <h3 class="font-semibold mb-4">Users</h3>
-          <ul class="space-y-2 text-text-secondary text-sm">
+          <h3 class="font-semibold mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+            Your Responsibility
+          </h3>
+          <ul class="space-y-2 text-sm text-text-secondary">
             <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              Use the tool lawfully and ethically
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
+              Use ASH lawfully and ethically
             </li>
             <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              Understand and accept limitations
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
+              Understand what you're doing and why
             </li>
             <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
-              Take responsibility for partner choice
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
+              Take responsibility for your choice of partner
             </li>
             <li class="flex items-start gap-2">
-              <span class="text-brand mt-1">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </span>
+              <span class="text-success mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg></span>
               Not use ASH to facilitate harm
             </li>
           </ul>
@@ -290,27 +314,31 @@ import InfoBox from '../components/InfoBox.astro'
 
     <!-- Closing Statement -->
     <section class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Closing Statement</h2>
+      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Our Position</h2>
 
-      <blockquote class="border-l-4 border-brand pl-6 py-2 mb-6">
-        <p class="text-xl font-medium text-white">
-          ASH exists to make careful communication possible, not effortless secrecy.
-        </p>
-      </blockquote>
+      <div class="bg-bg-card border border-brand/30 rounded-xl p-6 mb-6">
+        <blockquote class="text-xl font-medium text-white text-center">
+          "ASH exists to make careful communication possible, not effortless secrecy."
+        </blockquote>
+      </div>
 
       <p class="text-text-secondary mb-4">
-        Ethics are not a feature — they are a constraint on what we will build. If at any point the project's direction conflicts with this ethical position, the correct action is to stop, reconsider, and possibly not proceed.
+        We believe privacy is a human right. We also believe that tool designers bear responsibility for how their tools are used.
+      </p>
+
+      <p class="text-text-secondary mb-4">
+        We've chosen to discharge that responsibility through <strong class="text-white">thoughtful design constraints</strong> rather than surveillance, backdoors, or refusing to build privacy tools at all.
       </p>
 
       <p class="text-text-secondary">
-        We believe that privacy is a human right and that tools enabling private communication serve important social functions. We also believe that tool designers bear responsibility for how their tools are used, and that this responsibility is best discharged through thoughtful design constraints rather than surveillance or backdoors.
+        If at any point ASH's direction conflicts with these ethical principles, we will stop, reconsider, and if necessary, not proceed. Ethics are not a feature — they're a constraint on what we will build.
       </p>
     </section>
 
-    <!-- Footer -->
+    <!-- Footer Links -->
     <div class="pt-8 border-t border-border">
       <p class="text-text-muted text-sm text-center">
-        This ethics statement is a living document. For technical details, see <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>. For security analysis, see <a href="/security" class="text-brand hover:text-brand-light">Security Model</a>.
+        For security details, see <a href="/security" class="text-brand hover:text-brand-light">Security</a>. For technical specifications, see the <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>.
       </p>
     </div>
   </div>

@@ -1,188 +1,131 @@
 ---
 import Layout from '../layouts/Layout.astro'
 import InfoBox from '../components/InfoBox.astro'
-import Diagram from '../components/Diagram.astro'
 ---
 
-<Layout title="Security Model" description="Threat model, security guarantees, and limitations of the ASH protocol.">
+<Layout title="Security" description="What ASH protects, what it doesn't, and how to use it safely.">
   <div class="py-16 sm:py-24">
     <!-- Header -->
     <div class="text-center mb-16">
       <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
-        Security Model
+        Security
       </span>
-      <h1 class="text-4xl sm:text-5xl font-bold mb-4">Threat Model & Guarantees</h1>
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">What ASH Protects</h1>
       <p class="text-text-secondary text-lg max-w-2xl mx-auto">
-        What ASH protects against, what it doesn't, and why. Security is not a promise — it is a set of clearly defined limits.
+        Security isn't magic — it's a set of specific protections with clear boundaries. Here's exactly what ASH does and doesn't protect against.
       </p>
     </div>
 
-    <!-- Design Philosophy -->
-    <InfoBox class="mb-12">
-      <h3 class="text-white font-semibold mb-2">Design Philosophy</h3>
-      <p class="text-sm">
-        ASH assumes humans make mistakes, software is fallible, and infrastructure cannot be trusted. Security properties must be understandable by users, not hidden in cryptographic black boxes.
+    <!-- Quick Summary -->
+    <div class="bg-success/10 border border-success/30 rounded-2xl p-6 mb-16">
+      <h3 class="text-success font-semibold mb-4 flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        </svg>
+        The Short Version
+      </h3>
+      <p class="text-text-secondary mb-4">
+        ASH protects the <strong class="text-white">content</strong> of your messages with mathematically proven security. No one — hackers, governments, future quantum computers, or us — can read your messages without your key.
       </p>
-    </InfoBox>
+      <p class="text-text-secondary text-sm">
+        However, ASH cannot protect you from a compromised phone, a partner who betrays you, or someone looking over your shoulder. No technology can do that.
+      </p>
+    </div>
 
-    <!-- Threat Model -->
+    <!-- What ASH Protects Against -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Threat Model</h2>
-
-      <p class="text-text-secondary mb-6">
-        ASH is designed to protect against the following adversaries:
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">What ASH Protects Against</h2>
+      <p class="text-text-secondary mb-8">
+        These are the threats ASH is specifically designed to defend against. In each case, the protection is mathematically proven — not just "very strong."
       </p>
 
-      <div class="grid md:grid-cols-3 gap-4 mb-6">
-        <!-- Network Observer -->
-        <div class="bg-bg-card border border-success/30 rounded-xl p-5">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
-              <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <div class="grid md:grid-cols-3 gap-6">
+        <!-- Hackers & Interceptors -->
+        <div class="bg-bg-card border border-success/30 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-success/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
               </svg>
             </div>
-            <h3 class="font-semibold">Network Observer</h3>
+            <h3 class="font-semibold text-lg">Network Threats</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-3">ISPs, surveillance programs, wiretaps, packet sniffing, compromised infrastructure</p>
-          <div class="flex items-start gap-2">
-            <svg class="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-            </svg>
-            <p class="text-xs text-text-muted">All content is OTP-encrypted before transmission</p>
+          <p class="text-text-secondary text-sm mb-4">
+            Hackers, ISPs, Wi-Fi snoopers, government surveillance programs — anyone watching your internet traffic sees only random noise.
+          </p>
+          <div class="bg-success/10 rounded-lg p-3 text-xs text-text-muted">
+            <strong class="text-success">Why it works:</strong> Your message is encrypted before it leaves your phone. All anyone can intercept is encrypted data that's mathematically impossible to decode.
           </div>
         </div>
 
-        <!-- Compromised Relay -->
-        <div class="bg-bg-card border border-success/30 rounded-xl p-5">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
-              <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <!-- Compromised Servers -->
+        <div class="bg-bg-card border border-success/30 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-success/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
               </svg>
             </div>
-            <h3 class="font-semibold">Compromised Relay</h3>
+            <h3 class="font-semibold text-lg">Server Compromise</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-3">Full server control, access to storage, logs, ability to modify behavior</p>
-          <div class="flex items-start gap-2">
-            <svg class="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-            </svg>
-            <p class="text-xs text-text-muted">Relay never possesses key material. Cannot decrypt or forge.</p>
+          <p class="text-text-secondary text-sm mb-4">
+            Even if our servers are hacked, subpoenaed, or taken over by a malicious actor, your messages remain safe.
+          </p>
+          <div class="bg-success/10 rounded-lg p-3 text-xs text-text-muted">
+            <strong class="text-success">Why it works:</strong> Our servers never have your encryption keys. They only pass along encrypted data — they literally cannot read your messages.
           </div>
         </div>
 
-        <!-- Future Adversary -->
-        <div class="bg-bg-card border border-success/30 rounded-xl p-5">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-lg bg-success/20 flex items-center justify-center">
-              <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <!-- Future Threats -->
+        <div class="bg-bg-card border border-success/30 rounded-xl p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-success/20 flex items-center justify-center">
+              <svg class="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
               </svg>
             </div>
-            <h3 class="font-semibold">Future Adversary</h3>
+            <h3 class="font-semibold text-lg">Future Technology</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-3">Quantum computers, mathematical breakthroughs, new cryptanalysis techniques</p>
-          <div class="flex items-start gap-2">
-            <svg class="w-4 h-4 text-success mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-            </svg>
-            <p class="text-xs text-text-muted">OTP provides information-theoretic security. Proven mathematically.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Result Banner -->
-      <div class="bg-success/10 border border-success/30 rounded-xl p-6 text-center">
-        <div class="flex justify-center mb-3">
-          <div class="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center">
-            <svg class="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+          <p class="text-text-secondary text-sm mb-4">
+            Quantum computers, AI breakthroughs, new cryptanalysis methods — none of these can break ASH encryption.
+          </p>
+          <div class="bg-success/10 rounded-lg p-3 text-xs text-text-muted">
+            <strong class="text-success">Why it works:</strong> One-Time Pad security isn't based on "hard problems" that might be solved. It's based on information theory — mathematically impossible to break, period.
           </div>
         </div>
-        <h3 class="text-lg font-bold text-success mb-2">All See Only Encrypted Noise</h3>
-        <p class="text-text-secondary text-sm max-w-xl mx-auto">
-          No keys. No plaintext. No patterns. No metadata leaks. Every adversary — past, present, or future — sees only random bytes indistinguishable from noise.
-        </p>
-      </div>
-    </section>
-
-    <!-- Security Guarantees -->
-    <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Security Guarantees</h2>
-
-      <p class="text-text-secondary mb-6">
-        When used correctly, ASH provides the following security properties:
-      </p>
-
-      <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="border-b border-border bg-bg-elevated">
-              <th class="text-left p-4 text-text-muted font-medium">Property</th>
-              <th class="text-left p-4 text-text-muted font-medium">Description</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-border">
-            <tr>
-              <td class="p-4 font-medium">Perfect Secrecy</td>
-              <td class="p-4 text-text-secondary">Ciphertext reveals no information about plaintext without the pad</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Message Authentication</td>
-              <td class="p-4 text-text-secondary">256-bit Wegman-Carter MAC provides information-theoretic authentication (~2^-128 forgery probability)</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Forward Secrecy</td>
-              <td class="p-4 text-text-secondary">Compromise after message sent cannot reveal that message's content</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Future Secrecy</td>
-              <td class="p-4 text-text-secondary">No computational advances can break past encrypted messages or forge new ones</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Traffic Analysis Protection</td>
-              <td class="p-4 text-text-secondary">Mandatory 32-byte message padding prevents size-based fingerprinting</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Pad Non-Reuse</td>
-              <td class="p-4 text-text-secondary">Core library enforces strict single-use semantics for all pad bytes</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Ceremony Protection</td>
-              <td class="p-4 text-text-secondary">Mandatory passphrase encrypts QR frames against visual observation</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-medium">Human Verification</td>
-              <td class="p-4 text-text-secondary">Mnemonic checksums allow users to verify ceremony success verbally</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </section>
 
     <!-- What ASH Does NOT Protect Against -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">What ASH Does NOT Protect Against</h2>
-
-      <p class="text-text-secondary mb-6">
-        These limitations are <strong class="text-white">intentional design decisions</strong>, not implementation flaws.
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">What ASH Does NOT Protect Against</h2>
+      <p class="text-text-secondary mb-4">
+        These are fundamental limitations that apply to <em>any</em> messaging system — not flaws in ASH. Being honest about these helps you use ASH safely.
       </p>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <!-- Compromised Device -->
+      <InfoBox variant="warning" class="mb-8">
+        <p class="text-sm">
+          <strong>Important:</strong> No technology can protect you from a compromised device or a person who betrays your trust. ASH is honest about these boundaries.
+        </p>
+      </InfoBox>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Compromised Phone -->
         <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
           <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
               <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
               </svg>
             </div>
-            <h3 class="font-semibold">Compromised Device</h3>
+            <h3 class="font-semibold">Hacked Phone</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-2">Malware, OS exploits, keyloggers, hardware implants</p>
-          <p class="text-text-muted text-xs">A compromised device can read messages before encryption or after decryption.</p>
+          <p class="text-text-secondary text-sm mb-2">
+            If your phone has malware, spyware, or has been compromised, attackers can read messages before encryption or after decryption.
+          </p>
+          <p class="text-text-muted text-xs">
+            <strong>Protect yourself:</strong> Keep your phone updated, don't install apps from untrusted sources, use device encryption.
+          </p>
         </div>
 
         <!-- Malicious Partner -->
@@ -190,16 +133,20 @@ import Diagram from '../components/Diagram.astro'
           <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
               <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
               </svg>
             </div>
-            <h3 class="font-semibold">Malicious Partner</h3>
+            <h3 class="font-semibold">Partner Betrayal</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-2">Screenshots, betrayal, recording, sharing content</p>
-          <p class="text-text-muted text-xs">ASH requires trust between participants. Your partner can always betray you.</p>
+          <p class="text-text-secondary text-sm mb-2">
+            The person you're messaging can screenshot conversations, record their screen, or simply tell others what you said.
+          </p>
+          <p class="text-text-muted text-xs">
+            <strong>Protect yourself:</strong> Only use ASH with people you genuinely trust. Trust is the foundation of secure communication.
+          </p>
         </div>
 
-        <!-- Visual Observer -->
+        <!-- Shoulder Surfing -->
         <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
           <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
@@ -208,24 +155,32 @@ import Diagram from '../components/Diagram.astro'
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h3 class="font-semibold">Visual Observer</h3>
+            <h3 class="font-semibold">Visual Observation</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-2">Cameras, shoulder surfing, mirrors, direct observation</p>
-          <p class="text-text-muted text-xs">QR codes during ceremony can be captured. Perform ceremony privately.</p>
+          <p class="text-text-secondary text-sm mb-2">
+            Someone looking at your screen, security cameras, or mirrors can see your messages and the QR codes during setup.
+          </p>
+          <p class="text-text-muted text-xs">
+            <strong>Protect yourself:</strong> Do the key ceremony in private. Don't read sensitive messages in public places.
+          </p>
         </div>
 
-        <!-- Forensic Analysis -->
-        <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
+        <!-- Legal Compulsion -->
+        <div class="bg-bg-card border border-warning/30 rounded-xl p-5">
           <div class="flex items-center gap-3 mb-3">
-            <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
-              <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            <div class="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
+              <svg class="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 01-2.031.352 5.989 5.989 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" />
               </svg>
             </div>
-            <h3 class="font-semibold">Forensic Analysis</h3>
+            <h3 class="font-semibold">Legal Demands</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-2">RAM dumps, disk forensics, cold boot attacks</p>
-          <p class="text-text-muted text-xs">Best-effort memory wiping cannot guarantee forensic irrecoverability.</p>
+          <p class="text-text-secondary text-sm mb-2">
+            If you still have the key on your phone, you could be legally compelled to decrypt messages (laws vary by jurisdiction).
+          </p>
+          <p class="text-text-muted text-xs">
+            <strong>Protect yourself:</strong> Use the burn feature when you're done. Once the key is destroyed, decryption is physically impossible.
+          </p>
         </div>
 
         <!-- Traffic Analysis -->
@@ -233,199 +188,237 @@ import Diagram from '../components/Diagram.astro'
           <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 rounded-lg bg-warning/20 flex items-center justify-center">
               <svg class="w-5 h-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
               </svg>
             </div>
-            <h3 class="font-semibold">Traffic Analysis</h3>
+            <h3 class="font-semibold">Metadata</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-2">Timing patterns, metadata, correlation attacks</p>
-          <p class="text-text-muted text-xs">32-byte padding protects short message sizes. Timing and metadata still visible. No anonymity.</p>
+          <p class="text-text-secondary text-sm mb-2">
+            An observer can see <em>that</em> you're using ASH and roughly when you send messages, even though they can't read the content.
+          </p>
+          <p class="text-text-muted text-xs">
+            <strong>Note:</strong> ASH pads messages to hide their size, but doesn't provide anonymity. This is a deliberate design choice.
+          </p>
         </div>
 
-        <!-- Physical Coercion -->
+        <!-- Forensics -->
         <div class="bg-bg-card border border-danger/30 rounded-xl p-5">
           <div class="flex items-center gap-3 mb-3">
             <div class="w-10 h-10 rounded-lg bg-danger/20 flex items-center justify-center">
               <svg class="w-5 h-5 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
               </svg>
             </div>
-            <h3 class="font-semibold">Physical Coercion</h3>
+            <h3 class="font-semibold">Device Forensics</h3>
           </div>
-          <p class="text-text-secondary text-sm mb-2">Forced decryption, legal demands, rubber-hose cryptanalysis</p>
-          <p class="text-text-muted text-xs">While pad exists, you can be compelled to decrypt. No deniability features.</p>
+          <p class="text-text-secondary text-sm mb-2">
+            Advanced forensic analysis might recover deleted data from device memory, though ASH tries to securely erase sensitive data.
+          </p>
+          <p class="text-text-muted text-xs">
+            <strong>Note:</strong> This is a hardware/OS limitation. No app can guarantee forensic irrecoverability.
+          </p>
         </div>
       </div>
-
-      <InfoBox variant="warning">
-        <p class="text-sm">
-          <strong class="text-white">Important:</strong> These are fundamental limitations of any messaging system, not flaws in ASH. No technology can protect against a compromised device or a betraying partner. ASH is transparent about these boundaries.
-        </p>
-      </InfoBox>
     </section>
 
-    <!-- Trust Boundaries -->
+    <!-- How to Use ASH Safely -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Trust Boundaries</h2>
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">How to Use ASH Safely</h2>
+      <p class="text-text-secondary mb-8">
+        ASH's security depends on you using it correctly. Follow these practices:
+      </p>
 
+      <div class="bg-bg-card border border-border rounded-xl divide-y divide-border">
+        <div class="p-5 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
+          <div>
+            <h4 class="font-medium mb-2">Do the ceremony in private</h4>
+            <p class="text-text-secondary text-sm">
+              Find a place where no one can see your screens — no cameras, no mirrors, no people looking over your shoulder. A private room or quiet corner works well.
+            </p>
+          </div>
+        </div>
+        <div class="p-5 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
+          <div>
+            <h4 class="font-medium mb-2">Share the passphrase verbally</h4>
+            <p class="text-text-secondary text-sm">
+              The ceremony requires a passphrase. Speak it out loud to each other — don't text it, email it, or write it down anywhere digital.
+            </p>
+          </div>
+        </div>
+        <div class="p-5 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+          <div>
+            <h4 class="font-medium mb-2">Verify the 6-word checksum</h4>
+            <p class="text-text-secondary text-sm">
+              After scanning, both phones show the same 6 words. Say them out loud to confirm they match — this proves the key exchange worked correctly.
+            </p>
+          </div>
+        </div>
+        <div class="p-5 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+          <div>
+            <h4 class="font-medium mb-2">Trust your partner completely</h4>
+            <p class="text-text-secondary text-sm">
+              ASH protects your messages from outsiders, but your conversation partner can always share what you say. Only use ASH with people you fully trust.
+            </p>
+          </div>
+        </div>
+        <div class="p-5 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
+          <div>
+            <h4 class="font-medium mb-2">Keep your phone secure</h4>
+            <p class="text-text-secondary text-sm">
+              Use a strong passcode, keep your OS updated, and don't install apps from untrusted sources. A compromised phone compromises everything.
+            </p>
+          </div>
+        </div>
+        <div class="p-5 flex gap-4">
+          <span class="flex-shrink-0 w-8 h-8 bg-danger rounded-lg flex items-center justify-center text-white font-bold text-sm">6</span>
+          <div>
+            <h4 class="font-medium mb-2">Burn when you're done</h4>
+            <p class="text-text-secondary text-sm">
+              When your conversation is complete, use the burn feature. This destroys all key material, making it impossible for anyone to ever decrypt your messages — including you.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security Guarantees (Technical) -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Security Properties (Technical)</h2>
       <p class="text-text-secondary mb-6">
-        ASH defines explicit trust levels for each component:
+        For those who want the details, here are ASH's specific security guarantees:
       </p>
 
       <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-border bg-bg-elevated">
-              <th class="text-left p-4 text-text-muted font-medium">Component</th>
-              <th class="text-left p-4 text-text-muted font-medium">Trust Level</th>
-              <th class="text-left p-4 text-text-muted font-medium">Rationale</th>
+              <th class="text-left p-4 text-text-muted font-medium">Property</th>
+              <th class="text-left p-4 text-text-muted font-medium">What It Means</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
             <tr>
-              <td class="p-4 font-medium">Core Library</td>
-              <td class="p-4"><span class="px-2 py-0.5 bg-success/20 text-success rounded text-xs">Trusted</span></td>
-              <td class="p-4 text-text-secondary">Cryptographic authority; small, auditable, zero dependencies</td>
+              <td class="p-4 font-medium">Perfect Secrecy</td>
+              <td class="p-4 text-text-secondary">Encrypted messages reveal zero information about the original content — proven by Shannon's theorem (1949)</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">Mobile App</td>
-              <td class="p-4"><span class="px-2 py-0.5 bg-warning/20 text-warning rounded text-xs">Partial</span></td>
-              <td class="p-4 text-text-secondary">Orchestration only; cannot modify cryptographic operations</td>
+              <td class="p-4 font-medium">Information-Theoretic Authentication</td>
+              <td class="p-4 text-text-secondary">256-bit Wegman-Carter MAC with ~2^-128 forgery probability — mathematically unforgeable</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">Relay Server</td>
-              <td class="p-4"><span class="px-2 py-0.5 bg-danger/20 text-danger rounded text-xs">Untrusted</span></td>
-              <td class="p-4 text-text-secondary">Never sees plaintext or key material; assumed compromised</td>
+              <td class="p-4 font-medium">Forward Secrecy</td>
+              <td class="p-4 text-text-secondary">Key bytes are destroyed after use — past messages stay secure even if your device is later compromised</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">Network</td>
-              <td class="p-4"><span class="px-2 py-0.5 bg-danger/20 text-danger rounded text-xs">Untrusted</span></td>
-              <td class="p-4 text-text-secondary">Assumed hostile; all traffic is OTP-encrypted</td>
+              <td class="p-4 font-medium">Quantum Immunity</td>
+              <td class="p-4 text-text-secondary">Security doesn't depend on computational hardness — immune to all future computing advances</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">Operating System</td>
-              <td class="p-4"><span class="px-2 py-0.5 bg-success/20 text-success rounded text-xs">Trusted</span></td>
-              <td class="p-4 text-text-secondary">Must trust OS for entropy, memory protection, secure storage</td>
+              <td class="p-4 font-medium">Traffic Analysis Protection</td>
+              <td class="p-4 text-text-secondary">All messages padded to minimum 32 bytes — short messages can't be identified by size</td>
             </tr>
             <tr>
-              <td class="p-4 font-medium">Partner</td>
-              <td class="p-4"><span class="px-2 py-0.5 bg-text-muted/20 text-text-secondary rounded text-xs">User Decision</span></td>
-              <td class="p-4 text-text-secondary">ASH cannot protect against malicious participants</td>
+              <td class="p-4 font-medium">Zero-Trust Relay</td>
+              <td class="p-4 text-text-secondary">Server never has keys — even full server compromise reveals nothing</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <p class="text-text-muted text-sm mt-4">
+        For complete technical details, see the <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>.
+      </p>
     </section>
 
-    <!-- User Responsibilities -->
+    <!-- Trust Model -->
     <section class="mb-16">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">User Responsibilities</h2>
-
+      <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Who Do You Have to Trust?</h2>
       <p class="text-text-secondary mb-6">
-        Security in ASH is a shared responsibility. You must:
+        ASH is designed to minimize trust requirements. Here's what you're trusting and what you're not:
       </p>
 
-      <div class="bg-bg-card border border-border rounded-xl divide-y divide-border">
-        <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
-          <div>
-            <h4 class="font-medium mb-1">Perform the ceremony carefully</h4>
-            <p class="text-text-secondary text-sm">Do not rush. Scan all frames. Verify the mnemonic checksum verbally with your partner.</p>
-          </div>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-bg-card border border-success/30 rounded-xl p-6">
+          <h3 class="font-semibold mb-4 text-success flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Don't Need to Trust
+          </h3>
+          <ul class="space-y-3 text-sm">
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+              <span class="text-text-secondary"><strong class="text-white">Our servers</strong> — They never see your keys or unencrypted messages</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+              <span class="text-text-secondary"><strong class="text-white">The network</strong> — All data is encrypted before transmission</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-success mt-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+              <span class="text-text-secondary"><strong class="text-white">Future technology</strong> — OTP is provably unbreakable forever</span>
+            </li>
+          </ul>
         </div>
-        <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
-          <div>
-            <h4 class="font-medium mb-1">Share the passphrase securely</h4>
-            <p class="text-text-secondary text-sm">The mandatory passphrase must be exchanged verbally or through another secure channel. Do not send it digitally.</p>
-          </div>
-        </div>
-        <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
-          <div>
-            <h4 class="font-medium mb-1">Choose a private location</h4>
-            <p class="text-text-secondary text-sm">The ceremony must be performed where visual observation is not possible — no cameras, mirrors, or observers.</p>
-          </div>
-        </div>
-        <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
-          <div>
-            <h4 class="font-medium mb-1">Trust your conversation partner</h4>
-            <p class="text-text-secondary text-sm">ASH cannot prevent screenshots or betrayal. Only communicate with people you trust.</p>
-          </div>
-        </div>
-        <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
-          <div>
-            <h4 class="font-medium mb-1">Maintain device security</h4>
-            <p class="text-text-secondary text-sm">Keep your device updated, avoid installing untrusted software, and use device encryption.</p>
-          </div>
-        </div>
-        <div class="p-4 flex gap-4">
-          <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">6</span>
-          <div>
-            <h4 class="font-medium mb-1">Understand the limitations</h4>
-            <p class="text-text-secondary text-sm">Read this document. Know what ASH protects against and what it does not.</p>
-          </div>
+
+        <div class="bg-bg-card border border-warning/30 rounded-xl p-6">
+          <h3 class="font-semibold mb-4 text-warning flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            Must Trust
+          </h3>
+          <ul class="space-y-3 text-sm">
+            <li class="flex items-start gap-2">
+              <span class="text-warning mt-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+              </span>
+              <span class="text-text-secondary"><strong class="text-white">Your device</strong> — A compromised phone compromises everything</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-warning mt-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+              </span>
+              <span class="text-text-secondary"><strong class="text-white">Your operating system</strong> — iOS provides the secure storage and randomness</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-warning mt-1">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+              </span>
+              <span class="text-text-secondary"><strong class="text-white">Your conversation partner</strong> — They can always share what you say</span>
+            </li>
+          </ul>
         </div>
       </div>
     </section>
 
-    <!-- Implementation Notes -->
-    <section class="mb-12">
-      <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Implementation Notes</h2>
-
-      <div class="grid md:grid-cols-2 gap-6 mb-6">
-        <div class="bg-bg-card border border-border rounded-xl p-5">
-          <h3 class="font-semibold mb-2">Message Authentication</h3>
-          <p class="text-text-secondary text-sm mb-3">
-            Every message is authenticated using a <strong class="text-white">Wegman-Carter MAC</strong> with 256-bit tags. This provides information-theoretic authentication — mathematically proven unforgeable.
-          </p>
-          <div class="text-xs text-text-muted space-y-1">
-            <p>• Dual GF(2^128) polynomial evaluation</p>
-            <p>• 64 bytes from pad per message (r₁, r₂, s₁, s₂)</p>
-            <p>• Forgery probability: ~2^-128</p>
-          </div>
-        </div>
-        <div class="bg-bg-card border border-border rounded-xl p-5">
-          <h3 class="font-semibold mb-2">Traffic Analysis Protection</h3>
-          <p class="text-text-secondary text-sm mb-3">
-            All messages are padded to a minimum of <strong class="text-white">32 bytes</strong>. This prevents size-based fingerprinting of short messages.
-          </p>
-          <div class="text-xs text-text-muted space-y-1">
-            <p>• "yes", "no", "ok" → all 32 bytes</p>
-            <p>• Format: [marker][length][content][zeros]</p>
-            <p>• Pad consumption: 64 + padded_length per message</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid md:grid-cols-3 gap-6">
-        <div>
-          <h3 class="font-semibold mb-2">Entropy Sources</h3>
-          <p class="text-text-secondary text-sm">
-            Pad generation combines OS-provided cryptographic randomness with user gesture entropy. Defense-in-depth ensures compromise of either source alone does not compromise randomness.
-          </p>
-        </div>
-        <div>
-          <h3 class="font-semibold mb-2">Memory Protection</h3>
-          <p class="text-text-secondary text-sm">
-            Sensitive data is zeroed after use using volatile writes that prevent compiler optimization from removing wiping operations. Does not guarantee forensic irrecoverability.
-          </p>
-        </div>
-        <div>
-          <h3 class="font-semibold mb-2">Supply Chain</h3>
-          <p class="text-text-secondary text-sm">
-            The core library has zero external dependencies to minimize supply chain attack surface. All cryptographic primitives implemented directly: XOR, GF(2^128), CRC-32.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Footer -->
+    <!-- Footer Links -->
     <div class="pt-8 border-t border-border">
       <p class="text-text-muted text-sm text-center">
-        For security-critical deployments, conduct independent security audits. For technical details, see <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>. For ethical considerations, see <a href="/ethics" class="text-brand hover:text-brand-light">Ethics</a>.
+        For technical specifications, see the <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>. For our ethical position on privacy tools, see <a href="/ethics" class="text-brand hover:text-brand-light">Ethics</a>.
       </p>
     </div>
   </div>

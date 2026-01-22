@@ -43,13 +43,13 @@ variable "environment" {
 variable "container_min_scale" {
   description = "Minimum number of container instances"
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "container_max_scale" {
   description = "Maximum number of container instances"
   type        = number
-  default     = 5
+  default     = 1
 }
 
 variable "container_cpu_limit" {
@@ -69,7 +69,7 @@ variable "container_memory_limit" {
 # =============================================================================
 
 variable "domain" {
-  description = "Custom domain for the relay (e.g., relay.ashprotocol.app)"
+  description = "Custom domain for the relay (e.g., eu.relay.ashprotocol.app)"
   type        = string
   default     = ""
 }

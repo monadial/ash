@@ -180,6 +180,14 @@ jobs:
         working-directory: infra/scaleway
         run: terraform init
 
+      - name: Import Existing Resources
+        working-directory: infra/scaleway
+        run: |
+          # Import existing registry namespace (ignore if already in state or doesn't exist)
+          terraform import scaleway_registry_namespace.main nl-ams/ash-backend 2>/dev/null || true
+          # Import existing container namespace (ignore if already in state or doesn't exist)
+          terraform import scaleway_container_namespace.main nl-ams/ash-prod-containers 2>/dev/null || true
+
       - name: Terraform Apply
         working-directory: infra/scaleway
         run: |

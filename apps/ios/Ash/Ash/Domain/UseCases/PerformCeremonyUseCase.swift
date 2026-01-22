@@ -94,12 +94,13 @@ enum ConversationFlagsConstants {
         var result = flags & ~(messagePaddingEnabled | paddingSizeMask)
         if enabled {
             result |= messagePaddingEnabled
-            // Encode size: 32=0, 64=1, 128=2, 256=3
+            // Encode size: 32=0, 64=1, 128=2, 256=3, 512=4
             let sizeIndex: UInt16 = switch size {
             case .bytes32: 0
             case .bytes64: 1
             case .bytes128: 2
             case .bytes256: 3
+            case .bytes512: 4
             }
             result |= (sizeIndex << paddingSizeShift)
         }

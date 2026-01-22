@@ -171,6 +171,14 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
     /// Custom accent color for this conversation
     var accentColor: ConversationColor
 
+    // MARK: - Message Padding Settings
+
+    /// Whether message padding is enabled (hides message length)
+    let messagePaddingEnabled: Bool
+
+    /// Minimum message size when padding is enabled
+    let messagePaddingSize: MessagePaddingSize
+
     // MARK: - Relay State
 
     /// Last known cursor position for polling messages
@@ -207,6 +215,7 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         case relayURL, messageRetention, disappearingMessages, accentColor, role, relayCursor, activitySequence
         case processedIncomingSequences, peerBurnedAt, persistenceConsent
         case authToken, burnToken
+        case messagePaddingEnabled, messagePaddingSize
     }
 
     init(from decoder: Decoder) throws {
@@ -233,6 +242,8 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         persistenceConsent = try container.decodeIfPresent(Bool.self, forKey: .persistenceConsent) ?? false
         authToken = try container.decodeIfPresent(String.self, forKey: .authToken) ?? ""
         burnToken = try container.decodeIfPresent(String.self, forKey: .burnToken) ?? ""
+        messagePaddingEnabled = try container.decodeIfPresent(Bool.self, forKey: .messagePaddingEnabled) ?? false
+        messagePaddingSize = try container.decodeIfPresent(MessagePaddingSize.self, forKey: .messagePaddingSize) ?? .bytes32
     }
 
     func encode(to encoder: Encoder) throws {
@@ -259,6 +270,8 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         try container.encode(persistenceConsent, forKey: .persistenceConsent)
         try container.encode(authToken, forKey: .authToken)
         try container.encode(burnToken, forKey: .burnToken)
+        try container.encode(messagePaddingEnabled, forKey: .messagePaddingEnabled)
+        try container.encode(messagePaddingSize, forKey: .messagePaddingSize)
     }
 
     init(
@@ -277,6 +290,8 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         messageRetention: MessageRetention = .fiveMinutes,
         disappearingMessages: DisappearingMessages = .off,
         accentColor: ConversationColor = .indigo,
+        messagePaddingEnabled: Bool = false,
+        messagePaddingSize: MessagePaddingSize = .bytes32,
         relayCursor: String? = nil,
         activitySequence: UInt64 = 0,
         peerBurnedAt: Date? = nil,
@@ -300,6 +315,8 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         self.messageRetention = messageRetention
         self.disappearingMessages = disappearingMessages
         self.accentColor = accentColor
+        self.messagePaddingEnabled = messagePaddingEnabled
+        self.messagePaddingSize = messagePaddingSize
         self.relayCursor = relayCursor
         self.activitySequence = activitySequence
         self.peerBurnedAt = peerBurnedAt
@@ -444,6 +461,8 @@ extension Conversation {
         messageRetention: MessageRetention = .fiveMinutes,
         disappearingMessages: DisappearingMessages = .off,
         accentColor: ConversationColor = .indigo,
+        messagePaddingEnabled: Bool = false,
+        messagePaddingSize: MessagePaddingSize = .bytes32,
         persistenceConsent: Bool = false,
         authToken: String,
         burnToken: String
@@ -467,6 +486,8 @@ extension Conversation {
             messageRetention: messageRetention,
             disappearingMessages: disappearingMessages,
             accentColor: accentColor,
+            messagePaddingEnabled: messagePaddingEnabled,
+            messagePaddingSize: messagePaddingSize,
             persistenceConsent: persistenceConsent,
             authToken: authToken,
             burnToken: burnToken

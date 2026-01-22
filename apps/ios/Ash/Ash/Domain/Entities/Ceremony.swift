@@ -100,6 +100,53 @@ enum PadSizeOption: String, CaseIterable, Identifiable {
     }
 }
 
+/// Message padding size options - hides actual message length
+/// All messages are padded to this minimum size for privacy
+enum MessagePaddingSize: String, Codable, CaseIterable, Sendable, Equatable {
+    case bytes32 = "32"
+    case bytes64 = "64"
+    case bytes128 = "128"
+    case bytes256 = "256"
+    case bytes512 = "512"
+
+    var bytes: Int {
+        switch self {
+        case .bytes32: return 32
+        case .bytes64: return 64
+        case .bytes128: return 128
+        case .bytes256: return 256
+        case .bytes512: return 512
+        }
+    }
+
+    var displayName: String {
+        "\(bytes) bytes"
+    }
+
+    /// Encode padding size into 3 bits (0-7)
+    var encoded: UInt8 {
+        switch self {
+        case .bytes32: return 0
+        case .bytes64: return 1
+        case .bytes128: return 2
+        case .bytes256: return 3
+        case .bytes512: return 4
+        }
+    }
+
+    /// Decode padding size from 3 bits
+    static func decode(from value: UInt8) -> MessagePaddingSize {
+        switch value {
+        case 0: return .bytes32
+        case 1: return .bytes64
+        case 2: return .bytes128
+        case 3: return .bytes256
+        case 4: return .bytes512
+        default: return .bytes32
+        }
+    }
+}
+
 /// Pad size limits from core
 enum PadSizeLimits {
     /// Minimum pad size (32 KB)

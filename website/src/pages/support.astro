@@ -1,0 +1,168 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout title="Support" description="Get help with ASH - Report issues, request features, or contact support.">
+  <div class="py-16 sm:py-24">
+    <!-- Header -->
+    <div class="text-center mb-16">
+      <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
+        Help
+      </span>
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">Support</h1>
+      <p class="text-text-secondary text-lg max-w-2xl mx-auto">
+        Need help with ASH? Here's how to get in touch.
+      </p>
+    </div>
+
+    <!-- Support Options -->
+    <div class="max-w-3xl mx-auto">
+      <div class="grid md:grid-cols-2 gap-6 mb-12">
+        <!-- GitHub Issues -->
+        <div class="bg-bg-card border border-border rounded-xl p-6">
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-3">GitHub Issues</h3>
+          <p class="text-text-secondary text-sm mb-4">
+            Found a bug or have a feature request? Open an issue on GitHub. This is the best way to report technical problems.
+          </p>
+          <a href="https://github.com/AshProtocol/ash" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-brand hover:text-brand-light text-sm font-medium">
+            Open an Issue
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+          </a>
+        </div>
+
+        <!-- Email Support -->
+        <div class="bg-bg-card border border-border rounded-xl p-6">
+          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+          </div>
+          <h3 class="font-semibold text-lg mb-3">Email Support</h3>
+          <p class="text-text-secondary text-sm mb-4">
+            Have a general question or need help? Send us an email and we'll get back to you as soon as possible.
+          </p>
+          <a href="mailto:support@ashprotocol.app" class="inline-flex items-center gap-2 text-brand hover:text-brand-light text-sm font-medium">
+            support@ashprotocol.app
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- When to Use What -->
+      <section class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">When to Use What</h2>
+
+        <div class="space-y-4">
+          <div class="bg-bg-card border border-border rounded-lg p-4">
+            <h4 class="font-medium mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">1</span>
+              Bug Reports
+            </h4>
+            <p class="text-text-secondary text-sm pl-8">
+              App crashes, unexpected behavior, or something not working as expected? <strong class="text-white">Use GitHub Issues</strong> so we can track and fix it.
+            </p>
+          </div>
+
+          <div class="bg-bg-card border border-border rounded-lg p-4">
+            <h4 class="font-medium mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">2</span>
+              Feature Requests
+            </h4>
+            <p class="text-text-secondary text-sm pl-8">
+              Have an idea that would make ASH better? <strong class="text-white">Use GitHub Issues</strong> to suggest new features or improvements.
+            </p>
+          </div>
+
+          <div class="bg-bg-card border border-border rounded-lg p-4">
+            <h4 class="font-medium mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">3</span>
+              General Questions
+            </h4>
+            <p class="text-text-secondary text-sm pl-8">
+              Questions about how ASH works, setup help, or general inquiries? <strong class="text-white">Email support</strong> for personalized assistance.
+            </p>
+          </div>
+
+          <div class="bg-bg-card border border-border rounded-lg p-4">
+            <h4 class="font-medium mb-2 flex items-center gap-2">
+              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">4</span>
+              Security Issues
+            </h4>
+            <p class="text-text-secondary text-sm pl-8">
+              Found a security vulnerability? <strong class="text-white">Do NOT post publicly.</strong> Email <a href="mailto:security@ashprotocol.app" class="text-brand hover:text-brand-light">security@ashprotocol.app</a> for responsible disclosure.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Response Times -->
+      <section class="mb-12">
+        <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">What to Expect</h2>
+
+        <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border bg-bg-elevated">
+                <th class="text-left p-4 text-text-muted font-medium">Channel</th>
+                <th class="text-left p-4 text-text-muted font-medium">Best For</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr>
+                <td class="p-4 font-medium">GitHub Issues</td>
+                <td class="p-4 text-text-secondary">Bug reports, feature requests, technical discussions</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-medium">Email (support@)</td>
+                <td class="p-4 text-text-secondary">General questions, setup help, non-technical inquiries</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-medium">Email (security@)</td>
+                <td class="p-4 text-text-secondary">Security vulnerabilities (private disclosure)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Before You Contact -->
+      <section>
+        <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Before You Contact Us</h2>
+
+        <div class="bg-bg-card border border-border rounded-xl p-6">
+          <p class="text-text-secondary mb-4">
+            To help us help you faster, please include:
+          </p>
+          <ul class="space-y-2 text-sm text-text-secondary">
+            <li class="flex items-start gap-2">
+              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
+              What you were trying to do
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
+              What happened instead
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
+              Your device and iOS version
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
+              Steps to reproduce the issue (if applicable)
+            </li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</Layout>

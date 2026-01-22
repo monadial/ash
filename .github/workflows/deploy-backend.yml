@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: rg.nl-ams.scw.cloud
-  IMAGE_NAME: ash-backend/ash-backend
+  REGISTRY: rg.nl-ams.scw.cloud/ash-backend
+  IMAGE_NAME: ash-backend
 
 jobs:
   build:

@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro'
 import TableOfContents from '../components/TableOfContents.astro'
 import Diagram from '../components/Diagram.astro'
 import InfoBox from '../components/InfoBox.astro'
+import WhitepaperViewToggle from '../components/WhitepaperViewToggle.tsx'
 import OTPDemo from '../components/OTPDemo.tsx'
 import PaddingDemo from '../components/PaddingDemo.tsx'
 import MnemonicDemo from '../components/MnemonicDemo.tsx'
@@ -11,48 +12,81 @@ import PolyHashDemo from '../components/PolyHashDemo.tsx'
 import MessagePipelineDemo from '../components/MessagePipelineDemo.tsx'
 
 const tocItems = [
-  { id: 'overview', title: 'Protocol Overview', children: [
-    { id: 'otp', title: 'One-Time Pad' },
-    { id: 'shannon', title: 'Perfect Secrecy' },
+  { id: 'abstract', title: 'Abstract' },
+  { id: 'overview', title: '1. Protocol Overview', children: [
+    { id: 'otp', title: '1.1 One-Time Pad' },
+    { id: 'shannon', title: '1.2 Perfect Secrecy' },
   ]},
-  { id: 'architecture', title: 'System Architecture', children: [
-    { id: 'core', title: 'Shared Rust Core' },
-    { id: 'apps', title: 'Mobile Applications' },
-    { id: 'backend', title: 'Backend Relay' },
+  { id: 'architecture', title: '2. System Architecture', children: [
+    { id: 'core', title: '2.1 Cryptographic Core' },
+    { id: 'apps', title: '2.2 Mobile Applications' },
+    { id: 'backend', title: '2.3 Backend Relay' },
   ]},
-  { id: 'ceremony', title: 'Ceremony Protocol', children: [
-    { id: 'ceremony-flow', title: 'Ceremony Flow' },
-    { id: 'passphrase', title: 'Mandatory Passphrase' },
-    { id: 'mnemonic', title: 'Mnemonic Verification' },
-    { id: 'pad-sizes', title: 'Pad Sizes' },
+  { id: 'ceremony', title: '3. Key Establishment', children: [
+    { id: 'ceremony-flow', title: '3.1 Ceremony Flow' },
+    { id: 'passphrase', title: '3.2 Passphrase Protection' },
+    { id: 'mnemonic', title: '3.3 Mnemonic Verification' },
+    { id: 'pad-sizes', title: '3.4 Pad Sizes' },
   ]},
-  { id: 'framing', title: 'Frame Format', children: [
-    { id: 'basic-frame', title: 'Basic Frame' },
-    { id: 'extended-frame', title: 'Extended Frame' },
+  { id: 'framing', title: '4. Frame Format', children: [
+    { id: 'basic-frame', title: '4.1 Basic Frame' },
+    { id: 'extended-frame', title: '4.2 Extended Frame' },
   ]},
-  { id: 'messages', title: 'Messaging Protocol', children: [
-    { id: 'message-frame', title: 'Message Frame' },
-    { id: 'encryption-flow', title: 'Message Processing' },
-    { id: 'bidirectional', title: 'Bidirectional Consumption' },
-    { id: 'message-types', title: 'Message Types' },
+  { id: 'messages', title: '5. Messaging Protocol', children: [
+    { id: 'message-frame', title: '5.1 Message Frame' },
+    { id: 'encryption-flow', title: '5.2 Processing Pipeline' },
+    { id: 'authentication', title: '5.3 Authentication' },
+    { id: 'bidirectional', title: '5.4 Pad Consumption' },
+    { id: 'message-types', title: '5.5 Message Types' },
   ]},
-  { id: 'tokens', title: 'Token Derivation' },
-  { id: 'trust', title: 'Trust Boundaries' },
+  { id: 'tokens', title: '6. Token Derivation' },
+  { id: 'trust', title: '7. Trust Model' },
+  { id: 'glossary', title: 'Glossary' },
+  { id: 'sources', title: 'References' },
+  { id: 'changelog', title: 'Revision History' },
 ]
 ---
 
 <Layout title="Whitepaper" description="ASH Protocol technical specification. One-Time Pad encryption, ceremony protocol, and frame format.">
   <div class="py-16 sm:py-24">
-    <!-- Header -->
-    <div class="text-center mb-16">
-      <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
-        Technical Specification
-      </span>
-      <h1 class="text-4xl sm:text-5xl font-bold mb-4">ASH Protocol Whitepaper</h1>
-      <p class="text-text-secondary text-lg max-w-2xl mx-auto">
-        A comprehensive technical overview of the ASH secure messaging protocol, including architecture, ceremony specification, and frame format.
+    <!-- Document Header -->
+    <div class="text-center mb-12">
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">ASH Protocol Specification</h1>
+      <p class="text-text-secondary text-lg max-w-2xl mx-auto mb-8">
+        Information-Theoretic Secure Messaging Using One-Time Pad Encryption
       </p>
+
+      <!-- Document Metadata -->
+      <div class="inline-flex flex-wrap justify-center gap-4 text-sm mb-6">
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-bg-card border border-border rounded-lg">
+          <span class="text-text-muted">Version:</span>
+          <span class="text-white font-mono">1.0.0-draft</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-bg-card border border-border rounded-lg">
+          <span class="text-text-muted">Date:</span>
+          <span class="text-white font-mono">2025-01-22</span>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded-lg">
+          <span class="text-warning">Status:</span>
+          <span class="text-warning font-medium">Draft for Review</span>
+        </div>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="flex justify-center">
+        <WhitepaperViewToggle client:load />
+      </div>
     </div>
+
+    <!-- CSS for view modes -->
+    <style is:global>
+      .professional-mode .demo-section {
+        display: none !important;
+      }
+      .interactive-mode .demo-section {
+        display: block;
+      }
+    </style>
 
     <!-- Main content with TOC -->
     <div class="lg:grid lg:grid-cols-[240px_1fr] lg:gap-12">
@@ -63,12 +97,46 @@ const tocItems = [
 
       <!-- Content -->
       <article class="prose-content space-y-16">
-        <!-- Protocol Overview -->
+        <!-- Abstract -->
+        <section id="abstract">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Abstract</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              This document specifies ASH (Anonymous Secure Handoff), a secure messaging protocol designed for high-security, low-frequency communication. ASH provides <strong class="text-white">information-theoretic security</strong> — cryptographic guarantees that hold regardless of an adversary's computational power, including quantum computers.
+            </p>
+            <p>
+              The protocol employs One-Time Pad (OTP) encryption for confidentiality and Wegman-Carter polynomial hashing for authentication. Key establishment occurs through an in-person ceremony using QR codes, eliminating reliance on public-key infrastructure or trusted third parties. A stateless relay server stores only encrypted blobs in RAM, providing message delivery without access to plaintext.
+            </p>
+            <p>
+              ASH explicitly trades convenience for security: no key recovery, no cloud backup, no multi-device sync, no account system. These constraints are fundamental to the security model. The protocol is suitable for scenarios requiring provable security guarantees, including whistleblowing, journalism source protection, and high-value business communications.
+            </p>
+          </div>
+
+          <div class="mt-6 grid sm:grid-cols-3 gap-4">
+            <div class="bg-bg-card border border-border rounded-lg p-4">
+              <div class="text-xs text-text-muted uppercase tracking-wider mb-1">Encryption</div>
+              <div class="text-white font-medium">One-Time Pad (XOR)</div>
+              <div class="text-text-secondary text-sm">Perfect secrecy</div>
+            </div>
+            <div class="bg-bg-card border border-border rounded-lg p-4">
+              <div class="text-xs text-text-muted uppercase tracking-wider mb-1">Authentication</div>
+              <div class="text-white font-medium">Wegman-Carter MAC</div>
+              <div class="text-text-secondary text-sm">256-bit, GF(2^128)</div>
+            </div>
+            <div class="bg-bg-card border border-border rounded-lg p-4">
+              <div class="text-xs text-text-muted uppercase tracking-wider mb-1">Key Exchange</div>
+              <div class="text-white font-medium">In-Person Ceremony</div>
+              <div class="text-text-secondary text-sm">QR + passphrase</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 1: Protocol Overview -->
         <section id="overview">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Protocol Overview</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">1. Protocol Overview</h2>
 
           <div id="otp" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">One-Time Pad Encryption</h3>
+            <h3 class="text-xl font-semibold mb-4">1.1 One-Time Pad Encryption</h3>
             <p class="text-text-secondary mb-4">
               ASH uses the One-Time Pad (OTP) cipher, the only encryption method proven to provide <strong class="text-white">information-theoretic security</strong>. Unlike computational security (used by AES, RSA, and modern cryptography), OTP security does not depend on mathematical assumptions or computational hardness.
             </p>
@@ -90,16 +158,18 @@ Key:        7   K   2   X   9      (random key bytes)
 Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
             </Diagram>
 
-            <h4 class="font-medium mt-6 mb-3">Try It Yourself</h4>
-            <p class="text-text-secondary text-sm mb-4">
-              This interactive demo uses the actual ASH Rust cryptographic core compiled to WebAssembly.
-              Type a message and see how XOR encryption works byte-by-byte.
-            </p>
-            <OTPDemo client:load />
+            <div class="demo-section mt-6">
+              <h4 class="font-medium mb-3">Try It Yourself</h4>
+              <p class="text-text-secondary text-sm mb-4">
+                This interactive demo uses the actual ASH Rust cryptographic core compiled to WebAssembly.
+                Type a message and see how XOR encryption works byte-by-byte.
+              </p>
+              <OTPDemo client:load />
+            </div>
           </div>
 
           <div id="shannon" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Shannon's Perfect Secrecy</h3>
+            <h3 class="text-xl font-semibold mb-4">1.2 Shannon's Perfect Secrecy</h3>
             <p class="text-text-secondary mb-4">
               In 1949, Claude Shannon mathematically proved that OTP provides "perfect secrecy": the ciphertext reveals absolutely nothing about the plaintext to an attacker without the key.
             </p>
@@ -116,9 +186,9 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
         </section>
 
-        <!-- System Architecture -->
+        <!-- Section 2: System Architecture -->
         <section id="architecture">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">System Architecture</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">2. System Architecture</h2>
 
           <p class="text-text-secondary mb-6">
             ASH consists of four primary subsystems with explicitly defined trust boundaries. Security emerges from clear component separation and minimal infrastructure trust.
@@ -143,7 +213,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </Diagram>
 
           <div id="core" class="mt-8 mb-8">
-            <h3 class="text-xl font-semibold mb-4">Shared Rust Core (ash-core)</h3>
+            <h3 class="text-xl font-semibold mb-4">2.1 Cryptographic Core (ash-core)</h3>
             <p class="text-text-secondary mb-4">
               The core is the <strong class="text-white">cryptographic and procedural authority</strong> of ASH. All security-sensitive behavior is defined here, and all other components must treat it as authoritative.
             </p>
@@ -176,7 +246,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
 
           <div id="apps" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Mobile Applications</h3>
+            <h3 class="text-xl font-semibold mb-4">2.2 Mobile Applications</h3>
             <p class="text-text-secondary mb-4">
               The iOS application (Android planned) is a <strong class="text-white">presentation and orchestration layer</strong>. It invokes core functionality via UniFFI-generated Swift bindings and manages the user interface.
             </p>
@@ -186,7 +256,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
 
           <div id="backend" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Backend Relay</h3>
+            <h3 class="text-xl font-semibold mb-4">2.3 Backend Relay</h3>
             <p class="text-text-secondary mb-4">
               The backend is a <strong class="text-white">stateless RAM-only relay</strong>. It is intentionally simple and considered untrusted. Messages are held only in memory until ACK or TTL expiry.
             </p>
@@ -209,16 +279,16 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
         </section>
 
-        <!-- Ceremony Protocol -->
+        <!-- Section 3: Key Establishment -->
         <section id="ceremony">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Ceremony Protocol</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">3. Key Establishment Protocol</h2>
 
           <p class="text-text-secondary mb-6">
-            The ceremony establishes a shared One-Time Pad between two devices. It is designed to be <strong class="text-white">offline</strong>, <strong class="text-white">explicit</strong>, <strong class="text-white">human-verifiable</strong>, and <strong class="text-white">atomic</strong>.
+            The ceremony establishes a shared One-Time Pad between two devices through physical proximity. It is designed to be <strong class="text-white">offline</strong>, <strong class="text-white">explicit</strong>, <strong class="text-white">human-verifiable</strong>, and <strong class="text-white">atomic</strong>. No network communication occurs during key generation.
           </p>
 
           <div id="ceremony-flow" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Ceremony Flow</h3>
+            <h3 class="text-xl font-semibold mb-4">3.1 Ceremony Flow</h3>
 
             <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
               <div class="divide-y divide-border">
@@ -281,7 +351,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
 
           <div id="passphrase" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Mandatory Passphrase Protection</h3>
+            <h3 class="text-xl font-semibold mb-4">3.2 Passphrase Protection</h3>
             <p class="text-text-secondary mb-4">
               Every ceremony requires a <strong class="text-white">mandatory passphrase</strong> that encrypts QR frames during transfer. This protects against visual observation attacks.
             </p>
@@ -311,7 +381,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
 
           <div id="mnemonic" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Mnemonic Verification</h3>
+            <h3 class="text-xl font-semibold mb-4">3.3 Mnemonic Verification</h3>
             <p class="text-text-secondary mb-4">
               The mnemonic checksum allows human verification that both devices have identical pads.
             </p>
@@ -338,15 +408,17 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
               Words are optimized for verbal clarity: distinct pronunciation, no homophones, minimal confusion between similar words, and cross-language usability.
             </p>
 
-            <h4 class="font-medium mt-6 mb-3">Try It Yourself</h4>
-            <p class="text-text-secondary text-sm mb-4">
-              Generate mnemonic checksums from random pad bytes. Both devices generate identical words from the same pad.
-            </p>
-            <MnemonicDemo client:load />
+            <div class="demo-section mt-6">
+              <h4 class="font-medium mb-3">Try It Yourself</h4>
+              <p class="text-text-secondary text-sm mb-4">
+                Generate mnemonic checksums from random pad bytes. Both devices generate identical words from the same pad.
+              </p>
+              <MnemonicDemo client:load />
+            </div>
           </div>
 
           <div id="pad-sizes" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Pad Size Options</h3>
+            <h3 class="text-xl font-semibold mb-4">3.4 Pad Size Options</h3>
 
             <p class="text-text-secondary mb-4">
               ASH supports both preset sizes and <strong class="text-white">custom pad sizes</strong> from 32 KB to 10 MB. Larger pads support more messages but require longer ceremony transfer times.
@@ -408,16 +480,16 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
         </section>
 
-        <!-- Frame Format -->
+        <!-- Section 4: Frame Format -->
         <section id="framing">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Frame Format Specification</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">4. Frame Format Specification</h2>
 
           <p class="text-text-secondary mb-6">
-            Frames chunk large pad data into scannable QR codes, provide integrity verification per chunk, and enable ordered reconstruction.
+            Frames partition pad data into scannable QR codes, provide per-chunk integrity verification via CRC-32, and enable ordered reconstruction at the receiver.
           </p>
 
           <div id="basic-frame" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Basic Frame Structure</h3>
+            <h3 class="text-xl font-semibold mb-4">4.1 Basic Frame Structure</h3>
 
             <Diagram title="Frame Layout">
 {`+------------------+------------------+------------------+------------------+
@@ -446,7 +518,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
           </div>
 
           <div id="extended-frame" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Extended Frame Format</h3>
+            <h3 class="text-xl font-semibold mb-4">4.2 Extended Frame Format</h3>
 
             <p class="text-text-secondary mb-4">
               For ceremony transfer, an extended format includes metadata and optional encryption.
@@ -473,16 +545,16 @@ Flags: Bit 0 = ENCRYPTED, Bit 1 = METADATA`}
           </div>
         </section>
 
-        <!-- Messaging Protocol -->
+        <!-- Section 5: Messaging Protocol -->
         <section id="messages">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Messaging Protocol</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">5. Messaging Protocol</h2>
 
           <p class="text-text-secondary mb-6">
             ASH messages combine <strong class="text-white">OTP encryption</strong>, <strong class="text-white">Wegman-Carter authentication</strong>, and <strong class="text-white">mandatory padding</strong> into a single authenticated frame. Every message provides both information-theoretic confidentiality and information-theoretic authentication.
           </p>
 
           <div id="message-frame" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Authenticated Message Frame</h3>
+            <h3 class="text-xl font-semibold mb-4">5.1 Authenticated Message Frame</h3>
 
             <p class="text-text-secondary mb-4">
               All messages use this single frame format. The relay receives and stores these frames as opaque blobs.
@@ -542,332 +614,53 @@ Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
           </div>
 
           <div id="encryption-flow" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Message Processing</h3>
+            <h3 class="text-xl font-semibold mb-4">5.2 Message Processing Pipeline</h3>
 
-            <p class="text-text-secondary mb-6">
-              Every message passes through a symmetric pipeline that provides both confidentiality and authentication.
+            <p class="text-text-secondary mb-4">
+              Every message passes through a symmetric pipeline that provides both confidentiality and authentication. The sender encrypts and authenticates; the receiver verifies and decrypts using the same shared pad.
             </p>
 
-            <!-- Sender Section -->
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
-                </svg>
+            <!-- Pipeline Summary -->
+            <div class="grid sm:grid-cols-2 gap-4 mb-6">
+              <div class="bg-bg-card border border-border rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-5 h-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                  </svg>
+                  <span class="font-semibold text-white">Sender</span>
+                </div>
+                <ol class="text-sm text-text-secondary space-y-1 ml-7 list-decimal">
+                  <li><strong class="text-white">Pad</strong> message to minimum 32 bytes</li>
+                  <li><strong class="text-white">Encrypt</strong> with OTP (XOR with pad bytes)</li>
+                  <li><strong class="text-white">Authenticate</strong> with Wegman-Carter MAC</li>
+                  <li>Assemble frame and send to relay</li>
+                </ol>
               </div>
-              <div>
-                <h4 class="font-semibold text-white">Sender: Encryption</h4>
-                <p class="text-text-muted text-sm">Pad → Encrypt → Authenticate → Send</p>
-              </div>
-            </div>
-
-            <!-- Encryption Pipeline - HTML Version -->
-            <div class="bg-bg-card border border-border rounded-xl overflow-hidden mb-8">
-              <div class="p-6 space-y-6">
-
-                <!-- Step 1: Padding -->
-                <div class="relative">
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
-                    <div>
-                      <h5 class="font-semibold text-white">Padding</h5>
-                      <p class="text-text-muted text-xs">Traffic Analysis Protection</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="text-sm text-text-secondary mb-2">Input: <code class="text-brand">"hi"</code> (2 bytes)</div>
-                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-2">
-                      <span class="px-2 py-1 bg-warning/20 text-warning rounded">00</span>
-                      <span class="px-2 py-1 bg-brand/20 text-brand-light rounded">00 02</span>
-                      <span class="px-2 py-1 bg-success/20 text-success rounded">68 69</span>
-                      <span class="px-2 py-1 bg-bg-card text-text-muted rounded">00 00 00 ...</span>
-                    </div>
-                    <div class="flex flex-wrap gap-4 text-xs text-text-muted">
-                      <span><span class="inline-block w-2 h-2 bg-warning/50 rounded mr-1"></span>marker</span>
-                      <span><span class="inline-block w-2 h-2 bg-brand/50 rounded mr-1"></span>length</span>
-                      <span><span class="inline-block w-2 h-2 bg-success/50 rounded mr-1"></span>"hi"</span>
-                      <span><span class="inline-block w-2 h-2 bg-bg-card rounded mr-1 border border-border"></span>zero padding</span>
-                    </div>
-                    <div class="text-sm text-text-secondary mt-2">Output: <strong class="text-white">32 bytes</strong> (minimum for all messages)</div>
-                  </div>
-                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
+              <div class="bg-bg-card border border-border rounded-lg p-4">
+                <div class="flex items-center gap-2 mb-2">
+                  <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+                  </svg>
+                  <span class="font-semibold text-white">Receiver</span>
                 </div>
-
-                <!-- Arrow -->
-                <div class="ml-11 flex items-center gap-2 text-text-muted">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                  <span class="text-xs">padded plaintext</span>
-                </div>
-
-                <!-- Step 2: Encryption -->
-                <div class="relative">
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
-                    <div>
-                      <h5 class="font-semibold text-white">OTP Encryption</h5>
-                      <p class="text-text-muted text-xs">Perfect Secrecy</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="space-y-2 font-mono text-xs">
-                      <div class="flex items-center gap-2">
-                        <span class="text-text-muted w-24">Plaintext:</span>
-                        <span class="text-text-secondary">00 00 02 68 69 00 00 ...</span>
-                        <span class="text-text-muted">(32 bytes)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-text-muted w-24"></span>
-                        <span class="text-brand text-lg">⊕</span>
-                        <span class="text-text-muted text-xs">XOR</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-text-muted w-24">Pad key:</span>
-                        <span class="text-success">A3 F1 2B 9E 07 C4 D8 ...</span>
-                        <span class="text-text-muted">(32 bytes from pad)</span>
-                      </div>
-                      <div class="flex items-center gap-2 pt-2 border-t border-border">
-                        <span class="text-text-muted w-24">Ciphertext:</span>
-                        <span class="text-warning">A3 F1 29 F6 6E C4 D8 ...</span>
-                        <span class="text-text-muted">(32 bytes)</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
-                </div>
-
-                <!-- Arrow -->
-                <div class="ml-11 flex items-center gap-2 text-text-muted">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                  <span class="text-xs">ciphertext</span>
-                </div>
-
-                <!-- Step 3: Authentication -->
-                <div class="relative">
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
-                    <div>
-                      <h5 class="font-semibold text-white">Wegman-Carter MAC</h5>
-                      <p class="text-text-muted text-xs">Information-Theoretic Authentication</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="text-sm text-text-secondary mb-3">Auth key from pad (64 bytes):</div>
-                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
-                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₁ (16B)</span>
-                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₂ (16B)</span>
-                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₁ (16B)</span>
-                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₂ (16B)</span>
-                    </div>
-                    <div class="text-xs text-text-muted mb-2">Polynomial evaluation in GF(2^128):</div>
-                    <div class="font-mono text-xs text-text-secondary space-y-1 mb-3">
-                      <div>Tag₁ = Σ(blockᵢ · r₁<sup>n-i</sup>) ⊕ s₁</div>
-                      <div>Tag₂ = Σ(blockᵢ · r₂<sup>n-i</sup>) ⊕ s₂</div>
-                    </div>
-                    <div class="text-sm text-text-secondary">Output: <strong class="text-white">Tag₁ ∥ Tag₂</strong> = 256-bit (32 bytes)</div>
-                  </div>
-                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
-                </div>
-
-                <!-- Arrow -->
-                <div class="ml-11 flex items-center gap-2 text-text-muted">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                  <span class="text-xs">authentication tag</span>
-                </div>
-
-                <!-- Step 4: Frame Assembly -->
-                <div>
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
-                    <div>
-                      <h5 class="font-semibold text-white">Frame Assembly</h5>
-                      <p class="text-text-muted text-xs">Final Output</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
-                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">01</span>
-                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00</span>
-                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00 20</span>
-                      <span class="px-4 py-1.5 bg-warning/20 text-warning rounded">ciphertext (32B)</span>
-                      <span class="px-4 py-1.5 bg-brand/20 text-brand-light rounded">auth tag (32B)</span>
-                    </div>
-                    <div class="flex flex-wrap gap-4 text-xs text-text-muted mb-3">
-                      <span>version</span>
-                      <span>type</span>
-                      <span>length</span>
-                      <span><span class="inline-block w-2 h-2 bg-warning/50 rounded mr-1"></span>encrypted</span>
-                      <span><span class="inline-block w-2 h-2 bg-brand/50 rounded mr-1"></span>MAC</span>
-                    </div>
-                    <div class="text-sm text-success font-medium">Total: 68 bytes sent to relay</div>
-                  </div>
-                </div>
-
+                <ol class="text-sm text-text-secondary space-y-1 ml-7 list-decimal">
+                  <li><strong class="text-white">Verify</strong> MAC (reject if tampered)</li>
+                  <li><strong class="text-white">Decrypt</strong> with OTP (XOR is symmetric)</li>
+                  <li><strong class="text-white">Unpad</strong> to extract original message</li>
+                  <li>Display message, zero used pad bytes</li>
+                </ol>
               </div>
             </div>
 
-            <!-- Receiver Section -->
-            <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
-                </svg>
-              </div>
-              <div>
-                <h4 class="font-semibold text-white">Receiver: Decryption</h4>
-                <p class="text-text-muted text-sm">Receive → Verify → Decrypt → Unpad</p>
-              </div>
+            <div class="demo-section">
+              <p class="text-text-secondary text-sm mb-4">
+                The interactive demo below shows this pipeline in action using the actual Rust cryptographic core compiled to WebAssembly — the same code that runs on devices.
+              </p>
+              <MessagePipelineDemo client:load />
             </div>
 
-            <!-- Decryption Pipeline - HTML Version -->
-            <div class="bg-bg-card border border-border rounded-xl overflow-hidden mb-6">
-              <div class="p-6 space-y-6">
-
-                <!-- Step 1: Receive Frame -->
-                <div class="relative">
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
-                    <div>
-                      <h5 class="font-semibold text-white">Receive Frame</h5>
-                      <p class="text-text-muted text-xs">Parse authenticated message</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
-                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">01</span>
-                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00</span>
-                      <span class="px-2 py-1.5 bg-text-muted/20 text-text-secondary rounded border border-border">00 20</span>
-                      <span class="px-4 py-1.5 bg-warning/20 text-warning rounded">ciphertext (32B)</span>
-                      <span class="px-4 py-1.5 bg-brand/20 text-brand-light rounded">auth tag (32B)</span>
-                    </div>
-                    <div class="text-sm text-text-secondary">Extract: header, ciphertext, and authentication tag</div>
-                  </div>
-                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
-                </div>
-
-                <!-- Arrow -->
-                <div class="ml-11 flex items-center gap-2 text-text-muted">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                  <span class="text-xs">ciphertext + received tag</span>
-                </div>
-
-                <!-- Step 2: Verify MAC -->
-                <div class="relative">
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
-                    <div>
-                      <h5 class="font-semibold text-white">Verify Wegman-Carter MAC</h5>
-                      <p class="text-text-muted text-xs">Reject if tampered</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="text-sm text-text-secondary mb-3">Consume auth key from pad (64 bytes):</div>
-                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
-                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₁ (16B)</span>
-                      <span class="px-3 py-1.5 bg-brand/20 text-brand-light rounded">r₂ (16B)</span>
-                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₁ (16B)</span>
-                      <span class="px-3 py-1.5 bg-success/20 text-success rounded">s₂ (16B)</span>
-                    </div>
-                    <div class="font-mono text-xs text-text-secondary space-y-1 mb-3">
-                      <div>Computed Tag = Σ(blockᵢ · r<sup>n-i</sup>) ⊕ s</div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                      <div class="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded text-xs">
-                        <svg class="w-4 h-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                        <span class="text-success">computed_tag == received_tag → valid</span>
-                      </div>
-                      <div class="flex items-center gap-2 px-3 py-1.5 bg-danger/10 border border-danger/30 rounded text-xs">
-                        <svg class="w-4 h-4 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                        <span class="text-danger">mismatch → reject</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
-                </div>
-
-                <!-- Arrow -->
-                <div class="ml-11 flex items-center gap-2 text-text-muted">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                  <span class="text-xs">verified ciphertext</span>
-                </div>
-
-                <!-- Step 3: Decrypt -->
-                <div class="relative">
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
-                    <div>
-                      <h5 class="font-semibold text-white">OTP Decryption</h5>
-                      <p class="text-text-muted text-xs">XOR is symmetric</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="space-y-2 font-mono text-xs">
-                      <div class="flex items-center gap-2">
-                        <span class="text-text-muted w-24">Ciphertext:</span>
-                        <span class="text-warning">A3 F1 29 F6 6E C4 D8 ...</span>
-                        <span class="text-text-muted">(32 bytes)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-text-muted w-24"></span>
-                        <span class="text-brand text-lg">⊕</span>
-                        <span class="text-text-muted text-xs">XOR (same operation)</span>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-text-muted w-24">Pad key:</span>
-                        <span class="text-success">A3 F1 2B 9E 07 C4 D8 ...</span>
-                        <span class="text-text-muted">(32 bytes from pad)</span>
-                      </div>
-                      <div class="flex items-center gap-2 pt-2 border-t border-border">
-                        <span class="text-text-muted w-24">Plaintext:</span>
-                        <span class="text-text-secondary">00 00 02 68 69 00 00 ...</span>
-                        <span class="text-text-muted">(32 bytes padded)</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="absolute left-4 top-14 bottom-0 w-px bg-border -z-10"></div>
-                </div>
-
-                <!-- Arrow -->
-                <div class="ml-11 flex items-center gap-2 text-text-muted">
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                  <span class="text-xs">padded plaintext</span>
-                </div>
-
-                <!-- Step 4: Remove Padding -->
-                <div>
-                  <div class="flex items-center gap-3 mb-3">
-                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
-                    <div>
-                      <h5 class="font-semibold text-white">Remove Padding</h5>
-                      <p class="text-text-muted text-xs">Extract original message</p>
-                    </div>
-                  </div>
-                  <div class="ml-11 bg-bg-elevated rounded-lg p-4">
-                    <div class="flex flex-wrap gap-1 font-mono text-xs mb-3">
-                      <span class="px-2 py-1 bg-warning/20 text-warning rounded">00</span>
-                      <span class="px-2 py-1 bg-brand/20 text-brand-light rounded">00 02</span>
-                      <span class="px-2 py-1 bg-success/20 text-success rounded">68 69</span>
-                      <span class="px-2 py-1 bg-bg-card text-text-muted rounded line-through">00 00 00 ...</span>
-                    </div>
-                    <div class="flex flex-wrap gap-4 text-xs text-text-muted mb-3">
-                      <span><span class="inline-block w-2 h-2 bg-warning/50 rounded mr-1"></span>marker (0x00)</span>
-                      <span><span class="inline-block w-2 h-2 bg-brand/50 rounded mr-1"></span>length = 2</span>
-                      <span><span class="inline-block w-2 h-2 bg-success/50 rounded mr-1"></span>content</span>
-                      <span><span class="inline-block w-2 h-2 bg-bg-card rounded mr-1 border border-border"></span>discard padding</span>
-                    </div>
-                    <div class="text-sm text-success font-medium">Output: <code class="bg-success/20 px-2 py-0.5 rounded">"hi"</code> (2 bytes)</div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <h4 class="font-medium mt-6 mb-3">Live Pipeline Demo</h4>
-            <p class="text-text-secondary text-sm mb-4">
-              Watch the actual encryption pipeline in action. This demo uses the Rust FFI to process messages through padding, OTP encryption, and Wegman-Carter authentication — the same code that runs on devices.
-            </p>
-            <MessagePipelineDemo client:load />
-
-            <h4 class="font-medium mt-8 mb-3">Wegman-Carter MAC: GF(2^128) Polynomial Hashing</h4>
+            <div id="authentication"></div>
+            <h3 class="text-xl font-semibold mt-8 mb-4">5.3 Wegman-Carter Authentication</h3>
 
             <p class="text-text-secondary mb-4">
               The authentication tag is computed using dual polynomial evaluation over the Galois Field GF(2^128). This provides <strong class="text-white">information-theoretic authentication</strong> — mathematically proven unforgeable without the pad.
@@ -996,7 +789,7 @@ Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
             </div>
 
             <!-- Live Demo -->
-            <div class="mb-6">
+            <div class="demo-section mb-6">
               <h5 class="font-semibold text-white mb-3">Try It Yourself</h5>
               <p class="text-text-secondary text-sm mb-4">
                 This interactive demo uses the actual ASH Rust cryptographic core compiled to WebAssembly.
@@ -1068,11 +861,13 @@ With mandatory 32-byte padding:
 Padding format: [0x00 marker][2-byte length][content][zero fill to 32]`}
             </Diagram>
 
-            <h5 class="font-medium mt-6 mb-3">Try It Yourself</h5>
-            <p class="text-text-secondary text-sm mb-4">
-              See exactly how messages are padded. Type any message and observe the padding format.
-            </p>
-            <PaddingDemo client:load />
+            <div class="demo-section mt-6">
+              <h5 class="font-medium mb-3">Try It Yourself</h5>
+              <p class="text-text-secondary text-sm mb-4">
+                See exactly how messages are padded. Type any message and observe the padding format.
+              </p>
+              <PaddingDemo client:load />
+            </div>
 
             <InfoBox variant="warning" class="mt-4">
               <p class="text-sm">
@@ -1082,7 +877,7 @@ Padding format: [0x00 marker][2-byte length][content][zero fill to 32]`}
           </div>
 
           <div id="bidirectional" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Bidirectional Pad Consumption</h3>
+            <h3 class="text-xl font-semibold mb-4">5.4 Bidirectional Pad Consumption</h3>
 
             <p class="text-text-secondary mb-4">
               ASH uses a bidirectional consumption model to enable independent messaging by both parties without coordination or collision.
@@ -1130,7 +925,7 @@ Remaining: 50 bytes (indices 20-69)`}
           </div>
 
           <div id="message-types" class="mb-8">
-            <h3 class="text-xl font-semibold mb-4">Message Types</h3>
+            <h3 class="text-xl font-semibold mb-4">5.5 Message Types</h3>
 
             <p class="text-text-secondary mb-4">
               ASH v1 supports two message types. Both are encrypted identically — the type is determined by content structure after decryption.
@@ -1191,9 +986,9 @@ Remaining: 50 bytes (indices 20-69)`}
           </div>
         </section>
 
-        <!-- Token Derivation -->
+        <!-- Section 6: Token Derivation -->
         <section id="tokens">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Authorization Token Derivation</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">6. Authorization Token Derivation</h2>
 
           <p class="text-text-secondary mb-6">
             Authorization tokens enable API authentication without accounts or identity. Both parties derive the same tokens from the shared pad.
@@ -1233,16 +1028,18 @@ Remaining: 50 bytes (indices 20-69)`}
             <li><strong class="text-white">Backend-safe:</strong> Backend stores only hash(token)</li>
           </ul>
 
-          <h3 class="text-lg font-semibold mt-6 mb-3">Try It Yourself</h3>
-          <p class="text-text-secondary text-sm mb-4">
-            Watch how tokens are derived from specific byte ranges of the pad. Hover over each token to highlight its source bytes.
-          </p>
-          <TokenDemo client:load />
+          <div class="demo-section mt-6">
+            <h3 class="text-lg font-semibold mb-3">Try It Yourself</h3>
+            <p class="text-text-secondary text-sm mb-4">
+              Watch how tokens are derived from specific byte ranges of the pad. Hover over each token to highlight its source bytes.
+            </p>
+            <TokenDemo client:load />
+          </div>
         </section>
 
-        <!-- Trust Boundaries -->
+        <!-- Section 7: Trust Model -->
         <section id="trust">
-          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Trust Boundaries</h2>
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">7. Trust Model</h2>
 
           <p class="text-text-secondary mb-6">
             ASH explicitly defines what each component is trusted to do. This is fundamental to the security model.
@@ -1274,12 +1071,133 @@ Remaining: 50 bytes (indices 20-69)`}
           </InfoBox>
         </section>
 
-        <!-- Footer -->
-        <div class="pt-8 border-t border-border">
-          <p class="text-text-muted text-sm text-center">
-            For security analysis, see <a href="/security" class="text-brand hover:text-brand-light">Security Model</a>. For ethical considerations, see <a href="/ethics" class="text-brand hover:text-brand-light">Ethics Statement</a>.
-          </p>
-        </div>
+        <!-- Glossary -->
+        <section id="glossary" class="pt-8 border-t border-border">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Glossary</h2>
+
+          <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+            <dl class="divide-y divide-border">
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">Ceremony</dt>
+                <dd class="text-text-secondary text-sm">The in-person key establishment process between two devices, resulting in a shared One-Time Pad.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">GF(2^128)</dt>
+                <dd class="text-text-secondary text-sm">Galois Field with 2^128 elements. A finite field used for polynomial arithmetic in Wegman-Carter authentication.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">Information-theoretic security</dt>
+                <dd class="text-text-secondary text-sm">Security guaranteed by mathematical proof, not computational assumptions. Holds against adversaries with unlimited computing power.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">Initiator</dt>
+                <dd class="text-text-secondary text-sm">The party who starts the ceremony and generates the pad. Consumes pad bytes from index 0 forward.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">One-Time Pad (OTP)</dt>
+                <dd class="text-text-secondary text-sm">Encryption method using XOR with a random key equal in length to the message, used exactly once.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">Pad</dt>
+                <dd class="text-text-secondary text-sm">The shared random key material generated during ceremony. Consumed bidirectionally for encryption and authentication.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">Perfect secrecy</dt>
+                <dd class="text-text-secondary text-sm">Shannon's definition: ciphertext reveals no information about plaintext. P(M|C) = P(M) for all messages M and ciphertexts C.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">Responder</dt>
+                <dd class="text-text-secondary text-sm">The party who receives the pad during ceremony. Consumes pad bytes from the end backward.</dd>
+              </div>
+              <div class="p-4 grid sm:grid-cols-[200px_1fr] gap-2">
+                <dt class="font-medium text-white">Wegman-Carter MAC</dt>
+                <dd class="text-text-secondary text-sm">Message authentication code using polynomial evaluation over a finite field, providing information-theoretic authentication.</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
+        <!-- References -->
+        <section id="sources" class="pt-8 border-t border-border">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">References</h2>
+
+          <div class="space-y-6">
+            <div>
+              <h3 class="text-sm font-semibold text-white mb-3">Cryptographic Foundations</h3>
+              <ul class="space-y-2 text-sm text-text-secondary">
+                <li>
+                  <a href="https://www.cs.virginia.edu/~evans/greatworks/shannon1949.pdf" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">Shannon, C.E. (1949)</a> — "Communication Theory of Secrecy Systems" — Mathematical proof of perfect secrecy for One-Time Pad encryption.
+                </li>
+                <li>
+                  <a href="https://www.cs.umd.edu/~jkatz/gradcrypto2/NOTES/lecture4.pdf" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">Wegman, M.N. & Carter, J.L. (1981)</a> — "New Hash Functions and Their Use in Authentication and Set Equality" — Information-theoretic message authentication.
+                </li>
+                <li>
+                  <a href="https://csrc.nist.gov/csrc/media/publications/fips/180/2/archive/2002-08-01/documents/fips180-2.pdf" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">FIPS 180-2</a> — SHA-256 specification used for passphrase key derivation.
+                </li>
+                <li>
+                  <a href="https://www.w3.org/TR/PNG/#D-CRCAppendix" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">ISO 3309 / ITU-T V.42</a> — CRC-32 polynomial used for frame integrity verification.
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 class="text-sm font-semibold text-white mb-3">Galois Field Mathematics</h3>
+              <ul class="space-y-2 text-sm text-text-secondary">
+                <li>
+                  <a href="https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">NIST SP 800-38D</a> — GF(2^128) field operations and the irreducible polynomial x^128 + x^7 + x^2 + x + 1 used in GCM (same field as Wegman-Carter).
+                </li>
+                <li>
+                  <a href="https://cr.yp.to/papers.html#poly1305" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">Bernstein, D.J. (2005)</a> — "The Poly1305-AES message-authentication code" — Related polynomial MAC construction.
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 class="text-sm font-semibold text-white mb-3">Security Analysis</h3>
+              <ul class="space-y-2 text-sm text-text-secondary">
+                <li>
+                  <a href="https://eprint.iacr.org/2000/025.pdf" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">Rogaway, P. (2000)</a> — "Authenticated-Encryption with Associated-Data" — Formal definitions of authenticated encryption security.
+                </li>
+                <li>
+                  <a href="https://www.usenix.org/system/files/sec19-liu-hao.pdf" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">Liu, H. et al. (2019)</a> — "Traffic Analysis of Encrypted Messaging" — Why message padding matters for privacy.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Revision History -->
+        <section id="changelog" class="pt-8 border-t border-border">
+          <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Revision History</h2>
+
+          <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-border bg-bg-elevated">
+                  <th class="text-left p-3 text-text-muted font-medium">Version</th>
+                  <th class="text-left p-3 text-text-muted font-medium">Date</th>
+                  <th class="text-left p-3 text-text-muted font-medium">Author</th>
+                  <th class="text-left p-3 text-text-muted font-medium">Changes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                <tr>
+                  <td class="p-3 font-mono text-xs">1.0.0-draft</td>
+                  <td class="p-3 text-text-secondary">2025-01-22</td>
+                  <td class="p-3 text-text-secondary">Tomas Mihalicka</td>
+                  <td class="p-3 text-text-secondary">Initial draft for review</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-8 pt-6 border-t border-border text-center">
+            <p class="text-text-muted text-sm">
+              For detailed security analysis, see <a href="/security" class="text-brand hover:text-brand-light">Security Model</a>. For ethical considerations, see <a href="/ethics" class="text-brand hover:text-brand-light">Ethics Statement</a>.
+            </p>
+          </div>
+        </section>
       </article>
     </div>
   </div>

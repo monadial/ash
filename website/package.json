@@ -5,10 +5,12 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "build:wasm": "cd ../wasm && wasm-pack build --target web --out-dir ../website/public/wasm --out-name ash_wasm",
+    "build:all": "pnpm run build:wasm && pnpm run build",
     "preview": "astro preview",
     "astro": "astro",
-    "deploy": "npm run build && wrangler pages deploy dist",
-    "deploy:preview": "npm run build && wrangler pages deploy dist --branch preview",
+    "deploy": "pnpm run build:all && wrangler pages deploy dist",
+    "deploy:preview": "pnpm run build:all && wrangler pages deploy dist --branch preview",
     "cf:dev": "wrangler pages dev dist",
     "cf:tail": "wrangler pages deployment tail"
   },

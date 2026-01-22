@@ -1,0 +1,274 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout title="Privacy Policy" description="Privacy Policy for ASH - Secure Messaging Application">
+  <div class="py-16 sm:py-24">
+    <!-- Header -->
+    <div class="text-center mb-16">
+      <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
+        Legal
+      </span>
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">Privacy Policy</h1>
+      <p class="text-text-secondary text-lg max-w-2xl mx-auto">
+        Last updated: January 22, 2025
+      </p>
+    </div>
+
+    <!-- Privacy Summary -->
+    <div class="max-w-3xl mx-auto mb-12">
+      <div class="bg-success/10 border border-success/30 rounded-xl p-6">
+        <h3 class="text-success font-semibold mb-3 flex items-center gap-2">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+          Privacy by Design
+        </h3>
+        <p class="text-text-secondary text-sm">
+          ASH is built with privacy as a fundamental principle, not an afterthought. We collect no personal data, require no accounts, and cannot read your messages. This privacy policy exists to be transparent about what little data is processed and why.
+        </p>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="max-w-3xl mx-auto">
+      <article class="prose-content space-y-8">
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">1. Introduction</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              This Privacy Policy describes how ASH ("the App") handles information. ASH is developed by <strong class="text-white">Tomas Mihalicka</strong> ("Developer", "I", "me").
+            </p>
+            <p>
+              ASH is a secure messaging application that uses One-Time Pad encryption. The App is designed to minimize data collection and maximize user privacy.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">2. Information We Do NOT Collect</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>ASH is designed to collect as little information as possible. We do NOT collect:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li><strong class="text-white">Personal identifiers</strong> - No name, email, phone number, or account required</li>
+              <li><strong class="text-white">Message content</strong> - Messages are end-to-end encrypted; we cannot read them</li>
+              <li><strong class="text-white">Encryption keys</strong> - Keys are generated on-device and never transmitted</li>
+              <li><strong class="text-white">Contact lists</strong> - We do not access your contacts</li>
+              <li><strong class="text-white">Location data</strong> - We do not track your location (unless you choose to send a location message)</li>
+              <li><strong class="text-white">Device identifiers</strong> - We do not collect UDID, IDFA, or similar identifiers</li>
+              <li><strong class="text-white">Usage analytics</strong> - We do not track how you use the App</li>
+              <li><strong class="text-white">Crash reports</strong> - We do not collect crash data</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">3. Information Processed Transiently</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              The following information is processed transiently by our relay server to deliver messages. This data is NOT stored permanently:
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-lg overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Data</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Purpose</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Retention</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr>
+                    <td class="p-3 text-white">Encrypted message blobs</td>
+                    <td class="p-3 text-text-secondary">Message delivery</td>
+                    <td class="p-3 text-text-secondary">Until retrieved or 24-72 hours max</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-white">Routing tokens</td>
+                    <td class="p-3 text-text-secondary">Message routing</td>
+                    <td class="p-3 text-text-secondary">Transient only</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-white">IP addresses</td>
+                    <td class="p-3 text-text-secondary">Network delivery</td>
+                    <td class="p-3 text-text-secondary">Not logged</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-white">Push notification tokens</td>
+                    <td class="p-3 text-text-secondary">Silent push delivery</td>
+                    <td class="p-3 text-text-secondary">Not stored by us</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="text-sm text-text-muted">
+              The relay server is designed to be "untrusted" - it cannot decrypt messages, identify users, or correlate conversations.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">4. Data Stored on Your Device</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              The following data is stored locally on your device and never transmitted:
+            </p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li><strong class="text-white">Encryption keys (pads)</strong> - Generated during the ceremony, stored in device secure storage</li>
+              <li><strong class="text-white">Conversation state</strong> - Pad consumption pointers and metadata</li>
+              <li><strong class="text-white">App preferences</strong> - Your settings and preferences</li>
+            </ul>
+            <p>
+              This data is protected by your device's security features (Face ID, Touch ID, passcode). If you delete the App, all local data is permanently destroyed.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">5. Push Notifications</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              ASH uses Apple Push Notification service (APNs) to deliver silent push notifications when a message is waiting. These notifications:
+            </p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li>Contain no message content</li>
+              <li>Only signal that a message is available for download</li>
+              <li>Are processed by Apple according to their privacy policy</li>
+            </ul>
+            <p>
+              You can disable push notifications in your device settings at any time.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">6. Location Data</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              ASH allows you to send one-shot location messages to your contact. When you choose to send a location:
+            </p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li>Location access is requested only when you initiate a location message</li>
+              <li>The location is encrypted end-to-end like any other message</li>
+              <li>We do not store or process your location on our servers</li>
+              <li>Location precision is intentionally limited (approximately 10cm accuracy)</li>
+            </ul>
+            <p>
+              You can deny location permissions entirely, and all other features will continue to work.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">7. Third-Party Services</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              ASH uses the following third-party services:
+            </p>
+            <div class="bg-bg-card border border-border rounded-lg p-4">
+              <h4 class="text-white font-medium mb-2">Apple Push Notification service (APNs)</h4>
+              <p class="text-sm text-text-muted">
+                Used for silent push notifications. Subject to <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">Apple's Privacy Policy</a>.
+              </p>
+            </div>
+            <p class="text-sm text-text-muted mt-4">
+              We do not use any analytics services, advertising networks, or social media integrations.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">8. Data Security</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              Security is the core purpose of ASH. We implement:
+            </p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li><strong class="text-white">One-Time Pad encryption</strong> - Provides information-theoretic security</li>
+              <li><strong class="text-white">No key escrow</strong> - Keys exist only on user devices</li>
+              <li><strong class="text-white">Untrusted relay design</strong> - Server cannot decrypt or identify messages</li>
+              <li><strong class="text-white">Ephemeral storage</strong> - Encrypted blobs are deleted after retrieval</li>
+              <li><strong class="text-white">Secure local storage</strong> - Keys stored in device keychain/secure enclave</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">9. Children's Privacy</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              ASH is not directed at children under 13 years of age. We do not knowingly collect personal information from children. Since we do not collect personal information from any users, this is not applicable in practice.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">10. International Users</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              ASH can be used internationally. The relay server may process encrypted message blobs in various jurisdictions. Since these blobs are encrypted with One-Time Pad encryption and contain no identifying information, the jurisdiction of processing does not affect your privacy.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">11. Your Rights</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              Since we do not collect personal data, traditional data subject rights (access, rectification, deletion, portability) are not applicable. However:
+            </p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li><strong class="text-white">Data deletion</strong> - Delete the App to permanently destroy all local data</li>
+              <li><strong class="text-white">Data portability</strong> - Not applicable as we store no data about you</li>
+              <li><strong class="text-white">Opt-out</strong> - Stop using the App at any time</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">12. Changes to This Policy</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated revision date. Your continued use of the App after changes constitutes acceptance of the updated policy.
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">13. Contact</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              If you have questions about this Privacy Policy, please contact:
+            </p>
+            <div class="bg-bg-card border border-border rounded-lg p-4 mt-4">
+              <p class="text-white font-medium">Tomas Mihalicka</p>
+              <p class="text-text-muted text-sm mt-1">Email: <a href="mailto:tomas@mihalicka.com" class="text-brand hover:text-brand-light">tomas@mihalicka.com</a></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- App Store Privacy Label Summary -->
+        <section class="pt-8 border-t border-border">
+          <h2 class="text-2xl font-bold mb-4">App Store Privacy Label</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>For Apple App Store privacy nutrition labels, ASH declares:</p>
+            <div class="grid sm:grid-cols-2 gap-4 mt-4">
+              <div class="bg-success/10 border border-success/30 rounded-lg p-4">
+                <h4 class="text-success font-medium mb-2">Data Not Collected</h4>
+                <p class="text-sm text-text-muted">We do not collect any data from this app.</p>
+              </div>
+              <div class="bg-success/10 border border-success/30 rounded-lg p-4">
+                <h4 class="text-success font-medium mb-2">Data Not Linked to You</h4>
+                <p class="text-sm text-text-muted">No data is linked to your identity.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </article>
+    </div>
+  </div>
+</Layout>

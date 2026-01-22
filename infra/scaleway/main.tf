@@ -28,8 +28,10 @@ locals {
 # Container Registry
 # =============================================================================
 
+# Use existing registry namespace (created manually or import)
+# Registry: rg.nl-ams.scw.cloud/ash-backend
 resource "scaleway_registry_namespace" "main" {
-  name        = "${local.name_prefix}-registry"
+  name        = "ash-backend"
   description = "Container registry for ASH backend images"
   is_public   = false
   region      = var.region
@@ -66,7 +68,7 @@ resource "scaleway_container_namespace" "main" {
 resource "scaleway_container" "backend" {
   name           = "${local.name_prefix}-backend"
   namespace_id   = scaleway_container_namespace.main.id
-  registry_image = "${scaleway_registry_namespace.main.endpoint}/ash-backend:latest"
+  registry_image = "${scaleway_registry_namespace.main.endpoint}/ash-backend:${var.image_tag}"
   port           = 8080
   cpu_limit      = var.container_cpu_limit
   memory_limit   = var.container_memory_limit

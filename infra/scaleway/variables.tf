@@ -5,13 +5,19 @@
 variable "region" {
   description = "Scaleway region"
   type        = string
-  default     = "fr-par"
+  default     = "nl-ams"
 }
 
 variable "zone" {
   description = "Scaleway zone"
   type        = string
-  default     = "fr-par-1"
+  default     = "nl-ams-1"
+}
+
+variable "image_tag" {
+  description = "Docker image tag to deploy"
+  type        = string
+  default     = "latest"
 }
 
 # =============================================================================

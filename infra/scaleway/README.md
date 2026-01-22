@@ -33,7 +33,15 @@ cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your values
 ```
 
-### 3. Initialize and Apply
+### 3. Bootstrap State Bucket (First Time Only)
+
+Before running Terraform for the first time, create the S3 bucket for storing state:
+
+```bash
+./bootstrap.sh
+```
+
+### 4. Initialize and Apply
 
 ```bash
 terraform init
@@ -60,11 +68,11 @@ cd backend
 docker build -t ash-backend .
 
 # Login to registry
-docker login rg.fr-par.scw.cloud/<project-id> -u nologin -p $SCW_SECRET_KEY
+docker login rg.nl-ams.scw.cloud/ash-backend -u nologin -p $SCW_SECRET_KEY
 
 # Tag and push
-docker tag ash-backend rg.fr-par.scw.cloud/<project-id>/ash-backend:latest
-docker push rg.fr-par.scw.cloud/<project-id>/ash-backend:latest
+docker tag ash-backend rg.nl-ams.scw.cloud/ash-backend/ash-backend:latest
+docker push rg.nl-ams.scw.cloud/ash-backend/ash-backend:latest
 ```
 
 ## Custom Domain
@@ -89,15 +97,23 @@ To use a custom domain:
 - `container_max_scale = 5`: Limits maximum instances
 - Serverless Containers are billed per 100ms of execution
 
-## GitHub Actions Secrets
+## GitHub Actions Configuration
 
-For CI/CD, add these secrets to your repository:
+For CI/CD, add these secrets and variables to your repository:
+
+### Secrets
 
 | Secret | Description |
 |--------|-------------|
 | `SCW_ACCESS_KEY` | Scaleway access key |
 | `SCW_SECRET_KEY` | Scaleway secret key |
-| `SCW_PROJECT_ID` | Scaleway project ID |
+
+### Variables (Repository Variables)
+
+| Variable | Description |
+|----------|-------------|
+| `SCW_DEFAULT_PROJECT_ID` | Scaleway project ID |
+| `SCW_DEFAULT_ORGANIZATION_ID` | Scaleway organization ID |
 
 ## Destroying Infrastructure
 

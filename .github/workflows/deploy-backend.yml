@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'infra/scaleway/**'
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
@@ -155,36 +156,54 @@ jobs:
       SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
       SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
       SCW_DEFAULT_PROJECT_ID: ${{ vars.SCW_DEFAULT_PROJECT_ID }}
-      SCW_DEFAULT_ORGANIZATION_ID: ${{ vars.SCW_DEFAULT_ORGANIZATION_ID}}
-      SCW_DEFAULT_REGION: nl-ams
+      SCW_DEFAULT_ORGANIZATION_ID: ${{ vars.SCW_DEFAULT_ORGANIZATION_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
 
     steps:
-      - name: Deploy to Scaleway Serverless Container
-        run: |
-          # Install Scaleway CLI
-          curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+      - name: Checkout
+        uses: actions/checkout@v4
 
-          # Redeploy container to pull latest image
-          scw container container redeploy \
-            $(scw container container list name=ash-prod-backend region=nl-ams -o json | jq -r '.[0].id') \
-            region=nl-ams \
-            --wait
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Extract Image Tag
+        id: tag
+        run: |
+          # Extract SHA tag from image tags (e.g., sha-abc123)
+          SHA_TAG=$(echo "${{ needs.create-manifest.outputs.image-tags }}" | grep -oE 'sha-[a-f0-9]+' | head -1)
+          echo "sha_tag=${SHA_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Terraform Init
+        working-directory: infra/scaleway
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra/scaleway
+        run: |
+          terraform apply -auto-approve \
+            -var="image_tag=${{ steps.tag.outputs.sha_tag }}"
 
       - name: Health Check
         run: |
           echo "Waiting for deployment..."
           sleep 30
 
-          # Get container URL from Scaleway
-          CONTAINER_URL=$(scw container container list name=ash-prod-backend region=nl-ams -o json | jq -r '.[0].domain_name')
+          # Get container URL from Terraform output
+          cd infra/scaleway
+          CONTAINER_URL=$(terraform output -raw container_endpoint)
 
           # Check health endpoint
           curl -sf "https://${CONTAINER_URL}/health" || echo "Health check pending..."
 
       - name: Summary
+        working-directory: infra/scaleway
         run: |
           echo "### Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** \`${{ needs.create-manifest.outputs.image-tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image Tag:** \`${{ steps.tag.outputs.sha_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Container URL:** \`$(terraform output -raw container_endpoint)\`" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** nl-ams (Amsterdam)" >> $GITHUB_STEP_SUMMARY

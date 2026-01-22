@@ -8,26 +8,22 @@ on:
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
+env:
+  REGISTRY: rg.nl-ams.scw.cloud/ash-backend
+  IMAGE_NAME: ash-backend
+
 jobs:
-  build:
-    name: Build & Push Image
+  build-amd64:
+    name: Build (amd64)
     runs-on: ubuntu-latest
     environment: prod
 
-    env:
-      REGISTRY: rg.nl-ams.scw.cloud/ash-backend
-      IMAGE_NAME: ash-backend
-
     outputs:
-      image-tags: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
+      digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -46,7 +42,6 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,prefix=sha-
-            type=raw,value=latest
 
       - name: Build and push
         id: build
@@ -54,11 +49,94 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}-amd64
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+          platforms: linux/amd64
+
+  build-arm64:
+    name: Build (arm64)
+    runs-on: ubuntu-24.04-arm
+    environment: prod
+
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Scaleway Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+          platforms: linux/arm64
+
+  create-manifest:
+    name: Create Multi-arch Manifest
+    needs: [build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    environment: prod
+
+    outputs:
+      image-tags: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Login to Scaleway Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Create and push manifest
+        run: |
+          # Get the SHA tag
+          SHA_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep "sha-" | head -1)
+
+          # Create manifest for SHA tag
+          docker buildx imagetools create -t ${SHA_TAG} \
+            ${SHA_TAG}-amd64 \
+            ${SHA_TAG}-arm64
+
+          # Create manifest for latest tag
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            ${SHA_TAG}-amd64 \
+            ${SHA_TAG}-arm64
 
       - name: Summary
         run: |
@@ -69,7 +147,7 @@ jobs:
 
   deploy-production:
     name: Deploy Production
-    needs: build
+    needs: create-manifest
     runs-on: ubuntu-latest
     environment: prod
 
@@ -106,6 +184,6 @@ jobs:
         run: |
           echo "### Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** \`${{ needs.build.outputs.image-tags }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ needs.create-manifest.outputs.image-tags }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** nl-ams (Amsterdam)" >> $GITHUB_STEP_SUMMARY

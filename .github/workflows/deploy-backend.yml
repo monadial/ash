@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: rg.fr-par.scw.cloud
-  IMAGE_NAME: ash-backend
+  REGISTRY: rg.nl-ams.scw.cloud
+  IMAGE_NAME: ash-backend/ash-backend
 
 jobs:
   build:
@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -38,9 +41,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ secrets.SCW_PROJECT_ID }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=
+            type=sha,prefix=sha-
             type=raw,value=latest
 
       - name: Build and push
@@ -52,7 +55,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
 
   deploy:
     name: Deploy to Scaleway
@@ -72,8 +75,8 @@ jobs:
 
           # Redeploy container to pull latest image
           scw container container redeploy \
-            $(scw container container list name=ash-prod-backend -o json | jq -r '.[0].id') \
-            region=fr-par \
+            $(scw container container list name=ash-prod-backend region=nl-ams -o json | jq -r '.[0].id') \
+            region=nl-ams \
             --wait
 
       - name: Health Check
@@ -86,7 +89,7 @@ jobs:
           sleep 30
 
           # Get container URL from Scaleway
-          CONTAINER_URL=$(scw container container list name=ash-prod-backend -o json | jq -r '.[0].domain_name')
+          CONTAINER_URL=$(scw container container list name=ash-prod-backend region=nl-ams -o json | jq -r '.[0].domain_name')
 
           # Check health endpoint
           curl -sf "https://${CONTAINER_URL}/health" || echo "Health check pending..."

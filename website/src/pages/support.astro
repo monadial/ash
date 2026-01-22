@@ -15,154 +15,146 @@ import Layout from '../layouts/Layout.astro'
       </p>
     </div>
 
-    <!-- Support Options -->
+    <!-- Content -->
     <div class="max-w-3xl mx-auto">
-      <div class="grid md:grid-cols-2 gap-6 mb-12">
-        <!-- GitHub Issues -->
-        <div class="bg-bg-card border border-border rounded-xl p-6">
-          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-brand" fill="currentColor" viewBox="0 0 24 24">
-              <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <h3 class="font-semibold text-lg mb-3">GitHub Issues</h3>
-          <p class="text-text-secondary text-sm mb-4">
-            Found a bug or have a feature request? Open an issue on GitHub. This is the best way to report technical problems.
-          </p>
-          <a href="https://github.com/AshProtocol/ash" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-brand hover:text-brand-light text-sm font-medium">
-            Open an Issue
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-            </svg>
-          </a>
-        </div>
+      <article class="prose-content space-y-8">
 
-        <!-- Email Support -->
-        <div class="bg-bg-card border border-border rounded-xl p-6">
-          <div class="w-12 h-12 bg-brand-subtle rounded-xl flex items-center justify-center mb-4">
-            <svg class="w-6 h-6 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-            </svg>
+        <!-- GitHub Section -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">GitHub</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              ASH is open source. The best way to report bugs, request features, or contribute is through GitHub.
+            </p>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+              <a href="https://github.com/monadial/ash/issues/new?template=bug_report.md" target="_blank" rel="noopener noreferrer" class="bg-bg-card border border-border rounded-xl p-4 hover:border-brand/50 transition-colors group">
+                <div class="flex items-center gap-3 mb-2">
+                  <svg class="w-5 h-5 text-text-muted group-hover:text-brand transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                  <span class="font-medium text-white">Report a Bug</span>
+                </div>
+                <p class="text-sm text-text-muted">Found something broken? Let us know.</p>
+              </a>
+
+              <a href="https://github.com/monadial/ash/issues/new?template=feature_request.md" target="_blank" rel="noopener noreferrer" class="bg-bg-card border border-border rounded-xl p-4 hover:border-brand/50 transition-colors group">
+                <div class="flex items-center gap-3 mb-2">
+                  <svg class="w-5 h-5 text-text-muted group-hover:text-brand transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                  <span class="font-medium text-white">Request a Feature</span>
+                </div>
+                <p class="text-sm text-text-muted">Have an idea? We'd love to hear it.</p>
+              </a>
+
+              <a href="https://github.com/monadial/ash/issues" target="_blank" rel="noopener noreferrer" class="bg-bg-card border border-border rounded-xl p-4 hover:border-brand/50 transition-colors group">
+                <div class="flex items-center gap-3 mb-2">
+                  <svg class="w-5 h-5 text-text-muted group-hover:text-brand transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                  <span class="font-medium text-white">View All Issues</span>
+                </div>
+                <p class="text-sm text-text-muted">Browse existing issues and discussions.</p>
+              </a>
+
+              <a href="https://github.com/monadial/ash" target="_blank" rel="noopener noreferrer" class="bg-bg-card border border-border rounded-xl p-4 hover:border-brand/50 transition-colors group">
+                <div class="flex items-center gap-3 mb-2">
+                  <svg class="w-5 h-5 text-text-muted group-hover:text-brand transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                  <span class="font-medium text-white">View Repository</span>
+                </div>
+                <p class="text-sm text-text-muted">Explore the source code.</p>
+              </a>
+            </div>
           </div>
-          <h3 class="font-semibold text-lg mb-3">Email Support</h3>
-          <p class="text-text-secondary text-sm mb-4">
-            Have a general question or need help? Send us an email and we'll get back to you as soon as possible.
-          </p>
-          <a href="mailto:support@ashprotocol.app" class="inline-flex items-center gap-2 text-brand hover:text-brand-light text-sm font-medium">
-            support@ashprotocol.app
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-            </svg>
-          </a>
-        </div>
+        </section>
+
+        <!-- Email Section -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Email</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              Prefer email? We have dedicated addresses for different types of inquiries.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-4 text-text-muted font-medium">Address</th>
+                    <th class="text-left p-4 text-text-muted font-medium">Use For</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr>
+                    <td class="p-4">
+                      <a href="mailto:support@ashprotocol.app" class="text-brand hover:text-brand-light font-medium">support@ashprotocol.app</a>
+                    </td>
+                    <td class="p-4 text-text-secondary">General questions, setup help, non-technical inquiries</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4">
+                      <a href="mailto:security@ashprotocol.app" class="text-brand hover:text-brand-light font-medium">security@ashprotocol.app</a>
+                    </td>
+                    <td class="p-4 text-text-secondary">Security vulnerabilities (private disclosure only)</td>
+                  </tr>
+                  <tr>
+                    <td class="p-4">
+                      <a href="mailto:legal@ashprotocol.app" class="text-brand hover:text-brand-light font-medium">legal@ashprotocol.app</a>
+                    </td>
+                    <td class="p-4 text-text-secondary">Legal inquiries, privacy questions</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Security Vulnerabilities -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Security Vulnerabilities</h2>
+          <div class="text-text-secondary space-y-4">
+            <div class="bg-warning/10 border border-warning/30 rounded-xl p-6">
+              <h3 class="text-warning font-semibold mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                Responsible Disclosure
+              </h3>
+              <p class="text-sm mb-4">
+                If you discover a security vulnerability, please <strong class="text-white">do NOT</strong> open a public GitHub issue.
+              </p>
+              <p class="text-sm">
+                Instead, email <a href="mailto:security@ashprotocol.app" class="text-brand hover:text-brand-light font-medium">security@ashprotocol.app</a> with details. We take security seriously and will respond promptly.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Before You Contact -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Before You Contact Us</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>To help us help you faster, please include:</p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li><strong class="text-white">What you were trying to do</strong> - The action or goal</li>
+              <li><strong class="text-white">What happened instead</strong> - The unexpected behavior or error</li>
+              <li><strong class="text-white">Device and OS version</strong> - e.g., iPhone 15 Pro, iOS 17.2</li>
+              <li><strong class="text-white">Steps to reproduce</strong> - How can we recreate the issue?</li>
+            </ul>
+          </div>
+        </section>
+
+      </article>
+
+      <!-- Footer Links -->
+      <div class="pt-8 mt-8 border-t border-border">
+        <p class="text-text-muted text-sm text-center">
+          For security details, see <a href="/security" class="text-brand hover:text-brand-light">Security</a>. For technical specifications, see the <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>.
+        </p>
       </div>
-
-      <!-- When to Use What -->
-      <section class="mb-12">
-        <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">When to Use What</h2>
-
-        <div class="space-y-4">
-          <div class="bg-bg-card border border-border rounded-lg p-4">
-            <h4 class="font-medium mb-2 flex items-center gap-2">
-              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">1</span>
-              Bug Reports
-            </h4>
-            <p class="text-text-secondary text-sm pl-8">
-              App crashes, unexpected behavior, or something not working as expected? <strong class="text-white">Use GitHub Issues</strong> so we can track and fix it.
-            </p>
-          </div>
-
-          <div class="bg-bg-card border border-border rounded-lg p-4">
-            <h4 class="font-medium mb-2 flex items-center gap-2">
-              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">2</span>
-              Feature Requests
-            </h4>
-            <p class="text-text-secondary text-sm pl-8">
-              Have an idea that would make ASH better? <strong class="text-white">Use GitHub Issues</strong> to suggest new features or improvements.
-            </p>
-          </div>
-
-          <div class="bg-bg-card border border-border rounded-lg p-4">
-            <h4 class="font-medium mb-2 flex items-center gap-2">
-              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">3</span>
-              General Questions
-            </h4>
-            <p class="text-text-secondary text-sm pl-8">
-              Questions about how ASH works, setup help, or general inquiries? <strong class="text-white">Email support</strong> for personalized assistance.
-            </p>
-          </div>
-
-          <div class="bg-bg-card border border-border rounded-lg p-4">
-            <h4 class="font-medium mb-2 flex items-center gap-2">
-              <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold">4</span>
-              Security Issues
-            </h4>
-            <p class="text-text-secondary text-sm pl-8">
-              Found a security vulnerability? <strong class="text-white">Do NOT post publicly.</strong> Email <a href="mailto:security@ashprotocol.app" class="text-brand hover:text-brand-light">security@ashprotocol.app</a> for responsible disclosure.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Response Times -->
-      <section class="mb-12">
-        <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">What to Expect</h2>
-
-        <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-border bg-bg-elevated">
-                <th class="text-left p-4 text-text-muted font-medium">Channel</th>
-                <th class="text-left p-4 text-text-muted font-medium">Best For</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border">
-              <tr>
-                <td class="p-4 font-medium">GitHub Issues</td>
-                <td class="p-4 text-text-secondary">Bug reports, feature requests, technical discussions</td>
-              </tr>
-              <tr>
-                <td class="p-4 font-medium">Email (support@)</td>
-                <td class="p-4 text-text-secondary">General questions, setup help, non-technical inquiries</td>
-              </tr>
-              <tr>
-                <td class="p-4 font-medium">Email (security@)</td>
-                <td class="p-4 text-text-secondary">Security vulnerabilities (private disclosure)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Before You Contact -->
-      <section>
-        <h2 class="text-2xl font-bold mb-6 pb-2 border-b border-border">Before You Contact Us</h2>
-
-        <div class="bg-bg-card border border-border rounded-xl p-6">
-          <p class="text-text-secondary mb-4">
-            To help us help you faster, please include:
-          </p>
-          <ul class="space-y-2 text-sm text-text-secondary">
-            <li class="flex items-start gap-2">
-              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
-              What you were trying to do
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
-              What happened instead
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
-              Your device and iOS version
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-brand mt-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></span>
-              Steps to reproduce the issue (if applicable)
-            </li>
-          </ul>
-        </div>
-      </section>
-
     </div>
   </div>
 </Layout>

@@ -1,0 +1,184 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout title="Infrastructure" description="ASH relay infrastructure - European hosted, privacy-focused infrastructure powered by Scaleway.">
+  <div class="py-16 sm:py-24">
+    <!-- Header -->
+    <div class="text-center mb-16">
+      <span class="inline-block px-4 py-1.5 bg-brand-subtle text-brand-light text-xs font-semibold uppercase tracking-wider rounded-full mb-6">
+        Infrastructure
+      </span>
+      <h1 class="text-4xl sm:text-5xl font-bold mb-4">Relay Infrastructure</h1>
+      <p class="text-text-secondary text-lg max-w-2xl mx-auto">
+        Our relay servers are hosted in Europe with privacy-first infrastructure providers.
+      </p>
+    </div>
+
+    <!-- Content -->
+    <div class="max-w-3xl mx-auto">
+      <article class="prose-content space-y-8">
+
+        <!-- EU Hosting -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">European Data Sovereignty</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              All ASH relay infrastructure is hosted within the European Union. This ensures your encrypted message blobs are processed under EU data protection laws, including GDPR.
+            </p>
+
+            <div class="bg-success/10 border border-success/30 rounded-xl p-6">
+              <h3 class="text-success font-semibold mb-3 flex items-center gap-2">
+                <span class="text-lg">🇪🇺</span>
+                Why EU Hosting Matters
+              </h3>
+              <ul class="text-sm space-y-2">
+                <li><strong class="text-white">Data sovereignty</strong> - Your data stays in Europe under EU jurisdiction</li>
+                <li><strong class="text-white">GDPR protection</strong> - Strongest privacy regulations in the world</li>
+                <li><strong class="text-white">No US CLOUD Act</strong> - Not subject to US data access laws</li>
+                <li><strong class="text-white">Low latency</strong> - Fast connections for European users</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <!-- Provider -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Infrastructure Provider</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              ASH relay servers are powered by <a href="https://www.scaleway.com" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light font-medium">Scaleway</a>, a European cloud provider headquartered in Paris, France.
+            </p>
+
+            <div class="bg-bg-card border border-border rounded-xl p-6">
+              <div class="flex items-start gap-4">
+                <div class="w-12 h-12 bg-[#4F0599] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-lg text-white mb-2">Scaleway</h3>
+                  <p class="text-sm text-text-secondary mb-3">
+                    European cloud provider with data centers in Paris and Amsterdam. Part of the Iliad Group, one of Europe's largest telecom operators.
+                  </p>
+                  <div class="flex flex-wrap gap-2">
+                    <span class="px-2 py-1 bg-bg-elevated text-text-muted text-xs rounded">🇫🇷 French Company</span>
+                    <span class="px-2 py-1 bg-bg-elevated text-text-muted text-xs rounded">🇪🇺 EU Data Centers</span>
+                    <span class="px-2 py-1 bg-bg-elevated text-text-muted text-xs rounded">GDPR Compliant</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-sm text-text-muted">
+              We chose Scaleway because they are a European company with European data centers, ensuring your data never leaves EU jurisdiction.
+            </p>
+          </div>
+        </section>
+
+        <!-- Relay Locations -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Relay Locations</h2>
+          <div class="text-text-secondary space-y-4">
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-4 text-text-muted font-medium">Region</th>
+                    <th class="text-left p-4 text-text-muted font-medium">Location</th>
+                    <th class="text-left p-4 text-text-muted font-medium">Provider</th>
+                    <th class="text-left p-4 text-text-muted font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  <tr>
+                    <td class="p-4 font-medium">
+                      <span class="flex items-center gap-2">
+                        <span>🇪🇺</span> EU West
+                      </span>
+                    </td>
+                    <td class="p-4 text-text-secondary">Paris, France</td>
+                    <td class="p-4 text-text-secondary">Scaleway</td>
+                    <td class="p-4">
+                      <span class="inline-flex items-center gap-1.5 px-2 py-1 bg-success/10 text-success text-xs rounded-full">
+                        <span class="w-1.5 h-1.5 bg-success rounded-full"></span>
+                        Active
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="text-sm text-text-muted">
+              Additional relay locations may be added in the future based on user demand, always within privacy-respecting jurisdictions.
+            </p>
+          </div>
+        </section>
+
+        <!-- What the Relay Does -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">What the Relay Does</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              The relay server is intentionally designed to be <strong class="text-white">untrusted</strong>. It handles:
+            </p>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+              <li><strong class="text-white">Temporary storage</strong> - Holds encrypted blobs until retrieved (max 24-72 hours)</li>
+              <li><strong class="text-white">Message routing</strong> - Delivers messages to the correct recipient</li>
+              <li><strong class="text-white">Push notifications</strong> - Sends silent notifications via APNS</li>
+            </ul>
+
+            <div class="bg-warning/10 border border-warning/30 rounded-xl p-6">
+              <h3 class="text-warning font-semibold mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                What the Relay Cannot Do
+              </h3>
+              <ul class="text-sm space-y-2">
+                <li><strong class="text-white">Cannot decrypt messages</strong> - Only you and your contact have the keys</li>
+                <li><strong class="text-white">Cannot identify users</strong> - No accounts, no identifiers</li>
+                <li><strong class="text-white">Cannot read metadata</strong> - Routing tokens reveal nothing about content</li>
+                <li><strong class="text-white">Cannot correlate conversations</strong> - Each conversation uses unique tokens</li>
+              </ul>
+            </div>
+
+            <p>
+              For complete technical details, see the <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a> and <a href="/security" class="text-brand hover:text-brand-light">Security</a> pages.
+            </p>
+          </div>
+        </section>
+
+        <!-- Open Source -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Open Source & Transparency</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              The relay server code is open source. You can audit exactly what it does:
+            </p>
+
+            <a href="https://github.com/monadial/ash/tree/main/backend" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 bg-bg-card border border-border rounded-xl p-4 hover:border-brand/50 transition-colors group">
+              <svg class="w-6 h-6 text-text-muted group-hover:text-brand transition-colors" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+              <div>
+                <span class="font-medium text-white">View Backend Source Code</span>
+                <p class="text-sm text-text-muted">github.com/monadial/ash/backend</p>
+              </div>
+            </a>
+          </div>
+        </section>
+
+      </article>
+
+      <!-- Footer Links -->
+      <div class="pt-8 mt-8 border-t border-border">
+        <p class="text-text-muted text-sm text-center">
+          For security details, see <a href="/security" class="text-brand hover:text-brand-light">Security</a>. For technical specifications, see the <a href="/whitepaper" class="text-brand hover:text-brand-light">Whitepaper</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>

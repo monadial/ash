@@ -171,6 +171,129 @@ import Layout from '../layouts/Layout.astro'
           </div>
         </section>
 
+        <!-- Self-Hosting -->
+        <section>
+          <h2 class="text-2xl font-bold mb-4 pb-2 border-b border-border">Deploy Your Own Relay</h2>
+          <div class="text-text-secondary space-y-4">
+            <p>
+              Don't want to trust our relay? You can deploy your own. We publish official Docker images with every release.
+            </p>
+
+            <div class="bg-brand/10 border border-brand/30 rounded-xl p-6">
+              <h3 class="text-brand font-semibold mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Full Control
+              </h3>
+              <p class="text-sm">
+                Self-hosting gives you complete control over your relay infrastructure. Run it on your own servers, in your own jurisdiction, with your own security policies.
+              </p>
+            </div>
+
+            <!-- Docker Image -->
+            <div class="bg-bg-card border border-border rounded-xl p-6">
+              <h4 class="font-medium text-white mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5 text-[#2496ED]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.186m0 2.716h2.118a.187.187 0 00.186-.186V6.29a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.887c0 .102.082.185.185.186m-2.93 0h2.12a.186.186 0 00.184-.186V6.29a.185.185 0 00-.185-.185H8.1a.185.185 0 00-.185.185v1.887c0 .102.083.185.185.186m-2.964 0h2.119a.186.186 0 00.185-.186V6.29a.185.185 0 00-.185-.185H5.136a.186.186 0 00-.186.185v1.887c0 .102.084.185.186.186m5.893 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185m-2.93 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.083.185.185.185m-2.964 0h2.119a.185.185 0 00.185-.185V9.006a.185.185 0 00-.185-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185m-2.92 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.186.186 0 00-.185.185v1.888c0 .102.084.185.185.185M23.763 9.89c-.065-.051-.672-.51-1.954-.51-.338.001-.676.03-1.01.087-.248-1.7-1.653-2.53-1.716-2.566l-.344-.199-.226.327c-.284.438-.49.922-.612 1.43-.23.97-.09 1.882.403 2.661-.595.332-1.55.413-1.744.42H.751a.751.751 0 00-.75.748 11.376 11.376 0 00.692 4.062c.545 1.428 1.355 2.48 2.41 3.124 1.18.723 3.1 1.137 5.275 1.137.983.003 1.963-.086 2.93-.266a12.248 12.248 0 003.823-1.389c.98-.567 1.86-1.288 2.61-2.136 1.252-1.418 1.998-2.997 2.553-4.4h.221c1.372 0 2.215-.549 2.68-1.009.309-.293.55-.65.707-1.046l.098-.288z"/>
+                </svg>
+                Docker Image
+              </h4>
+              <div class="bg-black/50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                <code class="text-green-400">docker pull ghcr.io/monadial/ash-relay:latest</code>
+              </div>
+            </div>
+
+            <!-- Step by Step -->
+            <h4 class="font-medium text-white mt-6">Quick Start Guide</h4>
+
+            <div class="space-y-4">
+              <div class="bg-bg-card border border-border rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold flex-shrink-0">1</span>
+                  <div>
+                    <h5 class="font-medium text-white mb-1">Pull the Docker image</h5>
+                    <div class="bg-black/50 rounded-lg p-3 font-mono text-xs overflow-x-auto">
+                      <code class="text-green-400">docker pull ghcr.io/monadial/ash-relay:latest</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-bg-card border border-border rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold flex-shrink-0">2</span>
+                  <div>
+                    <h5 class="font-medium text-white mb-1">Run the relay server</h5>
+                    <div class="bg-black/50 rounded-lg p-3 font-mono text-xs overflow-x-auto">
+                      <code class="text-green-400">docker run -d \<br/>  --name ash-relay \<br/>  -p 8080:8080 \<br/>  -e RUST_LOG=info \<br/>  ghcr.io/monadial/ash-relay:latest</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-bg-card border border-border rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold flex-shrink-0">3</span>
+                  <div>
+                    <h5 class="font-medium text-white mb-1">Configure your domain (optional)</h5>
+                    <p class="text-sm text-text-secondary">
+                      Set up a reverse proxy (nginx, Caddy) with TLS for production use. Point your domain to the relay.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-bg-card border border-border rounded-lg p-4">
+                <div class="flex items-start gap-3">
+                  <span class="w-6 h-6 bg-brand-subtle rounded-full flex items-center justify-center text-brand text-xs font-bold flex-shrink-0">4</span>
+                  <div>
+                    <h5 class="font-medium text-white mb-1">Configure ASH app to use your relay</h5>
+                    <p class="text-sm text-text-secondary">
+                      In the ASH app settings, enter your relay URL to use your self-hosted server instead of the default.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Environment Variables -->
+            <h4 class="font-medium text-white mt-6">Environment Variables</h4>
+            <div class="bg-bg-card border border-border rounded-xl overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-border bg-bg-elevated">
+                    <th class="text-left p-3 text-text-muted font-medium">Variable</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Description</th>
+                    <th class="text-left p-3 text-text-muted font-medium">Default</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border font-mono text-xs">
+                  <tr>
+                    <td class="p-3 text-brand">RUST_LOG</td>
+                    <td class="p-3 text-text-secondary font-sans">Log level (error, warn, info, debug)</td>
+                    <td class="p-3 text-text-muted">info</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-brand">PORT</td>
+                    <td class="p-3 text-text-secondary font-sans">HTTP port to listen on</td>
+                    <td class="p-3 text-text-muted">8080</td>
+                  </tr>
+                  <tr>
+                    <td class="p-3 text-brand">MESSAGE_TTL</td>
+                    <td class="p-3 text-text-secondary font-sans">Message expiry time in seconds</td>
+                    <td class="p-3 text-text-muted">259200 (72h)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p class="text-sm text-text-muted mt-4">
+              For advanced configuration and deployment options, see the <a href="https://github.com/monadial/ash/tree/main/backend#readme" target="_blank" rel="noopener noreferrer" class="text-brand hover:text-brand-light">backend documentation</a> on GitHub.
+            </p>
+          </div>
+        </section>
+
       </article>
 
       <!-- Footer Links -->

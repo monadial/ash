@@ -52,13 +52,9 @@ resource "scaleway_container_namespace" "main" {
   }
 
   # Secret environment variables (APNS configuration)
-  dynamic "secret_environment_variables" {
-    for_each = var.apns_team_id != "" ? [1] : []
-    content {
-      key   = "APNS_TEAM_ID"
-      value = var.apns_team_id
-    }
-  }
+  secret_environment_variables = var.apns_team_id != "" ? {
+    APNS_TEAM_ID = var.apns_team_id
+  } : {}
 }
 
 # =============================================================================

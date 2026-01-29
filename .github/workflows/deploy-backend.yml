@@ -201,15 +201,20 @@ jobs:
           terraform init \
             -backend-config="key=scaleway/${{ needs.setup.outputs.environment }}/terraform.tfstate"
 
-      - name: Import Existing Container Namespace (if exists)
+      - name: Import Existing Container Namespace (if not in state)
         working-directory: infra/scaleway
-        continue-on-error: true
         run: |
-          terraform import \
-            -var="environment=${{ needs.setup.outputs.environment }}" \
-            -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
-            scaleway_container_namespace.main \
-            "nl-ams/ash-backend"
+          # Only import if not already in state
+          if ! terraform state list | grep -q "scaleway_container_namespace.main"; then
+            echo "Importing existing namespace..."
+            terraform import \
+              -var="environment=${{ needs.setup.outputs.environment }}" \
+              -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
+              scaleway_container_namespace.main \
+              "nl-ams/ash-backend" || echo "Import failed, namespace may not exist yet"
+          else
+            echo "Namespace already in state, skipping import"
+          fi
 
       - name: Terraform Plan
         working-directory: infra/scaleway

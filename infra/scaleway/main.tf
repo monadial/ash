@@ -107,6 +107,13 @@ resource "cloudflare_record" "relay" {
   comment = "ASH relay ${var.environment} - managed by Terraform"
 }
 
+# Link custom domain to Scaleway container
+resource "scaleway_container_domain" "relay" {
+  count        = local.create_dns ? 1 : 0
+  container_id = scaleway_container.backend.id
+  hostname     = local.full_domain
+}
+
 # =============================================================================
 # Object Storage for APNS Key (Optional, prod only)
 # =============================================================================

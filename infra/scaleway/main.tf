@@ -89,8 +89,6 @@ resource "scaleway_container" "backend" {
   deploy         = true
 
   environment_variables = {
-    BIND_ADDR   = "0.0.0.0"
-    PORT        = "8080"
     ENVIRONMENT = var.environment
   }
 

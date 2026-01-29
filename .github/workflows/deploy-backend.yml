@@ -209,7 +209,7 @@ jobs:
             -var="environment=${{ needs.setup.outputs.environment }}" \
             -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
             scaleway_container_namespace.main \
-            "nl-ams/ash-${{ needs.setup.outputs.environment }}-containers"
+            "nl-ams/ash-backend"
 
       - name: Terraform Plan
         working-directory: infra/scaleway

@@ -50,24 +50,13 @@ data "scaleway_registry_namespace" "main" {
 }
 
 # =============================================================================
-# Serverless Container Namespace (one per environment)
+# Serverless Container Namespace (shared between environments)
 # =============================================================================
 
 resource "scaleway_container_namespace" "main" {
-  name        = "${local.name_prefix}-containers"
-  description = "Serverless containers for ASH backend (${var.environment})"
+  name        = "ash-backend"
+  description = "Serverless containers for ASH relay"
   region      = var.region
-
-  # Environment variables shared by all containers in namespace
-  environment_variables = {
-    RUST_LOG    = local.is_prod ? "ash_backend=info,tower_http=info" : "ash_backend=debug,tower_http=debug"
-    ENVIRONMENT = var.environment
-  }
-
-  # Secret environment variables (APNS configuration)
-  secret_environment_variables = var.apns_team_id != "" ? {
-    APNS_TEAM_ID = var.apns_team_id
-  } : {}
 }
 
 # =============================================================================
@@ -75,7 +64,7 @@ resource "scaleway_container_namespace" "main" {
 # =============================================================================
 
 resource "scaleway_container" "backend" {
-  name           = "${local.name_prefix}-backend"
+  name           = "relay-${var.environment}"
   namespace_id   = scaleway_container_namespace.main.id
   registry_image = "${data.scaleway_registry_namespace.main.endpoint}/ash-backend:${var.image_tag}"
   port           = 8080
@@ -89,8 +78,14 @@ resource "scaleway_container" "backend" {
   deploy         = true
 
   environment_variables = {
+    RUST_LOG    = local.is_prod ? "ash_backend=info,tower_http=info" : "ash_backend=debug,tower_http=debug"
     ENVIRONMENT = var.environment
   }
+
+  # Secret environment variables (APNS configuration)
+  secret_environment_variables = var.apns_team_id != "" ? {
+    APNS_TEAM_ID = var.apns_team_id
+  } : {}
 
   # Health check
   http_option = "redirected"

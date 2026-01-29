@@ -20,7 +20,7 @@ Terraform configuration for deploying the ASH backend to Scaleway Serverless Con
 
 1. **Terraform** >= 1.5.0
 2. **Scaleway Account** with API keys
-3. **S3 Bucket** for Terraform state: `ash-tf-state`
+3. **S3 Bucket** for Terraform state: `ash-backend-tf-state`
 4. **Container Registry**: `rg.nl-ams.scw.cloud/ash-backend`
 5. **Container Namespace**: `ash-backend` (shared, contains `relay-prod` and `relay-beta`)
 

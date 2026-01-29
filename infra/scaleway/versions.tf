@@ -17,7 +17,7 @@ terraform {
   #   terraform init -backend-config="key=scaleway/prod/terraform.tfstate"
   #   terraform init -backend-config="key=scaleway/beta/terraform.tfstate"
   backend "s3" {
-    bucket                      = "ash-tf-state"
+    bucket                      = "ash-backend-tf-state"
     key                         = "scaleway/terraform.tfstate"  # Overridden by -backend-config
     region                      = "nl-ams"
     endpoints = {

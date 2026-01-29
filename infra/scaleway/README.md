@@ -1,124 +1,179 @@
-# ASH Infrastructure - Scaleway
+# ASH Backend - Scaleway Infrastructure
 
-Terraform configuration for provisioning ASH backend infrastructure on Scaleway.
+Terraform configuration for deploying the ASH backend to Scaleway Serverless Containers.
 
-## Resources
+## Environments
 
-- **Container Registry**: Private registry for Docker images
-- **Serverless Container**: Auto-scaling container for the backend
-- **Custom Domain**: Optional custom domain binding
+| Environment | Trigger | Image Tag | Domain |
+|-------------|---------|-----------|--------|
+| **beta** | Push to `main` | `sha-xxxxxxx` | `eu.relay.beta.ashprotocol.app` |
+| **prod** | Version tag (`v*`) | `v1.0.0` | `eu.relay.ashprotocol.app` |
+
+## Container Specs
+
+- **CPU**: 250 mvcpu (0.25 vCPU)
+- **Memory**: 256 MB
+- **Scaling**: 1-1 (always 1 instance)
+- **Region**: nl-ams (Amsterdam)
 
 ## Prerequisites
 
-1. [Terraform](https://www.terraform.io/downloads) >= 1.5.0
-2. [Scaleway CLI](https://github.com/scaleway/scaleway-cli) (optional, for local testing)
-3. Scaleway API credentials
+1. **Terraform** >= 1.5.0
+2. **Scaleway Account** with API keys
+3. **S3 Bucket** for Terraform state: `ash-tf-state`
+4. **Container Registry**: `rg.nl-ams.scw.cloud/ash-backend`
 
-## Setup
-
-### 1. Configure Credentials
-
-```bash
-export SCW_ACCESS_KEY="your-access-key"
-export SCW_SECRET_KEY="your-secret-key"
-export SCW_DEFAULT_PROJECT_ID="your-project-id"
-```
-
-Get credentials from: https://console.scaleway.com/iam/api-keys
-
-### 2. Create Variables File
+### Bootstrap (First Time)
 
 ```bash
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars with your values
-```
-
-### 3. Bootstrap State Bucket (First Time Only)
-
-Before running Terraform for the first time, create the S3 bucket for storing state:
-
-```bash
+# Create registry namespace and state bucket (one-time)
 ./bootstrap.sh
 ```
 
-### 4. Initialize and Apply
+## Manual Deployment
+
+### Deploy Beta
 
 ```bash
-terraform init
-terraform plan
-terraform apply
+# Initialize with beta state
+terraform init -backend-config="key=scaleway/beta/terraform.tfstate"
+
+# Plan
+terraform plan \
+  -var="environment=beta" \
+  -var="image_tag=sha-abc1234"
+
+# Apply
+terraform apply \
+  -var="environment=beta" \
+  -var="image_tag=sha-abc1234"
 ```
 
-## Outputs
-
-After applying, you'll get:
-
-| Output | Description |
-|--------|-------------|
-| `registry_endpoint` | Docker registry URL |
-| `container_endpoint` | Backend API URL |
-| `health_check_url` | Health check endpoint |
-| `docker_login_command` | Command to login to registry |
-
-## Pushing Docker Images
+### Deploy Production
 
 ```bash
-# Build the image
-cd backend
-docker build -t ash-backend .
+# Initialize with prod state (use -reconfigure if switching)
+terraform init -backend-config="key=scaleway/prod/terraform.tfstate" -reconfigure
 
-# Login to registry
-docker login rg.nl-ams.scw.cloud/ash-backend -u nologin -p $SCW_SECRET_KEY
+# Plan
+terraform plan \
+  -var="environment=prod" \
+  -var="image_tag=v1.0.0"
 
-# Tag and push
-docker tag ash-backend rg.nl-ams.scw.cloud/ash-backend/ash-backend:latest
-docker push rg.nl-ams.scw.cloud/ash-backend/ash-backend:latest
+# Apply
+terraform apply \
+  -var="environment=prod" \
+  -var="image_tag=v1.0.0"
 ```
 
-## Custom Domain
+## GitHub Actions
 
-To use a custom domain:
+Deployment is automated via `.github/workflows/deploy-backend.yml`:
 
-1. Set `domain` variable in `terraform.tfvars`:
-   ```hcl
-   domain = "relay.ashprotocol.app"
-   ```
+| Trigger | Action |
+|---------|--------|
+| Push to `main` | Deploy to **beta** |
+| Tag `v*` | Deploy to **prod** |
+| Manual dispatch | Choose environment |
 
-2. Apply terraform changes
-
-3. Add CNAME record in your DNS:
-   ```
-   relay.ashprotocol.app -> <container-endpoint>
-   ```
-
-## Cost Optimization
-
-- `container_min_scale = 0`: Scales to zero when idle (no cost)
-- `container_max_scale = 5`: Limits maximum instances
-- Serverless Containers are billed per 100ms of execution
-
-## GitHub Actions Configuration
-
-For CI/CD, add these secrets and variables to your repository:
-
-### Secrets
+### Required Secrets (per GitHub Environment)
 
 | Secret | Description |
 |--------|-------------|
 | `SCW_ACCESS_KEY` | Scaleway access key |
 | `SCW_SECRET_KEY` | Scaleway secret key |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token (DNS edit permission) |
 
-### Variables (Repository Variables)
+### Required Variables (per GitHub Environment)
 
 | Variable | Description |
 |----------|-------------|
 | `SCW_DEFAULT_PROJECT_ID` | Scaleway project ID |
 | `SCW_DEFAULT_ORGANIZATION_ID` | Scaleway organization ID |
+| `CLOUDFLARE_ZONE_ID` | Cloudflare zone ID for ashprotocol.app |
 
-## Destroying Infrastructure
+### Creating Cloudflare API Token
+
+1. Go to [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. Create token with **Edit DNS** permission for `ashprotocol.app` zone
+3. Copy the token to `CLOUDFLARE_API_TOKEN` secret
+
+### Finding Cloudflare Zone ID
+
+1. Go to Cloudflare dashboard → ashprotocol.app
+2. Zone ID is shown on the right sidebar (Overview page)
+3. Copy to `CLOUDFLARE_ZONE_ID` variable
+
+### Creating a Production Release
 
 ```bash
-terraform destroy
+# Tag a version
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-**Warning**: This will delete all resources including the container registry and any stored images.
+This will:
+1. Build multi-arch Docker image (amd64 + arm64)
+2. Push to registry as `v1.0.0`
+3. Deploy to production environment
+
+## Outputs
+
+```bash
+# Get container URL
+terraform output container_endpoint
+
+# Get health check URL
+terraform output health_check_url
+
+# Get environment
+terraform output environment
+```
+
+## DNS Configuration
+
+DNS is automatically managed via Cloudflare. When Terraform runs:
+
+1. Creates/updates CNAME record pointing to Scaleway container
+2. Enables Cloudflare proxy (orange cloud) for SSL and DDoS protection
+3. Links the domain to the Scaleway container
+
+| Environment | Domain |
+|-------------|--------|
+| prod | `eu.relay.ashprotocol.app` |
+| beta | `eu.relay.beta.ashprotocol.app` |
+
+## Cost
+
+Scaleway Serverless Containers pricing (nl-ams):
+- 250 mvcpu + 256 MB = ~€0.000004/second when running
+- With `min_scale=1`: Container always running (~€10/month)
+
+## Troubleshooting
+
+### Container not starting
+
+Check logs in Scaleway Console or use:
+
+```bash
+scw container container logs <container-id>
+```
+
+### Health check failing
+
+```bash
+curl -v https://<container-endpoint>/health
+```
+
+### State locked
+
+```bash
+terraform force-unlock <lock-id>
+```
+
+### Switching between environments
+
+```bash
+# Re-initialize with different state
+terraform init -backend-config="key=scaleway/beta/terraform.tfstate" -reconfigure
+```

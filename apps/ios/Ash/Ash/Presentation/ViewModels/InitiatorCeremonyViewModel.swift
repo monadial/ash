@@ -20,8 +20,16 @@ final class InitiatorCeremonyViewModel {
     private(set) var phase: CeremonyPhase = .selectingPadSize
     private(set) var generatedPadBytes: [UInt8]?
     private(set) var fountainGenerator: FountainFrameGenerator?
-    private(set) var preGeneratedQRImages: [UIImage] = []
     private(set) var sourceBlockCount: Int = 0
+    private(set) var totalFramesToGenerate: Int = 0
+
+    // MARK: - QR Generation Cache (minimal memory)
+
+    /// Small LRU cache for recently displayed QR images
+    /// Keeps only a few frames to smooth out display timing jitter
+    private var qrCache: [Int: UIImage] = [:]
+    /// Maximum cache size (very small to minimize memory)
+    private let maxCacheSize: Int = 5
 
     // Configuration state
     var selectedPadSizeOption: PadSizeOption = .medium
@@ -55,11 +63,26 @@ final class InitiatorCeremonyViewModel {
     /// Disappearing messages setting (client-side display TTL)
     var disappearingMessages: DisappearingMessages = .off
 
-    /// Whether message padding is enabled (hides message length)
-    var messagePaddingEnabled: Bool = false
+    /// Selected transfer method for QR ceremony
+    var transferMethod: CeremonyTransferMethod = .raptor
 
-    /// Minimum message size when padding is enabled
-    var messagePaddingSize: MessagePaddingSize = .bytes32
+    /// Backing storage for selected FPS
+    private var _selectedFPS: Double = 8.0
+
+    /// Selected frame rate for QR display (frames per second)
+    var selectedFPS: Double {
+        get { _selectedFPS }
+        set {
+            _selectedFPS = newValue
+            // Restart timer with new interval if currently playing
+            if isPlaying {
+                startTimer()
+            }
+        }
+    }
+
+    /// Available FPS options
+    static let fpsOptions: [Double] = [4, 6, 8, 10, 12, 15]
 
     // MARK: - Notification Preferences
 
@@ -80,9 +103,10 @@ final class InitiatorCeremonyViewModel {
         if notifyMessageExpired { flags |= ConversationFlagsConstants.notifyMessageExpired }
         if notifyDeliveryFailed { flags |= ConversationFlagsConstants.notifyDeliveryFailed }
         if willPersistMessages { flags |= ConversationFlagsConstants.persistenceConsent }
+        // Message padding is always enabled with 128-byte minimum size
         flags = ConversationFlagsConstants.encodePadding(
-            enabled: messagePaddingEnabled,
-            size: messagePaddingSize,
+            enabled: true,
+            size: .default,
             into: flags
         )
         return flags
@@ -96,13 +120,21 @@ final class InitiatorCeremonyViewModel {
 
     // MARK: - Constants
 
-    /// Block size for fountain encoding (1500 bytes + 16 header, base64 ~2021 chars, fits Version 23-24 QR)
-    private let fountainBlockSize: UInt32 = 1500
-    private let qrCodeSize: CGFloat = 380
-    /// How many extra blocks to pre-generate beyond source count (for redundancy)
-    private let redundancyBlocks: Int = 20
-    /// Frame display interval in seconds
-    private let frameDisplayInterval: TimeInterval = 0.15
+    /// Block size for fountain encoding (matches QRFrameCalculator.blockSize)
+    private var fountainBlockSize: UInt32 {
+        UInt32(QRFrameCalculator.blockSize)
+    }
+
+    /// Dynamic QR code size based on screen width
+    private var qrCodeSize: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width
+        return QRSizeCalculator.optimalSize(for: screenWidth)
+    }
+
+    /// Frame display interval in seconds (computed from selectedFPS)
+    private var frameDisplayInterval: TimeInterval {
+        1.0 / selectedFPS
+    }
 
     // MARK: - Initialization
 
@@ -299,63 +331,90 @@ final class InitiatorCeremonyViewModel {
                 padBytes: padBytes,
                 metadata: metadata,
                 blockSize: fountainBlockSize,
-                passphrase: passphrase
+                passphrase: passphrase,
+                transferMethod: transferMethod
             )
 
             fountainGenerator = generator
             sourceBlockCount = Int(generator.sourceCount())
+            totalFramesToGenerate = QRFrameCalculator.framesToGenerate(
+                padBytes: Int(padSizeBytes),
+                method: transferMethod
+            )
 
-            Log.info(.ceremony, "Fountain generator ready: \(sourceBlockCount) source blocks, block size: \(generator.blockSize())")
-            await preGenerateQRCodes()
+            Log.info(.ceremony, "Fountain generator ready: \(sourceBlockCount) source blocks, \(totalFramesToGenerate) total frames, block size: \(generator.blockSize())")
+            await startStreamingQRCodes()
         } catch {
             Log.error(.ceremony, "Pad generation failed: \(error)")
             phase = .failed(.qrGenerationFailed)
         }
     }
 
-    private func preGenerateQRCodes() async {
-        guard let generator = fountainGenerator else {
+    /// Start streaming QR display - generates on-demand with minimal caching
+    private func startStreamingQRCodes() async {
+        guard fountainGenerator != nil else {
             Log.error(.ceremony, "No fountain generator available")
             phase = .failed(.qrGenerationFailed)
             return
         }
 
-        // Pre-generate source blocks + some redundancy blocks
-        let totalToGenerate = sourceBlockCount + redundancyBlocks
-        Log.info(.ceremony, "Pre-generating \(totalToGenerate) QR codes at \(Int(qrCodeSize))px")
-        phase = .generatingQRCodes(progress: 0, total: totalToGenerate)
-        preGeneratedQRImages = []
-        preGeneratedQRImages.reserveCapacity(totalToGenerate)
+        Log.info(.ceremony, "On-demand QR streaming: \(totalFramesToGenerate) frames (\(sourceBlockCount) source + \(totalFramesToGenerate - sourceBlockCount) redundancy) at \(Int(qrCodeSize))px")
 
-        for index in 0..<totalToGenerate {
-            let frameBytes = generator.generateFrame(index: UInt32(index))
-            let frameData = Data(frameBytes)
+        // No pre-generation - just start display immediately
+        // QR codes are generated on-demand as they're displayed
+        qrCache.removeAll()
 
-            if let image = QRCodeGenerator.generate(from: frameData, size: qrCodeSize) {
-                preGeneratedQRImages.append(image)
-                let progress = Double(index + 1) / Double(totalToGenerate)
-                phase = .generatingQRCodes(progress: progress, total: totalToGenerate)
-            } else {
-                Log.error(.ceremony, "QR generation failed at frame \(index)/\(totalToGenerate)")
-                phase = .failed(.qrGenerationFailed)
-                return
-            }
-
-            if index % 10 == 0 {
-                await Task.yield()
-            }
-        }
-
-        Log.info(.ceremony, "QR generation complete: \(totalToGenerate) codes ready")
         dependencies.hapticService.success()
         phase = .transferring(currentFrame: 0, totalFrames: sourceBlockCount)
         startDisplayCycling()
     }
 
+    /// Generate a single QR image for the given frame index (on-demand)
+    private func generateQRImage(at index: Int) -> UIImage? {
+        guard let generator = fountainGenerator else { return nil }
+        let frameBytes = generator.generateFrame(index: UInt32(index))
+        let frameData = Data(frameBytes)
+        return QRCodeGenerator.generate(from: frameData, size: qrCodeSize)
+    }
+
+    /// Get QR image for index, using small cache to smooth display
+    private func getQRImage(at index: Int) -> UIImage? {
+        // Check cache first
+        if let cached = qrCache[index] {
+            return cached
+        }
+
+        // Generate on-demand
+        guard let image = generateQRImage(at: index) else { return nil }
+
+        // Add to cache
+        qrCache[index] = image
+
+        // Evict old entries if cache is too large
+        if qrCache.count > maxCacheSize {
+            // Remove entries furthest from current index
+            let sortedKeys = qrCache.keys.sorted { abs($0 - index) > abs($1 - index) }
+            for key in sortedKeys.prefix(qrCache.count - maxCacheSize) {
+                qrCache.removeValue(forKey: key)
+            }
+        }
+
+        return image
+    }
+
     // MARK: - QR Display Cycling
+
+    /// Whether automatic playback is running
+    private(set) var isPlaying: Bool = false
 
     private func startDisplayCycling() {
         currentDisplayIndex = 0
+        isPlaying = true
+        startTimer()
+    }
+
+    private func startTimer() {
+        displayTimer?.invalidate()
         displayTimer = Timer.scheduledTimer(withTimeInterval: frameDisplayInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.advanceFrame()
@@ -364,8 +423,12 @@ final class InitiatorCeremonyViewModel {
     }
 
     private func advanceFrame() {
-        guard !preGeneratedQRImages.isEmpty else { return }
-        currentDisplayIndex = (currentDisplayIndex + 1) % preGeneratedQRImages.count
+        guard totalFramesToGenerate > 0, isPlaying else { return }
+        currentDisplayIndex = (currentDisplayIndex + 1) % totalFramesToGenerate
+        updatePhase()
+    }
+
+    private func updatePhase() {
         if case .transferring = phase {
             phase = .transferring(currentFrame: currentDisplayIndex % sourceBlockCount, totalFrames: sourceBlockCount)
         }
@@ -374,11 +437,74 @@ final class InitiatorCeremonyViewModel {
     func stopDisplayCycling() {
         displayTimer?.invalidate()
         displayTimer = nil
+        isPlaying = false
+    }
+
+    // MARK: - Playback Control (for UI)
+
+    /// Toggle play/pause
+    func togglePlayback() {
+        if isPlaying {
+            pausePlayback()
+        } else {
+            resumePlayback()
+        }
+    }
+
+    /// Pause automatic frame advancement
+    func pausePlayback() {
+        isPlaying = false
+        displayTimer?.invalidate()
+        displayTimer = nil
+    }
+
+    /// Resume automatic frame advancement
+    func resumePlayback() {
+        isPlaying = true
+        startTimer()
+    }
+
+    /// Go to next frame
+    func nextFrame() {
+        guard totalFramesToGenerate > 0 else { return }
+        currentDisplayIndex = (currentDisplayIndex + 1) % totalFramesToGenerate
+        updatePhase()
+    }
+
+    /// Go to previous frame
+    func previousFrame() {
+        guard totalFramesToGenerate > 0 else { return }
+        currentDisplayIndex = (currentDisplayIndex - 1 + totalFramesToGenerate) % totalFramesToGenerate
+        updatePhase()
+    }
+
+    /// Go to first frame
+    func goToFirstFrame() {
+        currentDisplayIndex = 0
+        updatePhase()
+    }
+
+    /// Go to last frame
+    func goToLastFrame() {
+        guard totalFramesToGenerate > 0 else { return }
+        currentDisplayIndex = totalFramesToGenerate - 1
+        updatePhase()
+    }
+
+    /// Set playback speed (frames per second)
+    func setPlaybackSpeed(fps: Double) {
+        guard fps > 0 else { return }
+        let wasPlaying = isPlaying
+        pausePlayback()
+        // Note: We don't store fps as a property, but we could add one if needed
+        // For now, just restart with default interval
+        if wasPlaying {
+            resumePlayback()
+        }
     }
 
     func currentQRImage() -> UIImage? {
-        guard currentDisplayIndex < preGeneratedQRImages.count else { return nil }
-        return preGeneratedQRImages[currentDisplayIndex]
+        return getQRImage(at: currentDisplayIndex)
     }
 
     func currentFrameData() -> Data? {
@@ -433,8 +559,8 @@ final class InitiatorCeremonyViewModel {
                 messageRetention: serverRetention,
                 disappearingMessages: disappearingMessages,
                 accentColor: selectedColor,
-                messagePaddingEnabled: messagePaddingEnabled,
-                messagePaddingSize: messagePaddingSize,
+                messagePaddingEnabled: true,
+                messagePaddingSize: .default,
                 persistenceConsent: willPersistMessages
             )
 
@@ -462,8 +588,10 @@ final class InitiatorCeremonyViewModel {
         phase = .selectingPadSize
         generatedPadBytes = nil
         fountainGenerator = nil
-        preGeneratedQRImages = []
+        qrCache.removeAll()
         sourceBlockCount = 0
+        totalFramesToGenerate = 0
+        isPlaying = false
         collectedEntropy = []
         entropyProgress = 0
         consent = ConsentState()
@@ -477,6 +605,7 @@ final class InitiatorCeremonyViewModel {
         notifyMessageExpired = false
         notifyDeliveryFailed = true
         persistenceConsent = false
+        transferMethod = .raptor
     }
 
     func cancel() {

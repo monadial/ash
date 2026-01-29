@@ -31,9 +31,14 @@ variable "project_name" {
 }
 
 variable "environment" {
-  description = "Environment (dev, staging, prod)"
+  description = "Environment (beta, prod)"
   type        = string
   default     = "prod"
+
+  validation {
+    condition     = contains(["beta", "prod"], var.environment)
+    error_message = "Environment must be 'beta' or 'prod'."
+  }
 }
 
 # =============================================================================
@@ -53,23 +58,30 @@ variable "container_max_scale" {
 }
 
 variable "container_cpu_limit" {
-  description = "CPU limit in millicores (1000 = 1 vCPU)"
+  description = "CPU limit in millicores (1000 = 1 vCPU, 250 = 0.25 vCPU)"
   type        = number
-  default     = 1000
+  default     = 250
 }
 
 variable "container_memory_limit" {
   description = "Memory limit in MB"
   type        = number
-  default     = 512
+  default     = 256
 }
 
 # =============================================================================
-# Domain Configuration
+# Cloudflare Configuration (DNS)
 # =============================================================================
 
-variable "domain" {
-  description = "Custom domain for the relay (e.g., eu.relay.ashprotocol.app)"
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token with DNS edit permissions"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone ID for ashprotocol.app"
   type        = string
   default     = ""
 }

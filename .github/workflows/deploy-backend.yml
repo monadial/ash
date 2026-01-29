@@ -2,25 +2,78 @@ name: Deploy Backend
 
 on:
   push:
+    # Beta: push to main (with path filter)
     branches: [main]
     paths:
       - 'backend/**'
       - 'infra/scaleway/**'
       - '.github/workflows/deploy-backend.yml'
+    # Production: version tags (paths filter ignored for tags)
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'beta'
+        type: choice
+        options:
+          - beta
+          - prod
 
 env:
   REGISTRY: rg.nl-ams.scw.cloud/ash-backend
   IMAGE_NAME: ash-backend
 
 jobs:
+  # Determine deployment target
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      image_tag: ${{ steps.env.outputs.image_tag }}
+      should_deploy: ${{ steps.env.outputs.should_deploy }}
+
+    steps:
+      - name: Determine environment and tag
+        id: env
+        run: |
+          # Manual dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "image_tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          # Version tag -> prod
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${{ github.ref_name }}"
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          # Push to main -> beta
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=beta" >> $GITHUB_OUTPUT
+            echo "image_tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Summary
+        run: |
+          echo "### Deployment Setup" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ steps.env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag:** ${{ steps.env.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+  # Build for amd64
   build-amd64:
     name: Build (amd64)
+    needs: setup
+    if: needs.setup.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
-    environment: prod
-
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
+    environment: ${{ needs.setup.outputs.environment }}
 
     steps:
       - name: Checkout
@@ -36,33 +89,23 @@ jobs:
           username: nologin
           password: ${{ secrets.SCW_SECRET_KEY }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=sha-
-
       - name: Build and push
-        id: build
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}-amd64
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=amd64
-          cache-to: type=gha,mode=max,scope=amd64
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}-amd64
+          cache-from: type=gha,scope=amd64-${{ needs.setup.outputs.environment }}
+          cache-to: type=gha,mode=max,scope=amd64-${{ needs.setup.outputs.environment }}
           platforms: linux/amd64
 
+  # Build for arm64
   build-arm64:
     name: Build (arm64)
+    needs: setup
+    if: needs.setup.outputs.should_deploy == 'true'
     runs-on: ubuntu-24.04-arm
-    environment: prod
-
-    outputs:
-      digest: ${{ steps.build.outputs.digest }}
+    environment: ${{ needs.setup.outputs.environment }}
 
     steps:
       - name: Checkout
@@ -78,34 +121,22 @@ jobs:
           username: nologin
           password: ${{ secrets.SCW_SECRET_KEY }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=sha-
-
       - name: Build and push
-        id: build
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           push: true
-          tags: ${{ steps.meta.outputs.tags }}-arm64
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=arm64
-          cache-to: type=gha,mode=max,scope=arm64
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}-arm64
+          cache-from: type=gha,scope=arm64-${{ needs.setup.outputs.environment }}
+          cache-to: type=gha,mode=max,scope=arm64-${{ needs.setup.outputs.environment }}
           platforms: linux/arm64
 
+  # Create multi-arch manifest
   create-manifest:
     name: Create Multi-arch Manifest
-    needs: [build-amd64, build-arm64]
+    needs: [setup, build-amd64, build-arm64]
     runs-on: ubuntu-latest
-    environment: prod
-
-    outputs:
-      image-tags: ${{ steps.meta.outputs.tags }}
+    environment: ${{ needs.setup.outputs.environment }}
 
     steps:
       - name: Login to Scaleway Container Registry
@@ -114,43 +145,34 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: nologin
           password: ${{ secrets.SCW_SECRET_KEY }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=sha-
-            type=raw,value=latest
 
       - name: Create and push manifest
         run: |
-          # Get the SHA tag
-          SHA_TAG=$(echo "${{ steps.meta.outputs.tags }}" | grep "sha-" | head -1)
+          TAG="${{ needs.setup.outputs.image_tag }}"
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
 
-          # Create manifest for SHA tag
-          docker buildx imagetools create -t ${SHA_TAG} \
-            ${SHA_TAG}-amd64 \
-            ${SHA_TAG}-arm64
+          # Create manifest for the specific tag
+          docker buildx imagetools create -t ${IMAGE}:${TAG} \
+            ${IMAGE}:${TAG}-amd64 \
+            ${IMAGE}:${TAG}-arm64
 
-          # Create manifest for latest tag
-          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            ${SHA_TAG}-amd64 \
-            ${SHA_TAG}-arm64
+          # Also tag as latest-{environment}
+          docker buildx imagetools create -t ${IMAGE}:latest-${{ needs.setup.outputs.environment }} \
+            ${IMAGE}:${TAG}-amd64 \
+            ${IMAGE}:${TAG}-arm64
 
       - name: Summary
         run: |
           echo "### Build Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image:** \`${{ steps.meta.outputs.tags }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
 
-  deploy-production:
-    name: Deploy Production
-    needs: create-manifest
+  # Deploy to Scaleway
+  deploy:
+    name: Deploy (${{ needs.setup.outputs.environment }})
+    needs: [setup, create-manifest]
     runs-on: ubuntu-latest
-    environment: prod
+    environment: ${{ needs.setup.outputs.environment }}
 
     env:
       SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
@@ -159,6 +181,10 @@ jobs:
       SCW_DEFAULT_ORGANIZATION_ID: ${{ vars.SCW_DEFAULT_ORGANIZATION_ID }}
       AWS_ACCESS_KEY_ID: ${{ secrets.SCW_ACCESS_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      # Cloudflare for DNS
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
 
     steps:
       - name: Checkout
@@ -169,47 +195,66 @@ jobs:
         with:
           terraform_version: "1.7.0"
 
-      - name: Extract Image Tag
-        id: tag
-        run: |
-          # Extract SHA tag from image tags (e.g., sha-abc123)
-          SHA_TAG=$(echo "${{ needs.create-manifest.outputs.image-tags }}" | grep -oE 'sha-[a-f0-9]+' | head -1)
-          echo "sha_tag=${SHA_TAG}" >> $GITHUB_OUTPUT
-
       - name: Terraform Init
         working-directory: infra/scaleway
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="key=scaleway/${{ needs.setup.outputs.environment }}/terraform.tfstate"
 
-      - name: Import Existing Container Namespace
+      - name: Import Existing Container Namespace (if exists)
+        working-directory: infra/scaleway
+        continue-on-error: true
+        run: |
+          terraform import \
+            -var="environment=${{ needs.setup.outputs.environment }}" \
+            -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
+            scaleway_container_namespace.main \
+            "nl-ams/ash-${{ needs.setup.outputs.environment }}-containers"
+
+      - name: Terraform Plan
         working-directory: infra/scaleway
         run: |
-          # Import existing container namespace (ignore if already in state or doesn't exist)
-          terraform import scaleway_container_namespace.main nl-ams/ash-prod-containers 2>/dev/null || true
+          terraform plan \
+            -var="environment=${{ needs.setup.outputs.environment }}" \
+            -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
+            -out=tfplan
 
       - name: Terraform Apply
         working-directory: infra/scaleway
-        run: |
-          terraform apply -auto-approve \
-            -var="image_tag=${{ steps.tag.outputs.sha_tag }}"
+        run: terraform apply -auto-approve tfplan
 
       - name: Health Check
+        working-directory: infra/scaleway
         run: |
-          echo "Waiting for deployment..."
+          echo "Waiting for deployment to stabilize..."
           sleep 30
 
-          # Get container URL from Terraform output
-          cd infra/scaleway
-          CONTAINER_URL=$(terraform output -raw container_endpoint)
+          # Get relay URL from Terraform output
+          RELAY_URL=$(terraform output -raw relay_url 2>/dev/null || echo "")
 
-          # Check health endpoint
-          curl -sf "https://${CONTAINER_URL}/health" || echo "Health check pending..."
+          if [ -n "$RELAY_URL" ]; then
+            echo "Checking health at ${RELAY_URL}/health"
+            # Retry a few times as DNS/SSL might take a moment
+            for i in 1 2 3; do
+              curl -sf "${RELAY_URL}/health" && echo "Health check passed!" && break || echo "Attempt $i failed, retrying..."
+              sleep 10
+            done
+          fi
 
       - name: Summary
         working-directory: infra/scaleway
         run: |
+          RELAY_URL=$(terraform output -raw relay_url 2>/dev/null || echo "N/A")
+          CUSTOM_DOMAIN=$(terraform output -raw custom_domain 2>/dev/null || echo "N/A")
           echo "### Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Tag:** \`${{ steps.tag.outputs.sha_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Container URL:** \`$(terraform output -raw container_endpoint)\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
-          echo "**Region:** nl-ams (Amsterdam)" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ needs.setup.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image Tag** | \`${{ needs.setup.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Relay URL** | ${RELAY_URL} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Domain** | \`${CUSTOM_DOMAIN}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **CPU** | 250 mvcpu |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Memory** | 256 MB |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Scaling** | 1-1 |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Region** | nl-ams |" >> $GITHUB_STEP_SUMMARY

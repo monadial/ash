@@ -2,6 +2,12 @@
 # Outputs
 # =============================================================================
 
+# Environment
+output "environment" {
+  description = "Deployment environment"
+  value       = var.environment
+}
+
 # Registry
 output "registry_endpoint" {
   description = "Container registry endpoint"
@@ -26,8 +32,13 @@ output "container_id" {
 
 # Custom Domain
 output "custom_domain" {
-  description = "Custom domain for the backend (if configured)"
-  value       = var.domain != "" ? var.domain : null
+  description = "Custom domain for the backend"
+  value       = local.create_dns ? local.full_domain : null
+}
+
+output "relay_url" {
+  description = "Full relay URL"
+  value       = local.create_dns ? "https://${local.full_domain}" : "https://${scaleway_container.backend.domain_name}"
 }
 
 # Docker Commands

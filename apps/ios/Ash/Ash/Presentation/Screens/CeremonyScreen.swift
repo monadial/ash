@@ -228,9 +228,21 @@ private struct PadSizeView: View {
 
     /// Formatted custom pad size description
     private var customSizeDescription: String {
-        let bytes = UInt64(viewModel.customPadSizeKB * 1024)
-        let option = PadSizeOption.custom
-        return "~\(option.estimatedMessages(for: bytes)) messages, ~\(option.approximateFrames(for: bytes)) QR frames"
+        let bytes = UInt64(viewModel.customPadSizeKB) * 1024
+        let messages = PadSizeOption.custom.estimatedMessages(for: bytes)
+        let frames = QRFrameCalculator.expectedFrames(padBytes: Int(bytes), method: viewModel.transferMethod)
+        return "~\(messages) messages, ~\(frames) QR frames"
+    }
+
+    /// Calculation breakdown for current selection
+    private var calculationBreakdown: String {
+        let bytes: Int
+        if let preset = viewModel.selectedPadSizeOption.presetBytes {
+            bytes = Int(preset)
+        } else {
+            bytes = Int(viewModel.customPadSizeKB) * 1024
+        }
+        return QRFrameCalculator.calculationBreakdown(padBytes: bytes, method: viewModel.transferMethod)
     }
 
     var body: some View {
@@ -256,6 +268,38 @@ private struct PadSizeView: View {
                 .padding(.bottom, 24)
                 .padding(.horizontal, 20)
 
+                // Transfer Method Picker
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Transfer Method")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Picker("Transfer Method", selection: $viewModel.transferMethod) {
+                        ForEach(CeremonyTransferMethod.allCases, id: \.self) { method in
+                            Text(method.displayName).tag(method)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+
+                    Text(viewModel.transferMethod.descriptionText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+
                 // Pad Size Cards
                 VStack(spacing: 10) {
                     ForEach(PadSizeOption.allCases.filter { $0 != .custom }) { option in
@@ -263,7 +307,8 @@ private struct PadSizeView: View {
                             name: option.displayName,
                             size: option.sizeDescription,
                             messages: "~\(option.estimatedMessages) messages",
-                            frames: "\(option.approximateFrames) frames",
+                            frames: "\(option.approximateFrames(for: viewModel.transferMethod)) frames",
+                            calculation: option.calculationBreakdown(for: viewModel.transferMethod),
                             isSelected: viewModel.selectedPadSizeOption == option
                         ) {
                             viewModel.selectPadSizeOption(option)
@@ -281,6 +326,23 @@ private struct PadSizeView: View {
                     }
                 }
                 .padding(.horizontal, 20)
+
+                // Calculation breakdown for selected option
+                if viewModel.selectedPadSizeOption != .custom {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Frame calculation", systemImage: "function")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                        Text(calculationBreakdown)
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+                }
 
                 // Info about pad usage
                 VStack(alignment: .leading, spacing: 8) {
@@ -389,6 +451,7 @@ private struct PadSizeCard: View {
     let size: String
     let messages: String
     let frames: String
+    let calculation: String
     let isSelected: Bool
     let onTap: () -> Void
 
@@ -653,72 +716,6 @@ private struct OptionsView: View {
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
-
-                // Message Privacy Section
-                VStack(spacing: 0) {
-                    HStack {
-                        Image(systemName: "eye.slash")
-                            .font(.title3)
-                            .foregroundStyle(.tint)
-                            .frame(width: 32)
-                        Text("Message Privacy")
-                            .font(.subheadline.bold())
-                        Spacer()
-                    }
-                    .padding(16)
-
-                    Divider().padding(.leading, 56)
-
-                    Toggle(isOn: $viewModel.messagePaddingEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Message Padding")
-                                .font(.subheadline)
-                            Text("Pad short messages to hide length")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-
-                    if viewModel.messagePaddingEnabled {
-                        Divider().padding(.leading, 16)
-
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Minimum Size")
-                                    .font(.subheadline)
-                                Text("Messages padded to at least this")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Picker("", selection: $viewModel.messagePaddingSize) {
-                                ForEach(MessagePaddingSize.allCases, id: \.self) { Text($0.displayName) }
-                            }
-                            .labelsHidden()
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-
-                        Divider().padding(.leading, 16)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Padding hides message length by ensuring all short messages appear the same size. For example, \"HI\" becomes \(viewModel.messagePaddingSize.rawValue) bytes.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            Text("Note: Uses more pad bytes per message.")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                    }
-                }
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
 
                 // Relay Server Section
                 VStack(spacing: 0) {
@@ -1720,10 +1717,6 @@ private struct QRDisplayView: View {
     let currentFrame: Int
     let totalFrames: Int
     var accentColor: Color = Color.ashAccent
-    @State private var frame: Int = 0
-    @State private var playing = true
-    @State private var fps: Double = 4
-    @State private var timer: Timer?
     @State private var previousBrightness: CGFloat = 0.5
 
     var body: some View {
@@ -1747,8 +1740,8 @@ private struct QRDisplayView: View {
                     RoundedRectangle(cornerRadius: 20)
                         .fill(.white)
                         .shadow(color: .black.opacity(0.1), radius: 16, y: 8)
-                    if frame < viewModel.preGeneratedQRImages.count {
-                        Image(uiImage: viewModel.preGeneratedQRImages[frame])
+                    if let qrImage = viewModel.currentQRImage() {
+                        Image(uiImage: qrImage)
                             .interpolation(.none)
                             .resizable()
                             .scaledToFit()
@@ -1761,16 +1754,16 @@ private struct QRDisplayView: View {
                 // Frame indicator
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(playing ? Color.green : Color.orange)
+                        .fill(viewModel.isPlaying ? Color.green : Color.orange)
                         .frame(width: 8, height: 8)
-                    Text("Frame \(frame + 1) of \(totalFrames)")
+                    Text("Frame \(currentFrame + 1) of \(totalFrames)")
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
                 .padding(.top, 12)
 
                 // Progress bar
-                ProgressView(value: Double(frame + 1), total: Double(totalFrames))
+                ProgressView(value: Double(currentFrame + 1), total: Double(max(1, totalFrames)))
                     .tint(.accentColor)
                     .padding(.horizontal, 40)
                     .padding(.top, 6)
@@ -1782,26 +1775,26 @@ private struct QRDisplayView: View {
                     // Main controls row
                     HStack(spacing: 12) {
                         // First frame
-                        Button { frame = 0 } label: {
+                        Button { viewModel.goToFirstFrame() } label: {
                             Image(systemName: "backward.end.fill")
                                 .font(.subheadline)
                                 .frame(width: 36, height: 36)
                                 .background(Color(.secondarySystemGroupedBackground), in: Circle())
                         }
-                        .disabled(frame == 0)
+                        .disabled(currentFrame == 0)
 
                         // Previous frame
-                        Button { if frame > 0 { frame -= 1 } } label: {
+                        Button { viewModel.previousFrame() } label: {
                             Image(systemName: "backward.fill")
                                 .font(.subheadline)
                                 .frame(width: 36, height: 36)
                                 .background(Color(.secondarySystemGroupedBackground), in: Circle())
                         }
-                        .disabled(frame == 0)
+                        .disabled(currentFrame == 0)
 
                         // Play/Pause
-                        Button { playing.toggle(); playing ? start() : stop() } label: {
-                            Image(systemName: playing ? "pause.fill" : "play.fill")
+                        Button { viewModel.togglePlayback() } label: {
+                            Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
                                 .font(.title3)
                                 .frame(width: 52, height: 52)
                                 .background(Color.accentColor, in: Circle())
@@ -1809,32 +1802,33 @@ private struct QRDisplayView: View {
                         }
 
                         // Next frame
-                        Button { if frame < totalFrames - 1 { frame += 1 } } label: {
+                        Button { viewModel.nextFrame() } label: {
                             Image(systemName: "forward.fill")
                                 .font(.subheadline)
                                 .frame(width: 36, height: 36)
                                 .background(Color(.secondarySystemGroupedBackground), in: Circle())
                         }
-                        .disabled(frame >= totalFrames - 1)
+                        .disabled(currentFrame >= totalFrames - 1)
 
                         // Last frame
-                        Button { frame = totalFrames - 1 } label: {
+                        Button { viewModel.goToLastFrame() } label: {
                             Image(systemName: "forward.end.fill")
                                 .font(.subheadline)
                                 .frame(width: 36, height: 36)
                                 .background(Color(.secondarySystemGroupedBackground), in: Circle())
                         }
-                        .disabled(frame >= totalFrames - 1)
+                        .disabled(currentFrame >= totalFrames - 1)
                     }
                     .foregroundStyle(.primary)
 
-                    // Speed and reset row
+                    // Speed and Reset row
                     HStack(spacing: 12) {
                         // Reset button
                         Button {
-                            frame = 0
-                            if !playing { start() }
-                            playing = true
+                            viewModel.goToFirstFrame()
+                            if !viewModel.isPlaying {
+                                viewModel.resumePlayback()
+                            }
                         } label: {
                             Label("Reset", systemImage: "arrow.counterclockwise")
                                 .font(.caption)
@@ -1844,23 +1838,26 @@ private struct QRDisplayView: View {
                         }
                         .foregroundStyle(.primary)
 
-                        // Speed selector
+                        // FPS selector
                         Menu {
-                            ForEach([2, 4, 6, 8, 10], id: \.self) { r in
-                                Button("\(r) fps\(r == 4 ? " (default)" : "")") {
-                                    fps = Double(r)
-                                    if playing { restart() }
+                            ForEach(InitiatorCeremonyViewModel.fpsOptions, id: \.self) { fps in
+                                Button {
+                                    viewModel.selectedFPS = fps
+                                } label: {
+                                    HStack {
+                                        Text("\(Int(fps)) fps")
+                                        if viewModel.selectedFPS == fps {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
                                 }
                             }
                         } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "speedometer")
-                                Text("\(Int(fps)) fps")
-                            }
-                            .font(.caption)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color(.secondarySystemGroupedBackground), in: Capsule())
+                            Label("\(Int(viewModel.selectedFPS)) fps", systemImage: "speedometer")
+                                .font(.caption)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color(.secondarySystemGroupedBackground), in: Capsule())
                         }
                         .foregroundStyle(.primary)
                     }
@@ -1883,29 +1880,16 @@ private struct QRDisplayView: View {
             }
         }
         .background(Color(.systemBackground))
-        .background(BrightnessController(
-            onAppear: { screen in
-                previousBrightness = screen.brightness
-                screen.brightness = 1.0
-                UIApplication.shared.isIdleTimerDisabled = true
-                start()
-            },
-            onDisappear: { screen in
-                screen.brightness = previousBrightness
-                UIApplication.shared.isIdleTimerDisabled = false
-                stop()
-            }
-        ))
-    }
-
-    private func start() {
-        guard totalFrames > 0 else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: 1 / fps, repeats: true) { _ in
-            MainActor.assumeIsolated { frame = (frame + 1) % totalFrames }
+        .onAppear {
+            previousBrightness = UIScreen.main.brightness
+            UIScreen.main.brightness = 1.0
+            UIApplication.shared.isIdleTimerDisabled = true
+        }
+        .onDisappear {
+            UIScreen.main.brightness = previousBrightness
+            UIApplication.shared.isIdleTimerDisabled = false
         }
     }
-    private func stop() { timer?.invalidate(); timer = nil }
-    private func restart() { stop(); start() }
 }
 
 // MARK: - QR Scan
@@ -2698,3 +2682,4 @@ private struct FailedView: View {
         }
     }
 }
+

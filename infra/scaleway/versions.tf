@@ -6,11 +6,19 @@ terraform {
       source  = "scaleway/scaleway"
       version = "~> 2.40"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
   }
 
+  # State is stored per environment via -backend-config
+  # Usage:
+  #   terraform init -backend-config="key=scaleway/prod/terraform.tfstate"
+  #   terraform init -backend-config="key=scaleway/beta/terraform.tfstate"
   backend "s3" {
     bucket                      = "ash-tf-state"
-    key                         = "scaleway/terraform.tfstate"
+    key                         = "scaleway/terraform.tfstate"  # Overridden by -backend-config
     region                      = "nl-ams"
     endpoints = {
       s3 = "https://s3.nl-ams.scw.cloud"
@@ -26,4 +34,8 @@ terraform {
 provider "scaleway" {
   zone   = var.zone
   region = var.region
+}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }

@@ -8,9 +8,11 @@ on:
       - 'backend/**'
       - 'infra/scaleway/**'
       - '.github/workflows/deploy-backend.yml'
-    # Production: version tags (paths filter ignored for tags)
+    # Production: version tags
     tags:
       - 'v*'
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       environment:
@@ -45,7 +47,13 @@ jobs:
             echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
             echo "image_tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
-          # Version tag -> prod
+          # GitHub Release -> prod
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          # Version tag push -> prod
           elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG="${{ github.ref_name }}"
             echo "environment=prod" >> $GITHUB_OUTPUT

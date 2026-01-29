@@ -108,16 +108,6 @@ resource "cloudflare_record" "relay" {
 }
 
 # =============================================================================
-# Custom Domain (Scaleway - links container to domain)
-# =============================================================================
-
-resource "scaleway_container_domain" "backend" {
-  count        = local.create_dns ? 1 : 0
-  container_id = scaleway_container.backend.id
-  hostname     = local.full_domain
-}
-
-# =============================================================================
 # Object Storage for APNS Key (Optional, prod only)
 # =============================================================================
 

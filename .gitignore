@@ -57,6 +57,7 @@ Pods/
 .env
 .env.local
 .env.*.local
+.envrc
 *.pem
 *.key
 *.p12

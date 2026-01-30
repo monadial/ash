@@ -53,9 +53,8 @@ data "scaleway_registry_namespace" "main" {
 # Serverless Container Namespace (shared between environments)
 # =============================================================================
 
-# Namespace is shared - create manually or via bootstrap:
-#   scw container namespace create name=ash-backend region=nl-ams
-data "scaleway_container_namespace" "main" {
+# Namespace is created automatically if it doesn't exist
+resource "scaleway_container_namespace" "main" {
   name   = "ash-backend"
   region = var.region
 }
@@ -66,7 +65,7 @@ data "scaleway_container_namespace" "main" {
 
 resource "scaleway_container" "backend" {
   name           = "relay-${var.environment}"
-  namespace_id   = data.scaleway_container_namespace.main.id
+  namespace_id   = scaleway_container_namespace.main.id
   registry_image = "${data.scaleway_registry_namespace.main.endpoint}/ash-backend:${var.image_tag}"
   port           = 8080
   cpu_limit      = var.container_cpu_limit
@@ -103,7 +102,7 @@ resource "cloudflare_record" "relay" {
   name    = local.dns_name
   content = scaleway_container.backend.domain_name
   type    = "CNAME"
-  proxied = true  # Enable Cloudflare proxy for SSL/DDoS protection
+  proxied = false  # Enable Cloudflare proxy for SSL/DDoS protection
   ttl     = 1     # Auto TTL when proxied
   comment = "ASH relay ${var.environment} - managed by Terraform"
 }

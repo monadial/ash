@@ -98,7 +98,6 @@ resource "scaleway_container" "backend" {
     }
     failure_threshold = 3
     interval          = "30s"
-    timeout           = "10s"
   }
 }
 

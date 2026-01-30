@@ -1021,3 +1021,94 @@ private struct MessageInputView: View {
         }
     }
 }
+
+// MARK: - Screenshot Previews
+
+#Preview("Messaging - With Messages") {
+    MessagingPreviewContainer()
+}
+
+#Preview("Message Bubble - Outgoing") {
+    MessageBubbleView(
+        message: Message.screenshotSamples[1],
+        accentColor: Conversation.screenshotSamples[0].accentColor.color
+    )
+    .padding()
+}
+
+#Preview("Message Bubble - Incoming") {
+    MessageBubbleView(
+        message: Message.screenshotSamples[0],
+        accentColor: Conversation.screenshotSamples[0].accentColor.color
+    )
+    .padding()
+}
+
+/// Preview container to avoid issues with let bindings in #Preview
+private struct MessagingPreviewContainer: View {
+    let conversation = Conversation.screenshotSamples[0]
+    let messages = Message.screenshotSamples
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView {
+                    LazyVStack(spacing: Spacing.sm) {
+                        // Pad usage header - same as real messaging screen
+                        PadUsageHeaderView(
+                            conversation: conversation,
+                            isConnected: true,
+                            relayError: nil
+                        )
+                        .padding(.top, Spacing.md)
+
+                        ForEach(messages) { message in
+                            MessageBubbleView(
+                                message: message,
+                                accentColor: conversation.accentColor.color
+                            )
+                        }
+                    }
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.md)
+                }
+
+                // Static input bar for screenshot
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "location.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+
+                    Text("Message")
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(Color(uiColor: .tertiarySystemFill))
+                        )
+
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 32))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.secondary)
+                }
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(Material.bar)
+            }
+            .background(Color(uiColor: .systemBackground))
+            .navigationTitle(conversation.displayName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(conversation.accentColor.color.opacity(0.1), for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(conversation.accentColor.color)
+                }
+            }
+        }
+    }
+}

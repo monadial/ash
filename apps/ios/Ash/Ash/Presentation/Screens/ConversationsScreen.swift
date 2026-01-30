@@ -227,6 +227,14 @@ private struct ConversationCard: View {
 
                 // Pad usage section
                 VStack(spacing: 6) {
+                    // Header
+                    HStack {
+                        Text("Pad Usage")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                    }
+
                     // Usage bar with labels
                     HStack(spacing: 8) {
                         // Visual bar
@@ -323,8 +331,117 @@ private struct ConversationCard: View {
     }
 }
 
-#Preview {
+// MARK: - Screenshot Previews
+
+#Preview("Conversations - With Data") {
     NavigationStack {
-        ConversationsScreen(viewModel: AppViewModel(dependencies: Dependencies()))
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(Conversation.screenshotSamples) { conversation in
+                    ConversationCard(
+                        conversation: conversation,
+                        onTap: {},
+                        onShowInfo: {},
+                        onBurn: {}
+                    )
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Conversations")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.body)
+                }
+                .tint(Color.ashAccent)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                }
+                .tint(Color.ashAccent)
+            }
+        }
     }
+}
+
+#Preview("Conversations - Empty") {
+    NavigationStack {
+        VStack(spacing: 24) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.ashAccent.opacity(0.1))
+                    .frame(width: 100, height: 100)
+
+                Image("ash_logo")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 56, height: 56)
+                    .foregroundStyle(Color.ashAccent)
+            }
+
+            VStack(spacing: 8) {
+                Text("No Conversations")
+                    .font(.title2.bold())
+
+                Text("Start a secure conversation by performing\na ceremony with another device")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button { } label: {
+                HStack {
+                    Image(systemName: "plus.circle.fill")
+                    Text("New Conversation")
+                }
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 14)
+                .background(Color.ashAccent, in: Capsule())
+            }
+            .padding(.top, 8)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Conversations")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { } label: {
+                    Image(systemName: "gearshape.fill")
+                        .font(.body)
+                }
+                .tint(Color.ashAccent)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
+                }
+                .tint(Color.ashAccent)
+            }
+        }
+    }
+}
+
+#Preview("Conversation Card") {
+    ConversationCard(
+        conversation: Conversation.screenshotSamples[0],
+        onTap: {},
+        onShowInfo: {},
+        onBurn: {}
+    )
+    .padding()
+    .background(Color(.systemGroupedBackground))
 }

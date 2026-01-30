@@ -43,10 +43,10 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
       <!-- Phone Mockups -->
       <div class="relative h-125 lg:h-150 animate-fade-in delay-2 hidden lg:block">
         <div class="absolute top-8 right-8 transform rotate-6 opacity-60 scale-90">
-          <PhoneMockup label="Messages" />
+          <PhoneMockup image="/screenshots/messaging.png" label="Messages" />
         </div>
         <div class="absolute top-16 left-4 z-10">
-          <PhoneMockup label="Conversations" />
+          <PhoneMockup image="/screenshots/conversations.png" label="Conversations" />
         </div>
       </div>
     </div>
@@ -152,8 +152,28 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
     </div>
   </section>
 
+  <!-- App Screenshots -->
+  <section class="py-24 bg-bg-subtle border-y border-border overflow-hidden">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">The App</span>
+        <h2 class="text-4xl font-bold mt-4">Beautiful and secure</h2>
+        <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
+          ASH is designed to be simple and intuitive while providing mathematically perfect security.
+        </p>
+      </div>
+
+      <div class="flex justify-center gap-8 flex-wrap">
+        <PhoneMockup image="/screenshots/onboarding.png" label="Onboarding" />
+        <PhoneMockup image="/screenshots/conversations.png" label="Conversations" />
+        <PhoneMockup image="/screenshots/messaging.png" label="Messaging" />
+        <PhoneMockup image="/screenshots/settings.png" label="Settings" />
+      </div>
+    </div>
+  </section>
+
   <!-- Interactive Protocol Demo -->
-  <section class="py-24 bg-bg-subtle border-y border-border" id="demo">
+  <section class="py-24" id="demo">
     <div class="max-w-6xl mx-auto px-6">
       <div class="text-center mb-12">
         <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">See It In Action</span>

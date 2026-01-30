@@ -1,35 +1,47 @@
 ---
 interface Props {
   label?: string
+  image?: string
   class?: string
 }
 
 const {
   label,
+  image,
   class: className = ''
 } = Astro.props
 ---
 
 <div class={`relative ${className}`}>
   <!-- Phone frame -->
-  <div class="relative mx-auto w-[280px] h-[580px] bg-bg-card rounded-[3rem] border-4 border-border-light shadow-2xl shadow-black/50">
+  <div class="relative mx-auto w-[280px] h-[580px] bg-[#1a1a1a] rounded-[3rem] border-4 border-[#2a2a2a] shadow-2xl shadow-black/50">
     <!-- Dynamic Island -->
-    <div class="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-8 bg-black rounded-full"></div>
+    <div class="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-8 bg-black rounded-full z-10"></div>
 
     <!-- Screen content -->
-    <div class="absolute inset-6 top-16 bottom-6 rounded-[2rem] bg-bg-elevated overflow-hidden flex items-center justify-center">
-      <div class="text-center p-6">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
-          <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z" />
-          </svg>
+    <div class="absolute inset-[3px] rounded-[2.8rem] bg-black overflow-hidden">
+      {image ? (
+        <img
+          src={image}
+          alt={label || 'App screenshot'}
+          class="w-full h-full object-cover object-top"
+        />
+      ) : (
+        <div class="w-full h-full flex items-center justify-center bg-bg-elevated">
+          <div class="text-center p-6">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-brand-subtle flex items-center justify-center">
+              <svg class="w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 19.5h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5z" />
+              </svg>
+            </div>
+            <p class="text-text-muted text-sm">Screenshot placeholder</p>
+            {label && <p class="text-text-secondary text-xs mt-2">{label}</p>}
+          </div>
         </div>
-        <p class="text-text-muted text-sm">Screenshot placeholder</p>
-        {label && <p class="text-text-secondary text-xs mt-2">{label}</p>}
-      </div>
+      )}
     </div>
 
     <!-- Home indicator -->
-    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full"></div>
+    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full z-10"></div>
   </div>
 </div>

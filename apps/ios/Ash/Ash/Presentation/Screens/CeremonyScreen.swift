@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct CeremonyScreen: View {
     @Bindable var viewModel: CeremonyViewModel
@@ -1767,8 +1768,7 @@ private struct QRDisplayView: View {
                     .tint(.accentColor)
                     .padding(.horizontal, 40)
                     .padding(.top, 6)
-
-                Spacer()
+                    .padding(.bottom, 16)
 
                 // Playback Controls
                 VStack(spacing: 12) {
@@ -1862,7 +1862,8 @@ private struct QRDisplayView: View {
                         .foregroundStyle(.primary)
                     }
                 }
-                .padding(.bottom, 12)
+
+                Spacer()
 
                 // Receiver Ready button
                 Button { viewModel.finishSending() } label: {
@@ -2683,3 +2684,214 @@ private struct FailedView: View {
     }
 }
 
+// MARK: - Screenshot Previews
+
+@MainActor
+private enum CeremonyPreview {
+    static let dependencies = Dependencies()
+
+    static var ceremonyVM: CeremonyViewModel {
+        CeremonyViewModel(dependencies: dependencies)
+    }
+
+    static var initiatorVM: InitiatorCeremonyViewModel {
+        let vm = InitiatorCeremonyViewModel(dependencies: dependencies)
+        vm.passphrase = "secret"
+        return vm
+    }
+
+    static var receiverVM: ReceiverCeremonyViewModel {
+        let vm = ReceiverCeremonyViewModel(dependencies: dependencies)
+        vm.passphrase = "secret"
+        return vm
+    }
+}
+
+#Preview("1. Role Selection") {
+    NavigationStack {
+        RoleSelectionView(viewModel: CeremonyPreview.ceremonyVM)
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {}
+                }
+            }
+    }
+    .tint(Color.ashAccent)
+}
+
+#Preview("2. Pad Size") {
+    NavigationStack {
+        PadSizeView(viewModel: CeremonyPreview.initiatorVM)
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {}
+                }
+            }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("3. Options") {
+    NavigationStack {
+        OptionsView(viewModel: CeremonyPreview.initiatorVM)
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {}
+                }
+            }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("4. Consent") {
+    NavigationStack {
+        ConsentView(viewModel: CeremonyPreview.initiatorVM, accentColor: Color.indigo)
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {}
+                }
+            }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("5. Entropy") {
+    NavigationStack {
+        EntropyView(viewModel: CeremonyPreview.initiatorVM, accentColor: Color.indigo)
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {}
+                }
+            }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("6. Generating") {
+    NavigationStack {
+        GeneratingView(
+            title: "Generating QR Codes",
+            subtitle: "Preparing 72 frames for transfer...",
+            current: 45,
+            total: 72,
+            accentColor: Color.indigo
+        )
+        .navigationTitle("New Conversation")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {}
+            }
+        }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("7. QR Display") {
+    NavigationStack {
+        QRDisplayView(
+            viewModel: CeremonyPreview.initiatorVM,
+            currentFrame: 24,
+            totalFrames: 72,
+            accentColor: Color.indigo
+        )
+        .navigationTitle("New Conversation")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {}
+            }
+        }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("8. Receiver Setup") {
+    NavigationStack {
+        ReceiverSetupView(viewModel: CeremonyPreview.receiverVM)
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {}
+                }
+            }
+    }
+    .tint(Color.ashAccent)
+}
+
+#Preview("9. QR Scan") {
+    NavigationStack {
+        QRScanView(viewModel: CeremonyPreview.receiverVM, accentColor: Color.indigo)
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {}
+                }
+            }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("10. Verification") {
+    NavigationStack {
+        VerificationView(
+            mnemonic: ["whisper", "phoenix", "ember", "shadow", "cipher", "vault"],
+            accentColor: Color.indigo,
+            conversationName: .constant(""),
+            onConfirm: {},
+            onReject: {}
+        )
+        .navigationTitle("New Conversation")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {}
+            }
+        }
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("11. Completed") {
+    NavigationStack {
+        CompletedView(
+            conversation: Conversation.screenshotSamples[0],
+            onContinue: {},
+            accentColor: Color.indigo
+        )
+        .navigationTitle("New Conversation")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    .tint(Color.indigo)
+}
+
+#Preview("12. Failed") {
+    NavigationStack {
+        FailedView(
+            error: .checksumMismatch,
+            onRetry: {},
+            onCancel: {},
+            accentColor: Color.indigo
+        )
+        .navigationTitle("New Conversation")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {}
+            }
+        }
+    }
+    .tint(Color.indigo)
+}

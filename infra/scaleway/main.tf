@@ -66,7 +66,7 @@ data "scaleway_container_namespace" "main" {
 
 resource "scaleway_container" "backend" {
   name           = "relay-${var.environment}"
-  namespace_id   = data.scaleway_container_namespace.main.id
+  namespace_id   = data.scaleway_container_namespace.main.namespace_id
   registry_image = "${data.scaleway_registry_namespace.main.endpoint}/ash-backend:${var.image_tag}"
   port           = 8080
   cpu_limit      = var.container_cpu_limit

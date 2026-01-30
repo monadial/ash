@@ -163,11 +163,35 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
         </p>
       </div>
 
-      <div class="flex justify-center gap-8 flex-wrap">
-        <PhoneMockup image="/screenshots/onboarding.png" label="Onboarding" />
-        <PhoneMockup image="/screenshots/conversations.png" label="Conversations" />
-        <PhoneMockup image="/screenshots/messaging.png" label="Messaging" />
-        <PhoneMockup image="/screenshots/settings.png" label="Settings" />
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6 justify-items-center">
+        <div class="flex flex-col items-center">
+          <PhoneMockup image="/screenshots/onboarding.png" />
+          <h3 class="font-semibold mt-6 mb-2">Welcome</h3>
+          <p class="text-text-secondary text-sm text-center max-w-[200px]">
+            Clean onboarding explains the unique security model
+          </p>
+        </div>
+        <div class="flex flex-col items-center">
+          <PhoneMockup image="/screenshots/conversations.png" />
+          <h3 class="font-semibold mt-6 mb-2">Conversations</h3>
+          <p class="text-text-secondary text-sm text-center max-w-[200px]">
+            See pad usage at a glance with visual indicators
+          </p>
+        </div>
+        <div class="flex flex-col items-center">
+          <PhoneMockup image="/screenshots/messaging.png" />
+          <h3 class="font-semibold mt-6 mb-2">Messaging</h3>
+          <p class="text-text-secondary text-sm text-center max-w-[200px]">
+            Familiar chat interface with delivery confirmations
+          </p>
+        </div>
+        <div class="flex flex-col items-center">
+          <PhoneMockup image="/screenshots/settings.png" />
+          <h3 class="font-semibold mt-6 mb-2">Settings</h3>
+          <p class="text-text-secondary text-sm text-center max-w-[200px]">
+            Full control over security and privacy options
+          </p>
+        </div>
       </div>
     </div>
   </section>

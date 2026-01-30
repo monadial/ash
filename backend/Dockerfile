@@ -3,9 +3,9 @@
 # =============================================================================
 #
 # Optimized for:
-# - Fast rebuilds via cargo-chef dependency caching
 # - Minimal final image size (~25MB)
 # - Security (non-root user, minimal attack surface)
+# - Docker layer caching for dependencies
 #
 # Build: docker build -t ash-backend .
 # Run:   docker run -p 8080:8080 ash-backend
@@ -13,44 +13,28 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Stage 1: Chef - Install cargo-chef for dependency caching
+# Stage 1: Builder - Build the application
 # -----------------------------------------------------------------------------
-FROM rust:1.83-slim-bookworm AS chef
+FROM rust:1.83-slim-bookworm AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN cargo install cargo-chef --locked
-
 WORKDIR /app
 
-# -----------------------------------------------------------------------------
-# Stage 2: Planner - Analyze dependencies and create recipe
-# -----------------------------------------------------------------------------
-FROM chef AS planner
-
+# Copy manifests first for better caching
+# Remove dev-dependencies that have path references outside the build context
 COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+    sed -i '/^\[dev-dependencies\]/,/^\[/{ /ash-core/d }' Cargo.toml && \
+    cargo build --release && \
+    rm -rf src
+
+# Copy source and build
 COPY src ./src
-
-# Generate recipe.json for dependency caching
-RUN cargo chef prepare --recipe-path recipe.json
-
-# -----------------------------------------------------------------------------
-# Stage 3: Builder - Build dependencies (cached) then application
-# -----------------------------------------------------------------------------
-FROM chef AS builder
-
-# Build dependencies first (cached unless Cargo.toml/Cargo.lock change)
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-
-# Build application
-COPY Cargo.toml Cargo.lock ./
-COPY src ./src
-
-RUN cargo build --release --locked
+RUN cargo build --release --bin ash-backend
 
 # Verify binary exists and strip it (extra strip for good measure)
 RUN strip /app/target/release/ash-backend

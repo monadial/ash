@@ -209,12 +209,6 @@ jobs:
           terraform init \
             -backend-config="key=scaleway/${{ needs.setup.outputs.environment }}/terraform.tfstate"
 
-      - name: Remove old namespace resource from state (migrated to data source)
-        working-directory: infra/scaleway
-        continue-on-error: true
-        run: |
-          terraform state rm scaleway_container_namespace.main 2>/dev/null || true
-
       - name: Terraform Plan
         working-directory: infra/scaleway
         run: |

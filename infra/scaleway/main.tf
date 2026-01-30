@@ -53,8 +53,9 @@ data "scaleway_registry_namespace" "main" {
 # Serverless Container Namespace (shared between environments)
 # =============================================================================
 
-# Namespace is created automatically if it doesn't exist
-resource "scaleway_container_namespace" "main" {
+# Namespace is shared between prod and beta - lookup existing
+# Create manually if needed: scw container namespace create name=ash-backend region=nl-ams
+data "scaleway_container_namespace" "main" {
   name   = "ash-backend"
   region = var.region
 }
@@ -65,7 +66,7 @@ resource "scaleway_container_namespace" "main" {
 
 resource "scaleway_container" "backend" {
   name           = "relay-${var.environment}"
-  namespace_id   = scaleway_container_namespace.main.id
+  namespace_id   = data.scaleway_container_namespace.main.id
   registry_image = "${data.scaleway_registry_namespace.main.endpoint}/ash-backend:${var.image_tag}"
   port           = 8080
   cpu_limit      = var.container_cpu_limit

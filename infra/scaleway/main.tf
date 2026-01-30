@@ -88,8 +88,18 @@ resource "scaleway_container" "backend" {
     APNS_TEAM_ID = var.apns_team_id
   } : {}
 
-  # Health check
+  # HTTP redirect option
   http_option = "redirected"
+
+  # Health check probe
+  health_check {
+    http {
+      path = "/health"
+    }
+    failure_threshold = 3
+    interval          = "30s"
+    timeout           = "10s"
+  }
 }
 
 # =============================================================================

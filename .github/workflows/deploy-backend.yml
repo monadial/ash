@@ -193,6 +193,8 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       TF_VAR_cloudflare_zone_id: ${{ vars.CLOUDFLARE_ZONE_ID }}
+      # Scaleway project ID for Terraform
+      TF_VAR_project_id: ${{ vars.SCW_DEFAULT_PROJECT_ID }}
 
     steps:
       - name: Checkout

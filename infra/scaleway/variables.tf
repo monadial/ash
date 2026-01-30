@@ -14,6 +14,11 @@ variable "zone" {
   default     = "nl-ams-1"
 }
 
+variable "project_id" {
+  description = "Scaleway project ID"
+  type        = string
+}
+
 variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string

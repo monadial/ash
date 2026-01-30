@@ -219,7 +219,7 @@ jobs:
         working-directory: infra/scaleway
         run: |
           terraform plan \
-            -var="environment=${{ needs.setup.outputs.environment }}" \
+            -var-file="environments/${{ needs.setup.outputs.environment }}.tfvars" \
             -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
             -out=tfplan
 

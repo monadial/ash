@@ -20,7 +20,7 @@ struct LoadingScreen: View {
                 Spacer()
 
                 // Logo
-                AppLogo(size: .large, animated: true)
+                AppLogo(size: .large)
                     .opacity(showContent ? 1 : 0)
                     .scaleEffect(showContent ? 1 : 0.9)
 
@@ -50,17 +50,9 @@ struct AppLogo: View {
 
         var iconSize: CGFloat {
             switch self {
-            case .small: return 32
-            case .medium: return 48
-            case .large: return 64
-            }
-        }
-
-        var ringSize: CGFloat {
-            switch self {
-            case .small: return 56
-            case .medium: return 80
-            case .large: return 100
+            case .small: return 40
+            case .medium: return 64
+            case .large: return 80
             }
         }
 
@@ -82,39 +74,17 @@ struct AppLogo: View {
     }
 
     let size: Size
-    var animated: Bool = false
     var showTitle: Bool = true
-
-    @State private var ringProgress: CGFloat = 0
-    @State private var iconScale: CGFloat = 0.8
-    @State private var iconOpacity: CGFloat = 0
 
     var body: some View {
         VStack(spacing: size.spacing) {
-            // Icon with ring
-            ZStack {
-                // Background ring
-                Circle()
-                    .stroke(Color.ashSecure.opacity(0.15), lineWidth: 2)
-                    .frame(width: size.ringSize, height: size.ringSize)
-
-                // Animated progress ring
-                Circle()
-                    .trim(from: 0, to: animated ? ringProgress : 1)
-                    .stroke(
-                        Color.ashSecure.opacity(0.4),
-                        style: StrokeStyle(lineWidth: 2, lineCap: .round)
-                    )
-                    .frame(width: size.ringSize, height: size.ringSize)
-                    .rotationEffect(.degrees(-90))
-
-                // Shield icon
-                Image(systemName: "shield.fill")
-                    .font(.system(size: size.iconSize, weight: .medium))
-                    .foregroundStyle(Color.ashSecure)
-                    .scaleEffect(animated ? iconScale : 1)
-                    .opacity(animated ? iconOpacity : 1)
-            }
+            // ASH Logo (tinted)
+            Image("ash_logo")
+                .renderingMode(.template)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size.iconSize, height: size.iconSize)
+                .foregroundStyle(Color.ashSecure)
 
             if showTitle {
                 // App name
@@ -122,18 +92,6 @@ struct AppLogo: View {
                     .font(size.titleFont)
                     .foregroundStyle(Color.primary)
                     .tracking(4)
-            }
-        }
-        .onAppear {
-            guard animated else { return }
-
-            withAnimation(.easeOut(duration: 0.5)) {
-                iconOpacity = 1
-                iconScale = 1
-            }
-
-            withAnimation(.easeInOut(duration: 0.8).delay(0.2)) {
-                ringProgress = 1
             }
         }
     }

@@ -112,6 +112,13 @@ final class Log: Sendable {
     /// Shared instance with default configuration
     nonisolated(unsafe) static var shared = Log()
 
+    /// Date formatter for timestamps (HH:mm:ss.SSS)
+    private static let timestampFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        return formatter
+    }()
+
     /// Minimum log level - messages below this level are ignored
     nonisolated(unsafe) private(set) var minLevel: LogLevel
 
@@ -159,13 +166,14 @@ final class Log: Sendable {
         guard level >= shared.minLevel else { return }
 
         let msg = message()
+        let timestamp = timestampFormatter.string(from: Date())
         let output: String
 
         if shared.profile.includeSourceLocation {
             let filename = (file as NSString).lastPathComponent
-            output = "\(level.prefix) [\(category.rawValue)] \(msg) (\(filename):\(line))"
+            output = "\(timestamp) \(level.prefix) [\(category.rawValue)] \(msg) (\(filename):\(line))"
         } else {
-            output = "\(level.prefix) [\(category.rawValue)] \(msg)"
+            output = "\(timestamp) \(level.prefix) [\(category.rawValue)] \(msg)"
         }
 
         // Use os_log for system integration (visible in Console.app and Xcode)

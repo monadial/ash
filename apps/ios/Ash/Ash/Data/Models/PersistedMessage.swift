@@ -43,6 +43,9 @@ final class PersistedMessage {
     /// Whether the message content has been securely wiped (pad bytes zeroed)
     var isContentWiped: Bool
 
+    /// Authentication tag (32 bytes) for message integrity verification display
+    var authTag: Data?
+
     init(
         id: UUID,
         conversationId: String,
@@ -88,6 +91,7 @@ extension PersistedMessage {
             sequence: message.sequence,
             isContentWiped: message.isContentWiped
         )
+        self.authTag = message.authTag.map { Data($0) }
     }
 
     /// Convert to domain Message
@@ -102,7 +106,8 @@ extension PersistedMessage {
             isOutgoing: isOutgoing,
             expiresAt: expiresAt,
             deliveryStatus: deliveryStatus,
-            sequence: sequence
+            sequence: sequence,
+            authTag: authTag.map { Array($0) }
         )
         message.isContentWiped = isContentWiped
         return message

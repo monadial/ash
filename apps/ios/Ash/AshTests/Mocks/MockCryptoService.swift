@@ -56,6 +56,47 @@ final class MockCryptoService: CryptoServiceProtocol, @unchecked Sendable {
         return zip(ciphertext, key).map { $0 ^ $1 }
     }
 
+    func encryptAuthenticated(plaintext: [UInt8], authKey: [UInt8], encryptionKey: [UInt8], messageType: MessageType) throws -> [UInt8] {
+        encryptCalled = true
+        lastEncryptKey = encryptionKey
+
+        if let error = encryptError {
+            throw error
+        }
+
+        // Simple mock: XOR encrypt and append a fake 32-byte tag
+        let ciphertext = zip(plaintext, encryptionKey).map { $0 ^ $1 }
+        let fakeTag = [UInt8](repeating: 0xAB, count: 32)
+        return [messageType.rawValue] + ciphertext + fakeTag
+    }
+
+    func decryptAuthenticated(encodedFrame: [UInt8], authKey: [UInt8], encryptionKey: [UInt8]) throws -> AuthenticatedDecryptResult {
+        decryptCalled = true
+        lastDecryptKey = encryptionKey
+
+        if let error = decryptError {
+            throw error
+        }
+
+        // Parse mock frame: [msgType (1)] + [ciphertext (N)] + [tag (32)]
+        guard encodedFrame.count >= 33 else {
+            throw CryptoError.invalidData
+        }
+
+        let msgType = MessageType(rawValue: encodedFrame[0]) ?? .text
+        let ciphertext = Array(encodedFrame[1..<(encodedFrame.count - 32)])
+        let tag = Array(encodedFrame.suffix(32))
+
+        let plaintext = zip(ciphertext, encryptionKey).map { $0 ^ $1 }
+
+        return AuthenticatedDecryptResult(plaintext: plaintext, messageType: msgType, authTag: tag)
+    }
+
+    func calculatePadConsumption(plaintextLength: Int) -> Int {
+        // 64 bytes auth overhead + plaintext length
+        return 64 + plaintextLength
+    }
+
     func generateSecurePad(userEntropy: [UInt8], sizeBytes: Int) throws -> [UInt8] {
         // Return predictable bytes for testing (0, 1, 2, 3, ...)
         return (0..<sizeBytes).map { UInt8($0 % 256) }

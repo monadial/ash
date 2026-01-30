@@ -322,7 +322,7 @@ final class MessagingViewModel {
         do {
             // Ephemeral-only mode: all messages stored in RAM on server
             let ttlSeconds = conversation.messageRetention.seconds
-            let blobId = try await Log.measureAsync(.relay, "submit") {
+            let submitResult = try await Log.measureAsync(.relay, "submit") {
                 try await relay.submitMessage(
                     conversationId: conversation.id,
                     authToken: conversation.authToken,
@@ -333,14 +333,18 @@ final class MessagingViewModel {
                     persistent: false
                 )
             }
-            sentBlobIds.insert(blobId)
-            // Update message with blob ID and mark as sent
+            sentBlobIds.insert(submitResult.blobId)
+            // Update message with blob ID, server-provided expiry, and mark as sent
             if let index = messages.firstIndex(where: { $0.id == messageId }) {
-                messages[index] = messages[index].withBlobId(blobId).withDeliveryStatus(.sent)
+                var updatedMessage = messages[index].withBlobId(submitResult.blobId)
+                if let expiresAt = submitResult.expiresAt {
+                    updatedMessage = updatedMessage.withServerExpiresAt(expiresAt)
+                }
+                messages[index] = updatedMessage.withDeliveryStatus(.sent)
             }
             // Reset re-registration flag on successful submit
             hasAttemptedReregistration = false
-            Log.info(.relay, "[\(logId)] Submitted: \(ciphertext.count) bytes, seq=\(sequence), ttl=\(ttlSeconds)s")
+            Log.info(.relay, "[\(logId)] Submitted: \(ciphertext.count) bytes, seq=\(sequence), expires=\(submitResult.expiresAt?.description ?? "unknown")")
         } catch let error as RelayError {
             if case .conversationNotFound = error, !hasAttemptedReregistration {
                 // Conversation not registered - try to re-register and retry once

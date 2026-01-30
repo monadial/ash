@@ -295,7 +295,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
               <div class="divide-y divide-border">
                 <div class="p-4">
                   <div class="flex items-start gap-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
+                    <span class="shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">1</span>
                     <div>
                       <h4 class="font-medium mb-1">Pad Size Selection</h4>
                       <p class="text-text-secondary text-sm">Sender selects pad size via slider, determining message capacity and ceremony duration.</p>
@@ -304,7 +304,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 </div>
                 <div class="p-4">
                   <div class="flex items-start gap-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
+                    <span class="shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">2</span>
                     <div>
                       <h4 class="font-medium mb-1">Entropy Collection</h4>
                       <p class="text-text-secondary text-sm">OS randomness mixed with required gesture input. User draws patterns while entropy accumulates visually.</p>
@@ -313,7 +313,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 </div>
                 <div class="p-4">
                   <div class="flex items-start gap-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
+                    <span class="shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">3</span>
                     <div>
                       <h4 class="font-medium mb-1">Passphrase Exchange</h4>
                       <p class="text-text-secondary text-sm">Both parties agree on a shared passphrase (minimum 4 characters). This encrypts QR frames to protect against visual observation.</p>
@@ -322,7 +322,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 </div>
                 <div class="p-4">
                   <div class="flex items-start gap-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
+                    <span class="shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">4</span>
                     <div>
                       <h4 class="font-medium mb-1">QR Transfer</h4>
                       <p class="text-text-secondary text-sm">Sender displays passphrase-encrypted QR codes. Receiver scans frames, decrypts, validates CRC, and acknowledges.</p>
@@ -331,7 +331,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 </div>
                 <div class="p-4">
                   <div class="flex items-start gap-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
+                    <span class="shrink-0 w-8 h-8 bg-brand rounded-lg flex items-center justify-center text-white font-bold text-sm">5</span>
                     <div>
                       <h4 class="font-medium mb-1">Mnemonic Verification</h4>
                       <p class="text-text-secondary text-sm">Both devices display 6-word checksum. Users verbally confirm match to detect tampering.</p>
@@ -340,7 +340,7 @@ Ciphertext: ?   ?   ?   ?   ?      (encrypted bytes)`}
                 </div>
                 <div class="p-4">
                   <div class="flex items-start gap-4">
-                    <span class="flex-shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">6</span>
+                    <span class="shrink-0 w-8 h-8 bg-success rounded-lg flex items-center justify-center text-white font-bold text-sm">6</span>
                     <div>
                       <h4 class="font-medium mb-1">Activation</h4>
                       <p class="text-text-secondary text-sm">Tokens derived from pad. Conversation becomes active. Messaging available.</p>
@@ -698,28 +698,28 @@ Minimum frame size: 4 (header) + 32 (min ciphertext) + 32 (tag) = 68 bytes`}
                 <!-- Algorithm Steps -->
                 <div class="mt-4 space-y-3">
                   <div class="flex items-start gap-3">
-                    <span class="flex-shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">1</span>
+                    <span class="shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">1</span>
                     <div class="text-sm">
                       <span class="text-white font-medium">Split message into 128-bit blocks:</span>
                       <span class="text-text-secondary"> Each 16-byte chunk becomes a field element.</span>
                     </div>
                   </div>
                   <div class="flex items-start gap-3">
-                    <span class="flex-shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">2</span>
+                    <span class="shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">2</span>
                     <div class="text-sm">
                       <span class="text-white font-medium">Build polynomial:</span>
                       <span class="text-text-secondary"> Blocks are coefficients: P(x) = b₁·x^n + b₂·x^(n-1) + ... + bₙ·x</span>
                     </div>
                   </div>
                   <div class="flex items-start gap-3">
-                    <span class="flex-shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">3</span>
+                    <span class="shrink-0 w-6 h-6 bg-brand/20 rounded flex items-center justify-center text-brand text-xs font-bold">3</span>
                     <div class="text-sm">
                       <span class="text-white font-medium">Evaluate at secret point r:</span>
                       <span class="text-text-secondary"> Compute P(r) in GF(2^128) using Horner's method.</span>
                     </div>
                   </div>
                   <div class="flex items-start gap-3">
-                    <span class="flex-shrink-0 w-6 h-6 bg-success/20 rounded flex items-center justify-center text-success text-xs font-bold">4</span>
+                    <span class="shrink-0 w-6 h-6 bg-success/20 rounded flex items-center justify-center text-success text-xs font-bold">4</span>
                     <div class="text-sm">
                       <span class="text-white font-medium">Apply OTP mask:</span>
                       <span class="text-text-secondary"> Tag = P(r) ⊕ s. The mask s is never reused.</span>

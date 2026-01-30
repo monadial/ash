@@ -148,6 +148,26 @@ actor MockPadManager: PadManagerProtocol {
         )
     }
 
+    func zeroPadBytes(offset: UInt64, length: UInt64, for conversationId: String) async throws {
+        guard var pad = pads[conversationId] else {
+            throw PadManagerError.padNotFound
+        }
+
+        let start = Int(offset)
+        let end = start + Int(length)
+
+        guard start >= 0, end <= pad.bytes.count else {
+            throw PadManagerError.insufficientBytes
+        }
+
+        // Zero out the bytes for forward secrecy
+        for i in start..<end {
+            pad.bytes[i] = 0
+        }
+
+        pads[conversationId] = pad
+    }
+
     func wipePad(for conversationId: String) async throws {
         pads.removeValue(forKey: conversationId)
     }

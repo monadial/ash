@@ -12,32 +12,9 @@
 //! - No long-term storage - data deleted on ACK or expiry
 //! - Best-effort delivery - no guaranteed message persistence
 
-mod apns;
-mod auth;
-mod config;
-mod expiry;
-mod handlers;
-mod models;
-mod store;
-
-use axum::{
-    http::{header, Method},
-    routing::{get, post},
-    Router,
-};
-use config::Config;
-use handlers::AppState;
+use ash_backend::{apns, build_router, config::Config, expiry, handlers::AppState, store::Store};
 use std::sync::Arc;
-use store::Store;
-use tower_http::{
-    cors::{Any, CorsLayer},
-    limit::RequestBodyLimitLayer,
-    trace::TraceLayer,
-};
 use tracing::info;
-
-/// Maximum request body size (16 KiB).
-const MAX_BODY_SIZE: usize = 16 * 1024;
 
 #[tokio::main]
 async fn main() {
@@ -93,34 +70,8 @@ fn log_startup_info(config: &Config) {
     );
 }
 
-/// Build the Axum router with all endpoints and middleware.
-fn build_router(state: AppState) -> Router {
-    Router::new()
-        // Health check (unauthenticated)
-        .route("/health", get(handlers::health))
-        // API v1 endpoints
-        .route("/v1/conversations", post(handlers::register_conversation))
-        .route("/v1/register", post(handlers::register_device))
-        .route("/v1/messages", post(handlers::submit_message))
-        .route("/v1/messages", get(handlers::poll_messages))
-        .route("/v1/messages/ack", post(handlers::ack_messages))
-        .route("/v1/messages/stream", get(handlers::message_stream))
-        .route("/v1/burn", post(handlers::burn_conversation))
-        .route("/v1/burn", get(handlers::burn_status))
-        // Middleware stack (order matters: first added = outermost)
-        .layer(RequestBodyLimitLayer::new(MAX_BODY_SIZE))
-        .layer(
-            CorsLayer::new()
-                .allow_origin(Any)
-                .allow_methods([Method::GET, Method::POST])
-                .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION]),
-        )
-        .layer(TraceLayer::new_for_http())
-        .with_state(state)
-}
-
 /// Bind to address and serve the application.
-async fn serve(app: Router, config: &Config) {
+async fn serve(app: axum::Router, config: &Config) {
     let bind_addr = format!("{}:{}", config.bind_addr, config.port);
 
     let listener = tokio::net::TcpListener::bind(&bind_addr)

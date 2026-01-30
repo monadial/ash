@@ -132,6 +132,32 @@ impl From<Role> for ash_core::Role {
     }
 }
 
+// === Transfer Method Enum ===
+
+/// Transfer method for QR ceremony.
+///
+/// Determines which erasure coding strategy is used for pad transfer.
+/// All methods use the same wire format, so receivers auto-adapt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransferMethod {
+    /// Raptor codes - near-optimal, K + 2-5 blocks overhead (recommended)
+    Raptor,
+    /// LT codes - legacy fountain codes, K + O(√K) blocks overhead
+    LT,
+    /// Sequential - plain numbered frames, no erasure coding
+    Sequential,
+}
+
+impl From<TransferMethod> for ash_core::frame::TransferMethod {
+    fn from(method: TransferMethod) -> Self {
+        match method {
+            TransferMethod::Raptor => ash_core::frame::TransferMethod::Raptor,
+            TransferMethod::LT => ash_core::frame::TransferMethod::LT,
+            TransferMethod::Sequential => ash_core::frame::TransferMethod::Sequential,
+        }
+    }
+}
+
 // === Pad Wrapper ===
 
 /// Thread-safe wrapper around ash_core::Pad for FFI
@@ -281,6 +307,14 @@ pub struct AuthTokens {
     pub burn_token: String,
 }
 
+/// Result of authenticated decryption
+#[derive(Debug, Clone)]
+pub struct DecryptedMessage {
+    pub plaintext: Vec<u8>,
+    pub msg_type: u8,
+    pub tag: Vec<u8>,
+}
+
 // === Fountain Ceremony Result ===
 
 /// Result of fountain ceremony decoding
@@ -398,11 +432,13 @@ impl FountainFrameReceiver {
 
 /// Create a fountain frame generator for ceremony.
 /// Passphrase is required for encrypting the QR frames.
+/// Method selects the transfer strategy (Raptor recommended).
 pub fn create_fountain_generator(
     metadata: CeremonyMetadata,
     pad_bytes: Vec<u8>,
     block_size: u32,
     passphrase: String,
+    method: TransferMethod,
 ) -> Result<std::sync::Arc<FountainFrameGenerator>, AshError> {
     let core_metadata: ash_core::CeremonyMetadata = metadata.into();
     let generator = ash_core::frame::create_fountain_ceremony(
@@ -410,15 +446,102 @@ pub fn create_fountain_generator(
         &pad_bytes,
         block_size as usize,
         Some(&passphrase),
+        method.into(),
     )?;
     Ok(std::sync::Arc::new(FountainFrameGenerator {
         inner: Mutex::new(generator),
     }))
 }
 
+// === Authenticated Message Operations ===
+
+/// Authentication overhead per message (64 bytes for Wegman-Carter MAC)
+pub fn get_auth_overhead() -> u32 {
+    ash_core::mac::AUTH_KEY_SIZE as u32
+}
+
+/// Calculate total pad consumption for a message
+/// Returns: auth_overhead (64) + plaintext_length
+pub fn calculate_pad_consumption(plaintext_length: u32) -> u32 {
+    ash_core::message::pad_consumption(plaintext_length as usize) as u32
+}
+
+/// Encrypt plaintext with Wegman-Carter authentication.
+///
+/// This is the recommended encryption function. It provides:
+/// - OTP encryption (information-theoretic confidentiality)
+/// - Wegman-Carter MAC (information-theoretic authenticity)
+/// - Anti-malleability (any bit flip is detected)
+pub fn encrypt_authenticated(
+    auth_key: Vec<u8>,
+    encryption_key: Vec<u8>,
+    plaintext: Vec<u8>,
+    msg_type: u8,
+) -> Result<Vec<u8>, AshError> {
+    use ash_core::mac::AuthKey;
+    use ash_core::message::{MessageFrame, MessageType};
+
+    // Validate auth key size
+    if auth_key.len() != ash_core::mac::AUTH_KEY_SIZE {
+        return Err(AshError::LengthMismatch);
+    }
+
+    // Parse message type
+    let message_type = MessageType::from_byte(msg_type)
+        .ok_or(AshError::InvalidMetadataUrl)?; // Reuse error for invalid type
+
+    // Create auth key
+    let auth_key_array: [u8; 64] = auth_key.try_into()
+        .map_err(|_| AshError::LengthMismatch)?;
+    let auth = AuthKey::from_bytes(&auth_key_array);
+
+    // Encrypt and authenticate
+    let frame = MessageFrame::encrypt(message_type, &plaintext, &encryption_key, &auth)?;
+
+    // Encode to wire format
+    Ok(frame.encode())
+}
+
+/// Decrypt and verify an authenticated message.
+///
+/// Verifies the authentication tag BEFORE decryption.
+/// If verification fails, returns AuthenticationFailed error.
+pub fn decrypt_authenticated(
+    auth_key: Vec<u8>,
+    encryption_key: Vec<u8>,
+    encoded_frame: Vec<u8>,
+) -> Result<DecryptedMessage, AshError> {
+    use ash_core::mac::AuthKey;
+    use ash_core::message::MessageFrame;
+
+    // Validate auth key size
+    if auth_key.len() != ash_core::mac::AUTH_KEY_SIZE {
+        return Err(AshError::LengthMismatch);
+    }
+
+    // Create auth key
+    let auth_key_array: [u8; 64] = auth_key.try_into()
+        .map_err(|_| AshError::LengthMismatch)?;
+    let auth = AuthKey::from_bytes(&auth_key_array);
+
+    // Decode frame
+    let frame = MessageFrame::decode(&encoded_frame)?;
+
+    // Verify and decrypt (verification happens first internally)
+    let plaintext = frame.decrypt(&encryption_key, &auth)?;
+
+    Ok(DecryptedMessage {
+        plaintext,
+        msg_type: frame.msg_type.to_byte(),
+        tag: frame.tag.to_vec(),
+    })
+}
+
+// === Legacy OTP Operations (no authentication) ===
+
 /// Encrypt plaintext using OTP (XOR).
 ///
-/// Note: For authenticated encryption, use MessageFrame in the iOS app.
+/// WARNING: No authentication - use encrypt_authenticated for new code.
 /// This raw XOR function is exposed for legacy compatibility.
 pub fn encrypt(key: Vec<u8>, plaintext: Vec<u8>) -> Result<Vec<u8>, AshError> {
     if key.len() != plaintext.len() {
@@ -429,7 +552,7 @@ pub fn encrypt(key: Vec<u8>, plaintext: Vec<u8>) -> Result<Vec<u8>, AshError> {
 
 /// Decrypt ciphertext using OTP (XOR).
 ///
-/// Note: For authenticated decryption, use MessageFrame in the iOS app.
+/// WARNING: No authentication - use decrypt_authenticated for new code.
 /// This raw XOR function is exposed for legacy compatibility.
 pub fn decrypt(key: Vec<u8>, ciphertext: Vec<u8>) -> Result<Vec<u8>, AshError> {
     if key.len() != ciphertext.len() {
@@ -509,6 +632,49 @@ pub fn secure_zero_bytes(mut data: Vec<u8>) {
     std::sync::atomic::compiler_fence(std::sync::atomic::Ordering::SeqCst);
 }
 
+// === Pad Calculator Functions ===
+
+/// Calculate source blocks (K) for given pad size and block size.
+/// Includes metadata overhead in calculation.
+pub fn calculate_source_blocks(pad_bytes: u64, block_size: u32) -> u32 {
+    let total_data = pad_bytes as usize + ash_core::pad_calculator::METADATA_OVERHEAD;
+    let block_size = block_size as usize;
+    if block_size == 0 {
+        return 0;
+    }
+    ((total_data + block_size - 1) / block_size) as u32
+}
+
+/// Calculate expected frames needed for successful transfer.
+/// This is the number displayed in UI as "~X QR frames".
+pub fn calculate_expected_frames(pad_bytes: u64, block_size: u32, method: TransferMethod) -> u32 {
+    let source_blocks = calculate_source_blocks(pad_bytes, block_size) as usize;
+    ash_core::pad_calculator::expected_frames(source_blocks, method.into()) as u32
+}
+
+/// Calculate redundancy blocks to pre-generate beyond source count.
+/// This is used for QR pre-generation to ensure enough frames are ready.
+pub fn calculate_redundancy_blocks(source_blocks: u32, method: TransferMethod) -> u32 {
+    ash_core::pad_calculator::redundancy_blocks(source_blocks as usize, method.into()) as u32
+}
+
+/// Calculate total frames to pre-generate (source + redundancy).
+pub fn calculate_frames_to_generate(pad_bytes: u64, block_size: u32, method: TransferMethod) -> u32 {
+    let source_blocks = calculate_source_blocks(pad_bytes, block_size);
+    let redundancy = calculate_redundancy_blocks(source_blocks, method);
+    source_blocks + redundancy
+}
+
+/// Get metadata overhead constant (bytes added to pad for ceremony encoding).
+pub fn get_metadata_overhead() -> u32 {
+    ash_core::pad_calculator::METADATA_OVERHEAD as u32
+}
+
+/// Get default QR block size.
+pub fn get_default_block_size() -> u32 {
+    ash_core::pad_calculator::DEFAULT_QR_BLOCK_SIZE as u32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -551,7 +717,14 @@ mod tests {
         let pad = vec![0x42; 2000];
         let passphrase = "test-passphrase".to_string();
 
-        let generator = create_fountain_generator(metadata, pad.clone(), 256, passphrase.clone()).unwrap();
+        let generator = create_fountain_generator(
+            metadata,
+            pad.clone(),
+            256,
+            passphrase.clone(),
+            TransferMethod::Raptor,
+        )
+        .unwrap();
         let receiver = FountainFrameReceiver::new(passphrase);
 
         assert!(!receiver.is_complete());
@@ -566,6 +739,49 @@ mod tests {
         assert!(receiver.is_complete());
         let result = receiver.get_result().unwrap();
         assert_eq!(result.pad, pad);
+    }
+
+    #[test]
+    fn test_transfer_methods_all_work() {
+        let metadata = CeremonyMetadata {
+            version: 1,
+            ttl_seconds: 300,
+            disappearing_messages_seconds: 0,
+            notification_flags: 0x000B,
+            relay_url: "https://relay.test".to_string(),
+        };
+        let pad = vec![0x42; 1500];
+        let passphrase = "test-passphrase".to_string();
+
+        // Test all three methods
+        for method in [
+            TransferMethod::Raptor,
+            TransferMethod::LT,
+            TransferMethod::Sequential,
+        ] {
+            let generator = create_fountain_generator(
+                metadata.clone(),
+                pad.clone(),
+                256,
+                passphrase.clone(),
+                method,
+            )
+            .unwrap();
+            let receiver = FountainFrameReceiver::new(passphrase.clone());
+
+            let max_blocks = generator.source_count() as usize * 2;
+            for _ in 0..max_blocks {
+                if receiver.is_complete() {
+                    break;
+                }
+                let frame = generator.next_frame();
+                receiver.add_frame(frame).unwrap();
+            }
+
+            assert!(receiver.is_complete(), "{:?} should complete", method);
+            let result = receiver.get_result().unwrap();
+            assert_eq!(result.pad, pad, "{:?} should produce correct pad", method);
+        }
     }
 
     #[test]

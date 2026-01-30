@@ -72,7 +72,8 @@ actor InMemoryMessageRepository: MessageRepository {
                     deliveryStatus: .none,
                     sequence: 0,
                     blobId: nil,
-                    isContentWiped: true
+                    isContentWiped: true,
+                    authTag: nil  // No auth tag for wiped messages
                 )
             }
         }

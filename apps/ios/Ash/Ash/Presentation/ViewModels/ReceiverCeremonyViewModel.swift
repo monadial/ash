@@ -188,22 +188,22 @@ final class ReceiverCeremonyViewModel {
         let metadata = CeremonyMetadataSwift(
             ttlSeconds: result.metadata.ttlSeconds,
             disappearingMessagesSeconds: result.metadata.disappearingMessagesSeconds,
-            conversationFlags: result.metadata.conversationFlags,
+            conversationFlags: result.metadata.notificationFlags,
             relayURL: result.metadata.relayUrl
         )
         receivedMetadata = metadata
         generatedPadBytes = result.pad
 
         // Decode color from conversation flags (bits 12-15) and apply it
-        let decodedColor = ConversationFlagsConstants.decodeColor(from: result.metadata.conversationFlags)
+        let decodedColor = ConversationFlagsConstants.decodeColor(from: result.metadata.notificationFlags)
         selectedColor = decodedColor
 
         // Decode persistence consent from conversation flags (bit 4)
-        receivedPersistenceConsent = ConversationFlagsConstants.hasPersistenceConsent(result.metadata.conversationFlags)
+        receivedPersistenceConsent = ConversationFlagsConstants.hasPersistenceConsent(result.metadata.notificationFlags)
 
         // Decode message padding settings from conversation flags (bits 5-7)
-        receivedMessagePaddingEnabled = ConversationFlagsConstants.hasMessagePadding(result.metadata.conversationFlags)
-        receivedMessagePaddingSize = ConversationFlagsConstants.decodePaddingSize(from: result.metadata.conversationFlags)
+        receivedMessagePaddingEnabled = ConversationFlagsConstants.hasMessagePadding(result.metadata.notificationFlags)
+        receivedMessagePaddingSize = ConversationFlagsConstants.decodePaddingSize(from: result.metadata.notificationFlags)
 
         let paddingDesc = receivedMessagePaddingEnabled ? receivedMessagePaddingSize.displayName : "off"
         Log.info(.ceremony, "Decoded metadata: ttl=\(metadata.ttlSeconds)s, disappearing=\(metadata.disappearingMessagesSeconds)s, color=\(decodedColor.rawValue), padding=\(paddingDesc), persistence=\(receivedPersistenceConsent)")

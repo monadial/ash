@@ -413,9 +413,12 @@ private struct MessagingContent: View {
                 )
             }
         }
-        .sheet(item: $selectedMessageForInfo) { message in
-            MessageDetailView(message: message, accentColor: accentColor)
-                .presentationDetents([.medium, .large])
+        .navigationDestination(item: $selectedMessageForInfo) { message in
+            MessageDetailView(
+                message: message,
+                accentColor: accentColor,
+                onExtendTTL: nil  // TODO: Implement extend TTL when backend supports it
+            )
         }
     }
 }

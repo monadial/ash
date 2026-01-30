@@ -26,13 +26,13 @@
 //! # Example
 //!
 //! ```
-//! use ash_core::{CeremonyMetadata, frame};
+//! use ash_core::{CeremonyMetadata, frame, TransferMethod};
 //!
 //! // Sender side
 //! let metadata = CeremonyMetadata::default();
 //! let pad = vec![0u8; 1000];
 //! let mut generator = frame::create_fountain_ceremony(
-//!     &metadata, &pad, 256, None
+//!     &metadata, &pad, 256, None, TransferMethod::Raptor
 //! ).unwrap();
 //!
 //! // Generate QR frames (can generate unlimited)
@@ -62,7 +62,7 @@
 //! Optional passphrase encryption XORs each block's payload with a derived key:
 //!
 //! ```
-//! use ash_core::{CeremonyMetadata, frame};
+//! use ash_core::{CeremonyMetadata, frame, TransferMethod};
 //!
 //! let metadata = CeremonyMetadata::default();
 //! let pad = vec![0u8; 1000];
@@ -70,7 +70,7 @@
 //!
 //! // Encrypt on sender side
 //! let mut generator = frame::create_fountain_ceremony(
-//!     &metadata, &pad, 256, Some(passphrase)
+//!     &metadata, &pad, 256, Some(passphrase), TransferMethod::Raptor
 //! ).unwrap();
 //!
 //! // Decrypt on receiver side (same passphrase required)
@@ -78,7 +78,33 @@
 //! ```
 
 use crate::error::{Error, Result};
-use crate::fountain::{EncodedBlock, FountainDecoder, FountainEncoder};
+use crate::fountain::{EncodedBlock, FountainDecoder, LTEncoder};
+use crate::raptor::RaptorEncoder;
+
+/// Transfer method for QR ceremony.
+///
+/// Determines which erasure coding strategy is used for pad transfer.
+/// All methods use the same wire format, so receivers auto-adapt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TransferMethod {
+    /// Raptor codes - near-optimal, K + 2-5 blocks overhead (recommended).
+    ///
+    /// Uses LDPC pre-coding for better burst loss handling and
+    /// lower variance than pure LT codes.
+    #[default]
+    Raptor,
+    /// LT codes - legacy fountain codes, K + O(√K) blocks overhead.
+    ///
+    /// Uses Robust Soliton distribution for reliable decoding.
+    /// Higher overhead than Raptor but well-tested.
+    LT,
+    /// Sequential - plain numbered frames, no erasure coding.
+    ///
+    /// Simplest method: each frame contains one source block.
+    /// Requires receiving all K unique blocks to decode.
+    /// No error recovery - if a frame is missed, must wait for cycle.
+    Sequential,
+}
 
 /// Default block size for fountain encoding (1500 bytes).
 ///
@@ -87,6 +113,81 @@ use crate::fountain::{EncodedBlock, FountainDecoder, FountainEncoder};
 ///
 /// Frame counts: ~44 for 64KB, ~175 for 256KB, ~699 for 1MB.
 pub const DEFAULT_BLOCK_SIZE: usize = 1500;
+
+/// Sequential encoder - splits data into blocks without erasure coding.
+///
+/// This is the simplest transfer method: each block contains exactly
+/// one portion of the source data. Unlike fountain codes, there's no
+/// redundancy - all K blocks must be received to decode.
+struct SequentialEncoder {
+    source_blocks: Vec<Vec<u8>>,
+    block_size: usize,
+    original_len: usize,
+    next_index: u32,
+}
+
+impl SequentialEncoder {
+    /// Create a new sequential encoder.
+    fn new(data: &[u8], block_size: usize) -> Self {
+        let original_len = data.len();
+        let source_count = (data.len() + block_size - 1) / block_size;
+
+        let mut source_blocks = Vec::with_capacity(source_count);
+        for i in 0..source_count {
+            let start = i * block_size;
+            let end = std::cmp::min(start + block_size, data.len());
+            let mut block = data[start..end].to_vec();
+            // Pad last block to full size
+            block.resize(block_size, 0);
+            source_blocks.push(block);
+        }
+
+        Self {
+            source_blocks,
+            block_size,
+            original_len,
+            next_index: 0,
+        }
+    }
+
+    /// Generate the next block (cycles through source blocks).
+    fn next_block(&mut self) -> EncodedBlock {
+        let block = self.generate_block(self.next_index);
+        self.next_index += 1;
+        block
+    }
+
+    /// Generate a specific block by index.
+    fn generate_block(&self, index: u32) -> EncodedBlock {
+        let block_index = (index as usize) % self.source_blocks.len();
+        let data = self.source_blocks[block_index].clone();
+        let checksum = crate::crc::compute(&data);
+
+        EncodedBlock {
+            index,
+            source_count: self.source_blocks.len() as u16,
+            block_size: self.block_size as u16,
+            original_len: self.original_len as u32,
+            data,
+            checksum,
+        }
+    }
+
+    /// Number of source blocks.
+    fn source_count(&self) -> usize {
+        self.source_blocks.len()
+    }
+
+    /// Block size in bytes.
+    fn block_size(&self) -> usize {
+        self.block_size
+    }
+
+    /// Original data length.
+    fn original_len(&self) -> usize {
+        self.original_len
+    }
+}
 
 /// Create a fountain frame generator for ceremony QR transfer.
 ///
@@ -99,6 +200,7 @@ pub const DEFAULT_BLOCK_SIZE: usize = 1500;
 /// * `pad_bytes` - The pad data to transfer
 /// * `block_size` - Size of each fountain block (default 256)
 /// * `passphrase` - Optional passphrase for encryption
+/// * `method` - Transfer method (Raptor, LT, or Sequential)
 ///
 /// # Returns
 ///
@@ -112,12 +214,13 @@ pub const DEFAULT_BLOCK_SIZE: usize = 1500;
 ///
 /// ```
 /// use ash_core::{CeremonyMetadata, frame};
+/// use ash_core::frame::TransferMethod;
 ///
 /// let metadata = CeremonyMetadata::default();
 /// let pad = vec![0u8; 64 * 1024]; // 64KB pad
 ///
 /// let mut generator = frame::create_fountain_ceremony(
-///     &metadata, &pad, 256, None
+///     &metadata, &pad, 256, None, TransferMethod::Raptor
 /// ).unwrap();
 ///
 /// println!("Source blocks: {}", generator.source_count());
@@ -128,8 +231,9 @@ pub fn create_fountain_ceremony(
     pad_bytes: &[u8],
     block_size: usize,
     passphrase: Option<&str>,
+    method: TransferMethod,
 ) -> Result<FountainFrameGenerator> {
-    FountainFrameGenerator::new(metadata, pad_bytes, block_size, passphrase)
+    FountainFrameGenerator::new(metadata, pad_bytes, block_size, passphrase, method)
 }
 
 /// Fountain frame generator for QR display.
@@ -137,10 +241,16 @@ pub fn create_fountain_ceremony(
 /// Generates unlimited encoded blocks from ceremony data. The display
 /// cycles through blocks until the receiver signals completion.
 ///
-/// # Block Types
+/// # Block Types (for fountain codes)
 ///
 /// - **Blocks 0..K**: Source blocks (direct data, no encoding overhead)
-/// - **Blocks K+**: XOR blocks (combinations of two source blocks)
+/// - **Blocks K+**: XOR blocks (combinations of source blocks for recovery)
+///
+/// # Transfer Methods
+///
+/// - **Raptor**: Near-optimal erasure coding (K + 2-5 blocks overhead)
+/// - **LT**: Legacy fountain codes (K + O(√K) blocks overhead)
+/// - **Sequential**: Plain numbered frames, no erasure coding
 ///
 /// # Usage Pattern
 ///
@@ -150,8 +260,16 @@ pub fn create_fountain_ceremony(
 ///      └──────────────── repeat until complete ◀──────────────────┘
 /// ```
 pub struct FountainFrameGenerator {
-    encoder: FountainEncoder,
+    encoder: EncoderType,
     passphrase: Option<String>,
+    method: TransferMethod,
+}
+
+/// Internal enum to hold different encoder types.
+enum EncoderType {
+    Raptor(RaptorEncoder),
+    LT(LTEncoder),
+    Sequential(SequentialEncoder),
 }
 
 impl FountainFrameGenerator {
@@ -171,6 +289,7 @@ impl FountainFrameGenerator {
         pad_bytes: &[u8],
         block_size: usize,
         passphrase: Option<&str>,
+        method: TransferMethod,
     ) -> Result<Self> {
         if pad_bytes.is_empty() {
             return Err(Error::EmptyPayload);
@@ -185,24 +304,37 @@ impl FountainFrameGenerator {
         data.extend_from_slice(&metadata_bytes);
         data.extend_from_slice(pad_bytes);
 
-        let encoder = FountainEncoder::new(&data, block_size);
+        // Create appropriate encoder based on method
+        let encoder = match method {
+            TransferMethod::Raptor => EncoderType::Raptor(RaptorEncoder::new(&data, block_size)),
+            TransferMethod::LT => EncoderType::LT(LTEncoder::new(&data, block_size)),
+            TransferMethod::Sequential => {
+                EncoderType::Sequential(SequentialEncoder::new(&data, block_size))
+            }
+        };
 
         Ok(Self {
             encoder,
             passphrase: passphrase.map(String::from),
+            method,
         })
     }
 
     /// Generate the next QR frame bytes.
     ///
     /// Can be called infinitely - generates new blocks each time.
-    /// Blocks cycle through source blocks first, then XOR blocks.
+    /// For fountain codes, cycles through source blocks then XOR blocks.
+    /// For sequential, cycles through source blocks only.
     ///
     /// # Returns
     ///
     /// Encoded block bytes ready for QR code display.
     pub fn next_frame(&mut self) -> Vec<u8> {
-        let block = self.encoder.next_block();
+        let block = match &mut self.encoder {
+            EncoderType::Raptor(e) => e.next_block(),
+            EncoderType::LT(e) => e.next_block(),
+            EncoderType::Sequential(e) => e.next_block(),
+        };
         self.encode_block(&block)
     }
 
@@ -213,9 +345,13 @@ impl FountainFrameGenerator {
     ///
     /// # Arguments
     ///
-    /// * `index` - Block index (0..K for source, K+ for XOR blocks)
+    /// * `index` - Block index (0..K for source, K+ for XOR blocks in fountain mode)
     pub fn generate_frame(&self, index: u32) -> Vec<u8> {
-        let block = self.encoder.generate_block(index);
+        let block = match &self.encoder {
+            EncoderType::Raptor(e) => e.generate_block(index),
+            EncoderType::LT(e) => e.generate_block(index),
+            EncoderType::Sequential(e) => e.generate_block(index),
+        };
         self.encode_block(&block)
     }
 
@@ -233,21 +369,39 @@ impl FountainFrameGenerator {
 
     /// Number of source blocks (minimum needed for decoding).
     ///
-    /// This is K in the fountain code. Receiving any K distinct
-    /// source blocks is sufficient to decode (in-order reception).
-    /// Out-of-order reception may require K + small overhead.
+    /// This is K in the fountain code. For sequential mode, this is
+    /// exactly the number of blocks needed. For fountain codes,
+    /// receiving K distinct source blocks is sufficient (in-order),
+    /// or K + small overhead (out-of-order).
     pub fn source_count(&self) -> usize {
-        self.encoder.source_count()
+        match &self.encoder {
+            EncoderType::Raptor(e) => e.source_count(),
+            EncoderType::LT(e) => e.source_count(),
+            EncoderType::Sequential(e) => e.source_count(),
+        }
     }
 
     /// Block size in bytes.
     pub fn block_size(&self) -> usize {
-        self.encoder.block_size()
+        match &self.encoder {
+            EncoderType::Raptor(e) => e.block_size(),
+            EncoderType::LT(e) => e.block_size(),
+            EncoderType::Sequential(e) => e.block_size(),
+        }
     }
 
     /// Total data size being transferred (metadata + pad).
     pub fn total_size(&self) -> usize {
-        self.encoder.original_len()
+        match &self.encoder {
+            EncoderType::Raptor(e) => e.original_len(),
+            EncoderType::LT(e) => e.original_len(),
+            EncoderType::Sequential(e) => e.original_len(),
+        }
+    }
+
+    /// Get the transfer method used by this generator.
+    pub fn method(&self) -> TransferMethod {
+        self.method
     }
 }
 
@@ -481,7 +635,8 @@ mod tests {
             crate::CeremonyMetadata::new(3600, 30, "https://relay.ash.test".to_string()).unwrap();
         let pad: Vec<u8> = (0..=255).cycle().take(5000).collect();
 
-        let mut generator = create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
+        let mut generator =
+            create_fountain_ceremony(&metadata, &pad, 256, None, TransferMethod::Raptor).unwrap();
         let mut receiver = FountainFrameReceiver::new(None);
 
         let source_count = generator.source_count();
@@ -509,7 +664,8 @@ mod tests {
 
         // Test single block round-trip
         let mut generator =
-            create_fountain_ceremony(&metadata, &pad, 256, Some(passphrase)).unwrap();
+            create_fountain_ceremony(&metadata, &pad, 256, Some(passphrase), TransferMethod::Raptor)
+                .unwrap();
         let encrypted_frame = generator.next_frame();
 
         // Verify decryption works
@@ -519,7 +675,8 @@ mod tests {
 
         // Full roundtrip
         let mut generator =
-            create_fountain_ceremony(&metadata, &pad, 256, Some(passphrase)).unwrap();
+            create_fountain_ceremony(&metadata, &pad, 256, Some(passphrase), TransferMethod::Raptor)
+                .unwrap();
         let mut receiver = FountainFrameReceiver::new(Some(passphrase));
 
         while !receiver.is_complete() {
@@ -536,7 +693,8 @@ mod tests {
         let metadata = crate::CeremonyMetadata::default();
         let pad: Vec<u8> = (0..1000).map(|i| (i % 256) as u8).collect();
 
-        let mut generator = create_fountain_ceremony(&metadata, &pad, 128, None).unwrap();
+        let mut generator =
+            create_fountain_ceremony(&metadata, &pad, 128, None, TransferMethod::Raptor).unwrap();
         let k = generator.source_count();
 
         // Generate extra blocks
@@ -560,7 +718,8 @@ mod tests {
         let metadata = crate::CeremonyMetadata::default();
         let pad: Vec<u8> = vec![0x42; 1500];
 
-        let mut generator = create_fountain_ceremony(&metadata, &pad, 128, None).unwrap();
+        let mut generator =
+            create_fountain_ceremony(&metadata, &pad, 128, None, TransferMethod::Raptor).unwrap();
         let k = generator.source_count();
 
         // Generate many blocks
@@ -597,7 +756,8 @@ mod tests {
         let metadata = crate::CeremonyMetadata::default();
         let pad: Vec<u8> = vec![0; 2000];
 
-        let mut generator = create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
+        let mut generator =
+            create_fountain_ceremony(&metadata, &pad, 256, None, TransferMethod::Raptor).unwrap();
         let mut receiver = FountainFrameReceiver::new(None);
 
         assert_eq!(receiver.progress(), 0.0);
@@ -625,7 +785,9 @@ mod tests {
 
         for (name, size) in sizes {
             let pad = vec![0u8; size];
-            let generator = create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
+            let generator =
+                create_fountain_ceremony(&metadata, &pad, 256, None, TransferMethod::Raptor)
+                    .unwrap();
             println!("{}: {} source blocks", name, generator.source_count());
         }
     }
@@ -633,7 +795,7 @@ mod tests {
     #[test]
     fn fountain_empty_pad_error() {
         let metadata = crate::CeremonyMetadata::default();
-        let result = create_fountain_ceremony(&metadata, &[], 256, None);
+        let result = create_fountain_ceremony(&metadata, &[], 256, None, TransferMethod::Raptor);
         assert!(matches!(result, Err(Error::EmptyPayload)));
     }
 
@@ -642,11 +804,129 @@ mod tests {
         let metadata = crate::CeremonyMetadata::default();
         let pad: Vec<u8> = vec![0x42; 1000];
 
-        let generator = create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
+        let generator =
+            create_fountain_ceremony(&metadata, &pad, 256, None, TransferMethod::Raptor).unwrap();
 
         // Same index produces same block
         let block1 = generator.generate_frame(5);
         let block2 = generator.generate_frame(5);
         assert_eq!(block1, block2);
+    }
+
+    #[test]
+    fn transfer_method_lt_roundtrip() {
+        let metadata = crate::CeremonyMetadata::default();
+        let pad: Vec<u8> = (0..=255).cycle().take(3000).collect();
+
+        let mut generator =
+            create_fountain_ceremony(&metadata, &pad, 256, None, TransferMethod::LT).unwrap();
+        let mut receiver = FountainFrameReceiver::new(None);
+
+        let source_count = generator.source_count();
+
+        let mut blocks = 0;
+        while !receiver.is_complete() {
+            let frame = generator.next_frame();
+            receiver.add_frame(&frame).unwrap();
+            blocks += 1;
+            assert!(blocks <= source_count * 3, "Too many blocks needed for LT");
+        }
+
+        let result = receiver.get_result().unwrap();
+        assert_eq!(result.pad, pad);
+    }
+
+    #[test]
+    fn transfer_method_sequential_roundtrip() {
+        let metadata = crate::CeremonyMetadata::default();
+        let pad: Vec<u8> = (0..=255).cycle().take(2000).collect();
+
+        let mut generator =
+            create_fountain_ceremony(&metadata, &pad, 256, None, TransferMethod::Sequential)
+                .unwrap();
+        let mut receiver = FountainFrameReceiver::new(None);
+
+        let source_count = generator.source_count();
+
+        // Sequential mode: need exactly all source blocks
+        for _ in 0..source_count {
+            let frame = generator.next_frame();
+            receiver.add_frame(&frame).unwrap();
+        }
+
+        // Should be complete after receiving all K source blocks
+        assert!(receiver.is_complete());
+        let result = receiver.get_result().unwrap();
+        assert_eq!(result.pad, pad);
+    }
+
+    #[test]
+    fn transfer_method_all_produce_same_result() {
+        let metadata = crate::CeremonyMetadata::default();
+        let pad: Vec<u8> = vec![0xAB; 1500];
+
+        // Test all methods produce same decoded pad
+        for method in [
+            TransferMethod::Raptor,
+            TransferMethod::LT,
+            TransferMethod::Sequential,
+        ] {
+            let mut generator =
+                create_fountain_ceremony(&metadata, &pad, 256, None, method).unwrap();
+            let mut receiver = FountainFrameReceiver::new(None);
+
+            // Generate enough blocks
+            let max_blocks = generator.source_count() * 2;
+            for _ in 0..max_blocks {
+                if receiver.is_complete() {
+                    break;
+                }
+                let frame = generator.next_frame();
+                receiver.add_frame(&frame).unwrap();
+            }
+
+            assert!(receiver.is_complete(), "{:?} should complete", method);
+            let result = receiver.get_result().unwrap();
+            assert_eq!(result.pad, pad, "{:?} should produce correct pad", method);
+        }
+    }
+
+    #[test]
+    fn sequential_encoder_cycles() {
+        let data = vec![0u8; 300];
+        let mut encoder = SequentialEncoder::new(&data, 100);
+
+        // Should have 3 source blocks
+        assert_eq!(encoder.source_count(), 3);
+
+        // Generate 6 blocks (cycles twice)
+        let blocks: Vec<_> = (0..6).map(|_| encoder.next_block()).collect();
+
+        // Blocks 0 and 3 should have same data (cycled)
+        assert_eq!(blocks[0].data, blocks[3].data);
+        assert_eq!(blocks[1].data, blocks[4].data);
+        assert_eq!(blocks[2].data, blocks[5].data);
+
+        // But different indices
+        assert_eq!(blocks[0].index, 0);
+        assert_eq!(blocks[3].index, 3);
+    }
+
+    #[test]
+    fn transfer_method_getter() {
+        let metadata = crate::CeremonyMetadata::default();
+        let pad = vec![0u8; 500];
+
+        let gen_raptor =
+            create_fountain_ceremony(&metadata, &pad, 128, None, TransferMethod::Raptor).unwrap();
+        let gen_lt =
+            create_fountain_ceremony(&metadata, &pad, 128, None, TransferMethod::LT).unwrap();
+        let gen_seq =
+            create_fountain_ceremony(&metadata, &pad, 128, None, TransferMethod::Sequential)
+                .unwrap();
+
+        assert_eq!(gen_raptor.method(), TransferMethod::Raptor);
+        assert_eq!(gen_lt.method(), TransferMethod::LT);
+        assert_eq!(gen_seq.method(), TransferMethod::Sequential);
     }
 }

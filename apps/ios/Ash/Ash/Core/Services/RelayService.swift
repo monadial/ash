@@ -5,6 +5,14 @@
 
 import Foundation
 
+/// Result from submitting a message to the relay
+struct SubmitResult: Sendable {
+    let blobId: UUID
+    /// Server-provided expiry time (when the message will be deleted)
+    /// Optional for backwards compatibility with older backend versions
+    let expiresAt: Date?
+}
+
 protocol RelayServiceProtocol: Sendable {
     func submitMessage(
         conversationId: String,
@@ -14,7 +22,7 @@ protocol RelayServiceProtocol: Sendable {
         ttlSeconds: UInt64?,
         extendedTTL: Bool,
         persistent: Bool
-    ) async throws -> UUID
+    ) async throws -> SubmitResult
 
     func pollMessages(
         conversationId: String,
@@ -151,7 +159,7 @@ final class RelayService: RelayServiceProtocol, Sendable {
         ttlSeconds: UInt64?,
         extendedTTL: Bool,
         persistent: Bool
-    ) async throws -> UUID {
+    ) async throws -> SubmitResult {
         let url = baseURL.appendingPathComponent("v1/messages")
         let id = logId(conversationId)
 
@@ -182,8 +190,8 @@ final class RelayService: RelayServiceProtocol, Sendable {
             throw RelayError.serverError(statusCode: 400, message: "Message not accepted")
         }
 
-        Log.debug(.relay, "[\(id)] Submitted successfully: blob=\(result.blobId.uuidString.prefix(8))")
-        return result.blobId
+        Log.debug(.relay, "[\(id)] Submitted successfully: blob=\(result.blobId.uuidString.prefix(8)), expires=\(result.expiresAt?.description ?? "unknown")")
+        return SubmitResult(blobId: result.blobId, expiresAt: result.expiresAt)
     }
 
     func pollMessages(
@@ -431,10 +439,12 @@ private struct SubmitMessageRequest: Encodable {
 private struct SubmitMessageResponse: Decodable {
     let accepted: Bool
     let blobId: UUID
+    let expiresAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case accepted
         case blobId = "blob_id"
+        case expiresAt = "expires_at"
     }
 }
 

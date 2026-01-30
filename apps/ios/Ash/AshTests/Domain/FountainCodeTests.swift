@@ -19,7 +19,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B, // new message + expiring + delivery failed
+            notificationFlags: 0x000B, // new message + expiring + delivery failed
             relayUrl: "https://relay.test"
         )
 
@@ -29,7 +29,8 @@ final class FountainCodeRoundtripTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 256,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         XCTAssertGreaterThan(generator.sourceCount(), 0)
@@ -63,7 +64,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             version: 1,
             ttlSeconds: 3600,
             disappearingMessagesSeconds: 60,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -71,7 +72,8 @@ final class FountainCodeRoundtripTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 128,
-            passphrase: passphrase
+            passphrase: passphrase,
+            method: .raptor
         )
 
         let receiver = FountainFrameReceiver(passphrase: passphrase)
@@ -94,7 +96,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             version: 1,
             ttlSeconds: 3600,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -102,7 +104,8 @@ final class FountainCodeRoundtripTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 128,
-            passphrase: "correct-passphrase"
+            passphrase: "correct-passphrase",
+            method: .raptor
         )
 
         // Receiver with wrong passphrase
@@ -133,7 +136,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -142,7 +145,8 @@ final class FountainCodeRoundtripTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 256,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let sourceCount = Int(generator.sourceCount())
@@ -176,7 +180,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -185,7 +189,8 @@ final class FountainCodeRoundtripTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 128,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let sourceCount = Int(generator.sourceCount())
@@ -229,7 +234,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -238,7 +243,8 @@ final class FountainCodeRoundtripTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 256,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let receiver = FountainFrameReceiver(passphrase: testPassphrase)
@@ -266,7 +272,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -275,7 +281,8 @@ final class FountainCodeRoundtripTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 256,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let receiver = FountainFrameReceiver(passphrase: testPassphrase)
@@ -315,7 +322,7 @@ final class QRCodeSimulationTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -324,7 +331,8 @@ final class QRCodeSimulationTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 256,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let receiver = FountainFrameReceiver(passphrase: testPassphrase)
@@ -355,7 +363,7 @@ final class QRCodeSimulationTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -364,7 +372,8 @@ final class QRCodeSimulationTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: blockSize,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let sourceCount = generator.sourceCount()
@@ -400,7 +409,7 @@ final class CorruptedFrameTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -409,7 +418,8 @@ final class CorruptedFrameTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 128,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         var frame = generator.nextFrame()
@@ -432,7 +442,7 @@ final class CorruptedFrameTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.test"
         )
 
@@ -441,7 +451,8 @@ final class CorruptedFrameTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: 128,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let frame = generator.nextFrame()

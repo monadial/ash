@@ -20,6 +20,7 @@ enum ReceiveMessageError: Error, Sendable {
     case conversationExhausted
     case invalidCiphertext
     case missingSequence
+    case authenticationFailed
 }
 
 final class ReceiveMessageUseCase: ReceiveMessageUseCaseProtocol, Sendable {
@@ -43,47 +44,65 @@ final class ReceiveMessageUseCase: ReceiveMessageUseCaseProtocol, Sendable {
         blobId: UUID,
         in conversation: Conversation
     ) async throws -> (message: Message, updatedConversation: Conversation) {
-        let ciphertextBytes = Array(ciphertext)
+        let frameBytes = Array(ciphertext)
 
-        Log.debug(.crypto, "Decrypting message (\(ciphertextBytes.count) bytes)")
+        // Frame format: [version: 1][type: 1][length: 2][ciphertext: N][tag: 32] = N + 36 bytes overhead
+        let frameOverhead = 36  // 4 header + 32 tag
+        guard frameBytes.count > frameOverhead else {
+            Log.warning(.crypto, "Frame too short: \(frameBytes.count) bytes")
+            throw ReceiveMessageError.invalidCiphertext
+        }
+
+        let plaintextLength = frameBytes.count - frameOverhead
+        let totalPadConsumption = cryptoService.calculatePadConsumption(plaintextLength: plaintextLength)
+        Log.debug(.crypto, "Decrypting message (\(frameBytes.count) bytes frame, \(plaintextLength) bytes plaintext, \(totalPadConsumption) bytes pad)")
 
         // Sequence is required to know which pad offset the sender used
-        // The sender includes the actual pad offset in the sequence field
         guard let offset = sequence else {
             Log.warning(.crypto, "Missing sequence!")
             throw ReceiveMessageError.missingSequence
         }
 
         // Validate offset is within pad bounds
-        guard offset + UInt64(ciphertextBytes.count) <= conversation.totalBytes else {
+        guard offset + UInt64(totalPadConsumption) <= conversation.totalBytes else {
             Log.warning(.crypto, "Invalid pad offset")
             throw ReceiveMessageError.insufficientPad
         }
 
-        // Get pad bytes for decryption using the sender's offset (sequence)
+        // Get pad bytes for decryption: 64 auth + plaintext_length encryption
         let keyBytes = try await padManager.getBytesForDecryption(
             offset: offset,
-            length: UInt64(ciphertextBytes.count),
+            length: UInt64(totalPadConsumption),
             for: conversation.id
         )
 
-        Log.verbose(.crypto, "Key material retrieved")
+        // Split key material: first 64 bytes for auth, rest for encryption
+        let authKey = Array(keyBytes.prefix(AUTH_OVERHEAD))
+        let encryptionKey = Array(keyBytes.dropFirst(AUTH_OVERHEAD))
+        Log.verbose(.crypto, "Key material split: \(authKey.count) auth + \(encryptionKey.count) encryption bytes")
 
-        // Decrypt the message content
-        let plaintext: [UInt8]
+        // Decrypt and verify the message
+        let decryptResult: AuthenticatedDecryptResult
         do {
-            plaintext = try cryptoService.decrypt(ciphertext: ciphertextBytes, key: keyBytes)
-            Log.verbose(.crypto, "Decryption complete")
+            decryptResult = try cryptoService.decryptAuthenticated(
+                encodedFrame: frameBytes,
+                authKey: authKey,
+                encryptionKey: encryptionKey
+            )
+            Log.verbose(.crypto, "Authenticated decryption complete")
+        } catch CryptoError.authenticationFailed {
+            Log.error(.crypto, "Authentication failed - message may have been tampered!")
+            throw ReceiveMessageError.authenticationFailed
         } catch {
-            Log.error(.crypto, "Decryption failed")
+            Log.error(.crypto, "Decryption failed: \(error)")
             throw ReceiveMessageError.decryptionFailed
         }
 
-        // Calculate peer's consumption and update Rust Pad (shared logic with Android)
+        // Calculate peer's consumption and update Rust Pad
         let peerRole: Role = conversation.role == .initiator ? .responder : .initiator
         let peerConsumed = calculatePeerConsumed(
             sequence: offset,
-            length: UInt64(ciphertextBytes.count),
+            length: UInt64(totalPadConsumption),
             totalBytes: conversation.totalBytes,
             myRole: conversation.role
         )
@@ -94,16 +113,16 @@ final class ReceiveMessageUseCase: ReceiveMessageUseCaseProtocol, Sendable {
             for: conversation.id
         )
 
-        // Update conversation state
+        // Update conversation state with total pad consumption
         let updatedConversation = conversation.afterReceiving(
             sequence: offset,
-            length: UInt64(ciphertextBytes.count)
+            length: UInt64(totalPadConsumption)
         )
         try await conversationRepository.save(updatedConversation)
         Log.debug(.crypto, "Conversation state updated")
 
-        // Decode plaintext to content (text or location)
-        let content = decodeContent(plaintext)
+        // Decode plaintext to content based on message type from frame
+        let content = decodeContent(decryptResult.plaintext, messageType: decryptResult.messageType)
 
         switch content {
         case .text:
@@ -113,36 +132,38 @@ final class ReceiveMessageUseCase: ReceiveMessageUseCaseProtocol, Sendable {
         }
 
         // Create the incoming message with the sequence for deduplication
-        // Use the conversation's disappearing messages setting for display expiry
         let disappearingSeconds = conversation.disappearingMessages.seconds
         let message = Message.incoming(
             content: content,
             sequence: offset,
             disappearingSeconds: disappearingSeconds,
-            blobId: blobId
+            blobId: blobId,
+            authTag: decryptResult.authTag
         )
 
         return (message, updatedConversation)
     }
 
-    /// Decode plaintext bytes to MessageContent
+    /// Decode plaintext bytes to MessageContent based on message type
     /// Location messages are prefixed with "LOC:" followed by "lat,lon"
-    private func decodeContent(_ plaintext: [UInt8]) -> MessageContent {
+    private func decodeContent(_ plaintext: [UInt8], messageType: MessageType) -> MessageContent {
         let text = String(decoding: plaintext, as: UTF8.self)
 
-        // Check for location prefix
-        if text.hasPrefix("LOC:") {
-            let coordString = String(text.dropFirst(4))  // Remove "LOC:" prefix
+        switch messageType {
+        case .location:
+            // Parse location: "LOC:lat,lon" or just "lat,lon"
+            let coordString = text.hasPrefix("LOC:") ? String(text.dropFirst(4)) : text
             let parts = coordString.split(separator: ",")
             if parts.count == 2,
                let lat = Double(parts[0]),
                let lon = Double(parts[1]) {
                 return .location(latitude: lat, longitude: lon)
             }
+            // Fall back to text if parsing fails
+            return .text(text)
+        case .text:
+            return .text(text)
         }
-
-        // Default to text
-        return .text(text)
     }
 
     /// Calculate how much the peer has consumed based on their message sequence

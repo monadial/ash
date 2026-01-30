@@ -80,14 +80,17 @@ struct ConversationsScreen: View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Icon
+            // ASH Logo
             ZStack {
                 Circle()
                     .fill(Color.ashAccent.opacity(0.1))
                     .frame(width: 100, height: 100)
 
-                Image(systemName: "bubble.left.and.bubble.right")
-                    .font(.system(size: 44, weight: .light))
+                Image("ash_logo")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 56, height: 56)
                     .foregroundStyle(Color.ashAccent)
             }
 

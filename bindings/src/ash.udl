@@ -16,21 +16,76 @@ namespace ash {
     /// This is the main entry point for initiators. The generator produces
     /// unlimited encoded blocks that can be displayed as QR codes.
     /// Passphrase is required for encrypting the QR frames.
+    /// Method selects the transfer strategy (Raptor recommended).
     [Throws=AshError]
     FountainFrameGenerator create_fountain_generator(
         CeremonyMetadata metadata,
         sequence<u8> pad_bytes,
         u32 block_size,
-        string passphrase
+        string passphrase,
+        TransferMethod method
     );
 
-    // === OTP Operations ===
+    // === Authenticated Message Operations ===
+
+    /// Authentication overhead per message (64 bytes for Wegman-Carter MAC)
+    u32 get_auth_overhead();
+
+    /// Calculate total pad consumption for a message
+    /// Returns: auth_overhead (64) + plaintext_length
+    u32 calculate_pad_consumption(u32 plaintext_length);
+
+    /// Encrypt plaintext with Wegman-Carter authentication.
+    ///
+    /// This is the recommended encryption function. It provides:
+    /// - OTP encryption (information-theoretic confidentiality)
+    /// - Wegman-Carter MAC (information-theoretic authenticity)
+    /// - Anti-malleability (any bit flip is detected)
+    ///
+    /// # Arguments
+    /// - `auth_key`: 64 bytes from pad for authentication
+    /// - `encryption_key`: N bytes from pad for encryption (same length as plaintext)
+    /// - `plaintext`: Data to encrypt
+    /// - `msg_type`: Message type (0x01 = text, 0x02 = location)
+    ///
+    /// # Returns
+    /// Encoded message frame: [version][type][length][ciphertext][32-byte tag]
+    [Throws=AshError]
+    sequence<u8> encrypt_authenticated(
+        sequence<u8> auth_key,
+        sequence<u8> encryption_key,
+        sequence<u8> plaintext,
+        u8 msg_type
+    );
+
+    /// Decrypt and verify an authenticated message.
+    ///
+    /// Verifies the authentication tag BEFORE decryption.
+    /// If verification fails, returns AuthenticationFailed error.
+    ///
+    /// # Arguments
+    /// - `auth_key`: 64 bytes from pad for authentication
+    /// - `encryption_key`: N bytes from pad for decryption (same length as ciphertext)
+    /// - `encoded_frame`: Full message frame from encrypt_authenticated
+    ///
+    /// # Returns
+    /// Tuple of (plaintext, message_type)
+    [Throws=AshError]
+    DecryptedMessage decrypt_authenticated(
+        sequence<u8> auth_key,
+        sequence<u8> encryption_key,
+        sequence<u8> encoded_frame
+    );
+
+    // === Legacy OTP Operations (no authentication) ===
 
     /// Encrypt plaintext using OTP (XOR with key)
+    /// WARNING: No authentication - use encrypt_authenticated for new code
     [Throws=AshError]
     sequence<u8> encrypt(sequence<u8> key, sequence<u8> plaintext);
 
     /// Decrypt ciphertext using OTP (XOR with key)
+    /// WARNING: No authentication - use decrypt_authenticated for new code
     [Throws=AshError]
     sequence<u8> decrypt(sequence<u8> key, sequence<u8> ciphertext);
 
@@ -79,6 +134,29 @@ namespace ash {
     /// This prevents the compiler from optimizing away the zeroing.
     /// Use this for wiping sensitive data from memory.
     void secure_zero_bytes(sequence<u8> data);
+
+    // === Pad Calculator Operations ===
+
+    /// Calculate source blocks (K) for given pad size and block size.
+    /// Includes metadata overhead in calculation.
+    u32 calculate_source_blocks(u64 pad_bytes, u32 block_size);
+
+    /// Calculate expected frames needed for successful transfer.
+    /// This is the number displayed in UI as "~X QR frames".
+    u32 calculate_expected_frames(u64 pad_bytes, u32 block_size, TransferMethod method);
+
+    /// Calculate redundancy blocks to pre-generate beyond source count.
+    /// This is used for QR pre-generation to ensure enough frames are ready.
+    u32 calculate_redundancy_blocks(u32 source_blocks, TransferMethod method);
+
+    /// Calculate total frames to pre-generate (source + redundancy).
+    u32 calculate_frames_to_generate(u64 pad_bytes, u32 block_size, TransferMethod method);
+
+    /// Get metadata overhead constant (bytes added to pad for ceremony encoding).
+    u32 get_metadata_overhead();
+
+    /// Get default QR block size.
+    u32 get_default_block_size();
 };
 
 /// Available pad sizes
@@ -105,6 +183,19 @@ enum Role {
     "Initiator",
     /// Responder consumes from the end of the pad
     "Responder",
+};
+
+/// Transfer method for QR ceremony.
+///
+/// Determines which erasure coding strategy is used for pad transfer.
+/// All methods use the same wire format, so receivers auto-adapt.
+enum TransferMethod {
+    /// Raptor codes - near-optimal, K + 2-5 blocks overhead (recommended)
+    "Raptor",
+    /// LT codes - legacy fountain codes, K + O(sqrt(K)) blocks overhead
+    "LT",
+    /// Sequential - plain numbered frames, no erasure coding
+    "Sequential",
 };
 
 /// Error types for ASH operations
@@ -178,6 +269,16 @@ dictionary AuthTokens {
     string auth_token;
     /// Burn token for burn operations (hex-encoded, 64 chars)
     string burn_token;
+};
+
+/// Result of authenticated decryption
+dictionary DecryptedMessage {
+    /// Decrypted plaintext
+    sequence<u8> plaintext;
+    /// Message type (0x01 = text, 0x02 = location)
+    u8 msg_type;
+    /// Authentication tag (32 bytes) - can be shown in UI
+    sequence<u8> tag;
 };
 
 /// Result of fountain ceremony decoding

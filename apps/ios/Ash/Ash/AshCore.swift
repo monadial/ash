@@ -1186,13 +1186,14 @@ public static func fromBytesWithState(bytes: [UInt8], consumedFront: UInt64, con
 }
     
     /**
-     * Create pad from entropy bytes.
-     * The entropy length determines the pad size (must be 32KB - 1GB).
+     * Create pad from entropy bytes with a specific size.
+     * The entropy length must match the specified pad size.
      */
-public static func fromEntropy(entropy: [UInt8])throws  -> Pad {
+public static func fromEntropy(entropy: [UInt8], size: PadSize)throws  -> Pad {
     return try  FfiConverterTypePad.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_constructor_pad_from_entropy(
-        FfiConverterSequenceUInt8.lower(entropy),$0
+        FfiConverterSequenceUInt8.lower(entropy),
+        FfiConverterTypePadSize.lower(size),$0
     )
 })
 }
@@ -1513,7 +1514,7 @@ public struct CeremonyMetadata {
      */
     public let disappearingMessagesSeconds: UInt32
     /**
-     * Conversation flags (16-bit bitfield) encoding various settings:
+     * Notification flags (16-bit bitfield) encoding various settings:
      *
      * Notification flags (bits 0-7):
      * - Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
@@ -1532,7 +1533,7 @@ public struct CeremonyMetadata {
      *
      * Default: 0x000B (new message + expiring + delivery failed)
      */
-    public let conversationFlags: UInt16
+    public let notificationFlags: UInt16
     /**
      * Relay server URL
      */
@@ -1551,7 +1552,7 @@ public struct CeremonyMetadata {
          * Disappearing messages timeout in seconds (0 = off)
          */disappearingMessagesSeconds: UInt32, 
         /**
-         * Conversation flags (16-bit bitfield) encoding various settings:
+         * Notification flags (16-bit bitfield) encoding various settings:
          *
          * Notification flags (bits 0-7):
          * - Bit 0: NOTIFY_NEW_MESSAGE (0x0001) - notify on new message
@@ -1569,14 +1570,14 @@ public struct CeremonyMetadata {
          * - Bits 12-15: Conversation accent color (16 colors)
          *
          * Default: 0x000B (new message + expiring + delivery failed)
-         */conversationFlags: UInt16, 
+         */notificationFlags: UInt16, 
         /**
          * Relay server URL
          */relayUrl: String) {
         self.version = version
         self.ttlSeconds = ttlSeconds
         self.disappearingMessagesSeconds = disappearingMessagesSeconds
-        self.conversationFlags = conversationFlags
+        self.notificationFlags = notificationFlags
         self.relayUrl = relayUrl
     }
 }
@@ -1594,7 +1595,7 @@ extension CeremonyMetadata: Equatable, Hashable {
         if lhs.disappearingMessagesSeconds != rhs.disappearingMessagesSeconds {
             return false
         }
-        if lhs.conversationFlags != rhs.conversationFlags {
+        if lhs.notificationFlags != rhs.notificationFlags {
             return false
         }
         if lhs.relayUrl != rhs.relayUrl {
@@ -1607,7 +1608,7 @@ extension CeremonyMetadata: Equatable, Hashable {
         hasher.combine(version)
         hasher.combine(ttlSeconds)
         hasher.combine(disappearingMessagesSeconds)
-        hasher.combine(conversationFlags)
+        hasher.combine(notificationFlags)
         hasher.combine(relayUrl)
     }
 }
@@ -1623,7 +1624,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
                 version: FfiConverterUInt8.read(from: &buf), 
                 ttlSeconds: FfiConverterUInt64.read(from: &buf), 
                 disappearingMessagesSeconds: FfiConverterUInt32.read(from: &buf), 
-                conversationFlags: FfiConverterUInt16.read(from: &buf), 
+                notificationFlags: FfiConverterUInt16.read(from: &buf), 
                 relayUrl: FfiConverterString.read(from: &buf)
         )
     }
@@ -1632,7 +1633,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
         FfiConverterUInt8.write(value.version, into: &buf)
         FfiConverterUInt64.write(value.ttlSeconds, into: &buf)
         FfiConverterUInt32.write(value.disappearingMessagesSeconds, into: &buf)
-        FfiConverterUInt16.write(value.conversationFlags, into: &buf)
+        FfiConverterUInt16.write(value.notificationFlags, into: &buf)
         FfiConverterString.write(value.relayUrl, into: &buf)
     }
 }
@@ -1650,6 +1651,101 @@ public func FfiConverterTypeCeremonyMetadata_lift(_ buf: RustBuffer) throws -> C
 #endif
 public func FfiConverterTypeCeremonyMetadata_lower(_ value: CeremonyMetadata) -> RustBuffer {
     return FfiConverterTypeCeremonyMetadata.lower(value)
+}
+
+
+/**
+ * Result of authenticated decryption
+ */
+public struct DecryptedMessage {
+    /**
+     * Decrypted plaintext
+     */
+    public let plaintext: [UInt8]
+    /**
+     * Message type (0x01 = text, 0x02 = location)
+     */
+    public let msgType: UInt8
+    /**
+     * Authentication tag (32 bytes) - can be shown in UI
+     */
+    public let tag: [UInt8]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Decrypted plaintext
+         */plaintext: [UInt8], 
+        /**
+         * Message type (0x01 = text, 0x02 = location)
+         */msgType: UInt8, 
+        /**
+         * Authentication tag (32 bytes) - can be shown in UI
+         */tag: [UInt8]) {
+        self.plaintext = plaintext
+        self.msgType = msgType
+        self.tag = tag
+    }
+}
+
+
+
+extension DecryptedMessage: Equatable, Hashable {
+    public static func ==(lhs: DecryptedMessage, rhs: DecryptedMessage) -> Bool {
+        if lhs.plaintext != rhs.plaintext {
+            return false
+        }
+        if lhs.msgType != rhs.msgType {
+            return false
+        }
+        if lhs.tag != rhs.tag {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(plaintext)
+        hasher.combine(msgType)
+        hasher.combine(tag)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDecryptedMessage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DecryptedMessage {
+        return
+            try DecryptedMessage(
+                plaintext: FfiConverterSequenceUInt8.read(from: &buf), 
+                msgType: FfiConverterUInt8.read(from: &buf), 
+                tag: FfiConverterSequenceUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DecryptedMessage, into buf: inout [UInt8]) {
+        FfiConverterSequenceUInt8.write(value.plaintext, into: &buf)
+        FfiConverterUInt8.write(value.msgType, into: &buf)
+        FfiConverterSequenceUInt8.write(value.tag, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDecryptedMessage_lift(_ buf: RustBuffer) throws -> DecryptedMessage {
+    return try FfiConverterTypeDecryptedMessage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDecryptedMessage_lower(_ value: DecryptedMessage) -> RustBuffer {
+    return FfiConverterTypeDecryptedMessage.lower(value)
 }
 
 
@@ -1811,14 +1907,14 @@ public enum AshError {
     case PadTooSmallForTokens(message: String)
     
     /**
-     * Pad size is below minimum (32 KB)
+     * Message authentication failed
      */
-    case PadSizeTooSmall(message: String)
+    case AuthenticationFailed(message: String)
     
     /**
-     * Pad size exceeds maximum (1 GB)
+     * Invalid message padding
      */
-    case PadSizeTooBig(message: String)
+    case InvalidPadding(message: String)
     
 }
 
@@ -1880,11 +1976,11 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 12: return .PadSizeTooSmall(
+        case 12: return .AuthenticationFailed(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 13: return .PadSizeTooBig(
+        case 13: return .InvalidPadding(
             message: try FfiConverterString.read(from: &buf)
         )
         
@@ -1921,9 +2017,9 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(10))
         case .PadTooSmallForTokens(_ /* message is ignored*/):
             writeInt(&buf, Int32(11))
-        case .PadSizeTooSmall(_ /* message is ignored*/):
+        case .AuthenticationFailed(_ /* message is ignored*/):
             writeInt(&buf, Int32(12))
-        case .PadSizeTooBig(_ /* message is ignored*/):
+        case .InvalidPadding(_ /* message is ignored*/):
             writeInt(&buf, Int32(13))
 
         
@@ -1939,6 +2035,109 @@ extension AshError: Foundation.LocalizedError {
         String(reflecting: self)
     }
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Available pad sizes
+ */
+
+public enum PadSize {
+    
+    /**
+     * 32 KB - approximately 25 short messages
+     */
+    case tiny
+    /**
+     * 64 KB - approximately 50 short messages
+     */
+    case small
+    /**
+     * 256 KB - approximately 200 short messages
+     */
+    case medium
+    /**
+     * 512 KB - approximately 400 short messages
+     */
+    case large
+    /**
+     * 1 MB - approximately 800 short messages
+     */
+    case huge
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePadSize: FfiConverterRustBuffer {
+    typealias SwiftType = PadSize
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PadSize {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .tiny
+        
+        case 2: return .small
+        
+        case 3: return .medium
+        
+        case 4: return .large
+        
+        case 5: return .huge
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PadSize, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .tiny:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .small:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .medium:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .large:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .huge:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePadSize_lift(_ buf: RustBuffer) throws -> PadSize {
+    return try FfiConverterTypePadSize.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePadSize_lower(_ value: PadSize) -> RustBuffer {
+    return FfiConverterTypePadSize.lower(value)
+}
+
+
+
+extension PadSize: Equatable, Hashable {}
+
+
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -2017,6 +2216,92 @@ extension Role: Equatable, Hashable {}
 
 
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Transfer method for QR ceremony.
+ *
+ * Determines which erasure coding strategy is used for pad transfer.
+ * All methods use the same wire format, so receivers auto-adapt.
+ */
+
+public enum TransferMethod {
+    
+    /**
+     * Raptor codes - near-optimal, K + 2-5 blocks overhead (recommended)
+     */
+    case raptor
+    /**
+     * LT codes - legacy fountain codes, K + O(sqrt(K)) blocks overhead
+     */
+    case lt
+    /**
+     * Sequential - plain numbered frames, no erasure coding
+     */
+    case sequential
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTransferMethod: FfiConverterRustBuffer {
+    typealias SwiftType = TransferMethod
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TransferMethod {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .raptor
+        
+        case 2: return .lt
+        
+        case 3: return .sequential
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TransferMethod, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .raptor:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .lt:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .sequential:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTransferMethod_lift(_ buf: RustBuffer) throws -> TransferMethod {
+    return try FfiConverterTypeTransferMethod.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTransferMethod_lower(_ value: TransferMethod) -> RustBuffer {
+    return FfiConverterTypeTransferMethod.lower(value)
+}
+
+
+
+extension TransferMethod: Equatable, Hashable {}
+
+
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -2091,30 +2376,116 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     }
 }
 /**
+ * Calculate expected frames needed for successful transfer.
+ * This is the number displayed in UI as "~X QR frames".
+ */
+public func calculateExpectedFrames(padBytes: UInt64, blockSize: UInt32, method: TransferMethod) -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_calculate_expected_frames(
+        FfiConverterUInt64.lower(padBytes),
+        FfiConverterUInt32.lower(blockSize),
+        FfiConverterTypeTransferMethod.lower(method),$0
+    )
+})
+}
+/**
+ * Calculate total frames to pre-generate (source + redundancy).
+ */
+public func calculateFramesToGenerate(padBytes: UInt64, blockSize: UInt32, method: TransferMethod) -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_calculate_frames_to_generate(
+        FfiConverterUInt64.lower(padBytes),
+        FfiConverterUInt32.lower(blockSize),
+        FfiConverterTypeTransferMethod.lower(method),$0
+    )
+})
+}
+/**
+ * Calculate total pad consumption for a message
+ * Returns: auth_overhead (64) + plaintext_length
+ */
+public func calculatePadConsumption(plaintextLength: UInt32) -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_calculate_pad_consumption(
+        FfiConverterUInt32.lower(plaintextLength),$0
+    )
+})
+}
+/**
+ * Calculate redundancy blocks to pre-generate beyond source count.
+ * This is used for QR pre-generation to ensure enough frames are ready.
+ */
+public func calculateRedundancyBlocks(sourceBlocks: UInt32, method: TransferMethod) -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_calculate_redundancy_blocks(
+        FfiConverterUInt32.lower(sourceBlocks),
+        FfiConverterTypeTransferMethod.lower(method),$0
+    )
+})
+}
+/**
+ * Calculate source blocks (K) for given pad size and block size.
+ * Includes metadata overhead in calculation.
+ */
+public func calculateSourceBlocks(padBytes: UInt64, blockSize: UInt32) -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_calculate_source_blocks(
+        FfiConverterUInt64.lower(padBytes),
+        FfiConverterUInt32.lower(blockSize),$0
+    )
+})
+}
+/**
  * Create a fountain frame generator for ceremony QR display.
  *
  * This is the main entry point for initiators. The generator produces
  * unlimited encoded blocks that can be displayed as QR codes.
  * Passphrase is required for encrypting the QR frames.
+ * Method selects the transfer strategy (Raptor recommended).
  */
-public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8], blockSize: UInt32, passphrase: String)throws  -> FountainFrameGenerator {
+public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8], blockSize: UInt32, passphrase: String, method: TransferMethod)throws  -> FountainFrameGenerator {
     return try  FfiConverterTypeFountainFrameGenerator.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_create_fountain_generator(
         FfiConverterTypeCeremonyMetadata.lower(metadata),
         FfiConverterSequenceUInt8.lower(padBytes),
         FfiConverterUInt32.lower(blockSize),
-        FfiConverterString.lower(passphrase),$0
+        FfiConverterString.lower(passphrase),
+        FfiConverterTypeTransferMethod.lower(method),$0
     )
 })
 }
 /**
  * Decrypt ciphertext using OTP (XOR with key)
+ * WARNING: No authentication - use decrypt_authenticated for new code
  */
 public nonisolated func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_decrypt(
         FfiConverterSequenceUInt8.lower(key),
         FfiConverterSequenceUInt8.lower(ciphertext),$0
+    )
+})
+}
+/**
+ * Decrypt and verify an authenticated message.
+ *
+ * Verifies the authentication tag BEFORE decryption.
+ * If verification fails, returns AuthenticationFailed error.
+ *
+ * # Arguments
+ * - `auth_key`: 64 bytes from pad for authentication
+ * - `encryption_key`: N bytes from pad for decryption (same length as ciphertext)
+ * - `encoded_frame`: Full message frame from encrypt_authenticated
+ *
+ * # Returns
+ * Tuple of (plaintext, message_type)
+ */
+public nonisolated func decryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], encodedFrame: [UInt8])throws  -> DecryptedMessage {
+    return try  FfiConverterTypeDecryptedMessage.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_func_decrypt_authenticated(
+        FfiConverterSequenceUInt8.lower(authKey),
+        FfiConverterSequenceUInt8.lower(encryptionKey),
+        FfiConverterSequenceUInt8.lower(encodedFrame),$0
     )
 })
 }
@@ -2162,12 +2533,40 @@ public func deriveConversationId(padBytes: [UInt8])throws  -> String {
 }
 /**
  * Encrypt plaintext using OTP (XOR with key)
+ * WARNING: No authentication - use encrypt_authenticated for new code
  */
 public nonisolated func encrypt(key: [UInt8], plaintext: [UInt8])throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_encrypt(
         FfiConverterSequenceUInt8.lower(key),
         FfiConverterSequenceUInt8.lower(plaintext),$0
+    )
+})
+}
+/**
+ * Encrypt plaintext with Wegman-Carter authentication.
+ *
+ * This is the recommended encryption function. It provides:
+ * - OTP encryption (information-theoretic confidentiality)
+ * - Wegman-Carter MAC (information-theoretic authenticity)
+ * - Anti-malleability (any bit flip is detected)
+ *
+ * # Arguments
+ * - `auth_key`: 64 bytes from pad for authentication
+ * - `encryption_key`: N bytes from pad for encryption (same length as plaintext)
+ * - `plaintext`: Data to encrypt
+ * - `msg_type`: Message type (0x01 = text, 0x02 = location)
+ *
+ * # Returns
+ * Encoded message frame: [version][type][length][ciphertext][32-byte tag]
+ */
+public nonisolated func encryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], plaintext: [UInt8], msgType: UInt8)throws  -> [UInt8] {
+    return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
+    uniffi_ash_bindings_fn_func_encrypt_authenticated(
+        FfiConverterSequenceUInt8.lower(authKey),
+        FfiConverterSequenceUInt8.lower(encryptionKey),
+        FfiConverterSequenceUInt8.lower(plaintext),
+        FfiConverterUInt8.lower(msgType),$0
     )
 })
 }
@@ -2193,11 +2592,20 @@ public nonisolated func generateMnemonicWithCount(padBytes: [UInt8], wordCount: 
 })
 }
 /**
- * Get maximum pad size in bytes (1 GB)
+ * Authentication overhead per message (64 bytes for Wegman-Carter MAC)
  */
-public func getMaxPadSize() -> UInt64 {
-    return try!  FfiConverterUInt64.lift(try! rustCall() {
-    uniffi_ash_bindings_fn_func_get_max_pad_size($0
+public func getAuthOverhead() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_auth_overhead($0
+    )
+})
+}
+/**
+ * Get default QR block size.
+ */
+public func getDefaultBlockSize() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_default_block_size($0
     )
 })
 }
@@ -2211,11 +2619,11 @@ public func getMaxPassphraseLength() -> UInt32 {
 })
 }
 /**
- * Get minimum pad size in bytes (32 KB)
+ * Get metadata overhead constant (bytes added to pad for ceremony encoding).
  */
-public func getMinPadSize() -> UInt64 {
-    return try!  FfiConverterUInt64.lift(try! rustCall() {
-    uniffi_ash_bindings_fn_func_get_min_pad_size($0
+public func getMetadataOverhead() -> UInt32 {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_metadata_overhead($0
     )
 })
 }
@@ -2229,6 +2637,16 @@ public func getMinPassphraseLength() -> UInt32 {
 })
 }
 /**
+ * Get pad size in bytes for a given PadSize
+ */
+public func getPadSizeBytes(size: PadSize) -> UInt64 {
+    return try!  FfiConverterUInt64.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_func_get_pad_size_bytes(
+        FfiConverterTypePadSize.lower(size),$0
+    )
+})
+}
+/**
  * Securely zero a byte array using volatile writes.
  * This prevents the compiler from optimizing away the zeroing.
  * Use this for wiping sensitive data from memory.
@@ -2238,16 +2656,6 @@ public func secureZeroBytes(data: [UInt8]) {try! rustCall() {
         FfiConverterSequenceUInt8.lower(data),$0
     )
 }
-}
-/**
- * Validate that a pad size is within allowed bounds (32KB - 1GB)
- */
-public func validatePadSize(size: UInt64) -> Bool {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_ash_bindings_fn_func_validate_pad_size(
-        FfiConverterUInt64.lower(size),$0
-    )
-})
 }
 /**
  * Validate passphrase meets requirements (4-64 printable ASCII chars)
@@ -2275,10 +2683,28 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_create_fountain_generator() != 18935) {
+    if (uniffi_ash_bindings_checksum_func_calculate_expected_frames() != 48929) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_calculate_frames_to_generate() != 45104) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_calculate_pad_consumption() != 37519) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_calculate_redundancy_blocks() != 36440) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_calculate_source_blocks() != 21521) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_create_fountain_generator() != 65342) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_decrypt() != 24750) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_decrypt_authenticated() != 13357) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_derive_all_tokens() != 49844) {
@@ -2296,28 +2722,34 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_func_encrypt() != 28557) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ash_bindings_checksum_func_encrypt_authenticated() != 2230) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ash_bindings_checksum_func_generate_mnemonic() != 8039) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_generate_mnemonic_with_count() != 38577) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_get_max_pad_size() != 9742) {
+    if (uniffi_ash_bindings_checksum_func_get_auth_overhead() != 18216) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ash_bindings_checksum_func_get_default_block_size() != 39613) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_get_max_passphrase_length() != 19825) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_get_min_pad_size() != 25389) {
+    if (uniffi_ash_bindings_checksum_func_get_metadata_overhead() != 5769) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_get_min_passphrase_length() != 46202) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_secure_zero_bytes() != 4018) {
+    if (uniffi_ash_bindings_checksum_func_get_pad_size_bytes() != 14934) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_func_validate_pad_size() != 32786) {
+    if (uniffi_ash_bindings_checksum_func_secure_zero_bytes() != 4018) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ash_bindings_checksum_func_validate_passphrase() != 11471) {
@@ -2407,7 +2839,7 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_constructor_pad_from_bytes_with_state() != 25438) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ash_bindings_checksum_constructor_pad_from_entropy() != 25338) {
+    if (uniffi_ash_bindings_checksum_constructor_pad_from_entropy() != 28891) {
         return InitializationResult.apiChecksumMismatch
     }
 

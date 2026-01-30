@@ -45,6 +45,7 @@
 //!     initiator_pad.as_bytes(),
 //!     256,
 //!     None, // Optional passphrase
+//!     frame::TransferMethod::Raptor, // Transfer method
 //! ).unwrap();
 //!
 //! // 3. Generate mnemonic for verification
@@ -113,6 +114,7 @@ pub mod mac;
 pub mod mnemonic;
 pub mod message;
 pub mod pad;
+pub mod pad_calculator;
 pub mod passphrase;
 pub mod poly_hash;
 pub mod raptor;
@@ -125,11 +127,17 @@ pub(crate) mod otp;
 // Re-export main types at crate root
 pub use ceremony::{CeremonyMetadata, NotificationFlags, DEFAULT_TTL_SECONDS, METADATA_VERSION};
 pub use error::{Error, Result};
-pub use fountain::{EncodedBlock, FountainDecoder, FountainEncoder};
-pub use raptor::{RaptorBlock, RaptorDecoder, RaptorEncoder};
+pub use fountain::{EncodedBlock, FountainDecoder, FountainEncoder, LegacyLTEncoder, LegacyLTDecoder};
+pub use raptor::{RaptorDecoder, RaptorEncoder};
 pub use frame::{
     create_fountain_ceremony, FountainCeremonyResult, FountainFrameGenerator,
-    FountainFrameReceiver, DEFAULT_BLOCK_SIZE,
+    FountainFrameReceiver, TransferMethod, DEFAULT_BLOCK_SIZE,
+};
+
+// Re-export pad calculator types for convenience
+pub use pad_calculator::{
+    calculate_pad_stats, calculate_pad_stats_with_qr_size, expected_frames, redundancy_blocks,
+    PadCalculator, PadStats, METADATA_OVERHEAD, DEFAULT_QR_BLOCK_SIZE,
 };
 pub use pad::{Pad, PadSize, Role};
 
@@ -159,9 +167,14 @@ mod tests {
 
         // === Initiator creates fountain frames ===
         let metadata = CeremonyMetadata::default();
-        let mut generator =
-            frame::create_fountain_ceremony(&metadata, initiator_pad.as_bytes(), 256, None)
-                .unwrap();
+        let mut generator = frame::create_fountain_ceremony(
+            &metadata,
+            initiator_pad.as_bytes(),
+            256,
+            None,
+            frame::TransferMethod::Raptor,
+        )
+        .unwrap();
 
         // === Initiator generates mnemonic ===
         let initiator_mnemonic = mnemonic::generate_default(initiator_pad.as_bytes());
@@ -291,7 +304,9 @@ mod tests {
     fn fountain_corruption_detected() {
         let metadata = CeremonyMetadata::default();
         let pad = vec![0u8; 1000];
-        let mut generator = frame::create_fountain_ceremony(&metadata, &pad, 256, None).unwrap();
+        let mut generator =
+            frame::create_fountain_ceremony(&metadata, &pad, 256, None, frame::TransferMethod::Raptor)
+                .unwrap();
 
         let mut frame = generator.next_frame();
 

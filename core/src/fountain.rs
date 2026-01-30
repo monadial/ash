@@ -579,10 +579,21 @@ impl PseudoRng {
     }
 }
 
-/// Backward compatibility alias for [`LTEncoder`].
-pub type FountainEncoder = LTEncoder;
-/// Backward compatibility alias for [`LTDecoder`].
-pub type FountainDecoder = LTDecoder;
+/// Primary encoder for fountain codes - uses Raptor codes for better efficiency.
+///
+/// Raptor codes provide lower overhead than pure LT codes:
+/// - K + 2-5 blocks needed vs K + O(√K) for LT
+/// - Better burst loss handling via LDPC pre-coding
+/// - Consistent performance with low variance
+pub type FountainEncoder = crate::raptor::RaptorEncoder;
+
+/// Primary decoder for fountain codes - uses Raptor codes for better efficiency.
+pub type FountainDecoder = crate::raptor::RaptorDecoder;
+
+/// Legacy alias for LT encoder (kept for comparison tests).
+pub type LegacyLTEncoder = LTEncoder;
+/// Legacy alias for LT decoder (kept for comparison tests).
+pub type LegacyLTDecoder = LTDecoder;
 
 #[cfg(test)]
 mod tests {

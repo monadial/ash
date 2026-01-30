@@ -9,7 +9,14 @@
 //! - Pre-code adds redundancy through LDPC-like parity symbols
 //! - LT encoding generates additional repair symbols
 //!
-//! Key advantages over pure LT codes:
+//! ## Pre-coding Layer (FROZEN - DO NOT CHANGE)
+//!
+//! The LDPC-like parity structure is deterministic and must remain unchanged:
+//! - P = ceil(K * 0.05) + 3 parity symbols
+//! - Each parity XORs ~K/4 source symbols using seed (i + 0x12345678)
+//! - Changing this formula breaks decoding compatibility!
+//!
+//! ## Key advantages over pure LT codes:
 //! - Much lower overhead (2-5 extra symbols vs O(√K))
 //! - Consistent performance (low variance)
 //! - Handles burst losses well due to pre-coding
@@ -18,6 +25,7 @@
 //!
 //! ```
 //! use ash_core::raptor::{RaptorEncoder, RaptorDecoder};
+//! use ash_core::fountain::EncodedBlock;
 //!
 //! let data = b"Hello, Raptor codes!";
 //! let mut encoder = RaptorEncoder::new(data, 64);
@@ -33,96 +41,26 @@
 //! ```
 
 use crate::crc;
-use crate::error::{Error, Result};
+use crate::fountain::EncodedBlock;
 use std::collections::HashSet;
 
-/// Default symbol size optimized for QR codes with L correction level.
-pub const DEFAULT_SYMBOL_SIZE: usize = 900;
-
-/// An encoded Raptor block for transmission.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RaptorBlock {
-    /// Encoding Symbol ID (ESI) - unique identifier for this block
-    pub esi: u32,
-    /// Number of source symbols (K)
-    pub source_count: u16,
-    /// Size of each symbol in bytes
-    pub symbol_size: u16,
-    /// Original data length in bytes
-    pub original_len: u32,
-    /// Encoded symbol data
-    pub data: Vec<u8>,
-    /// CRC-32 checksum
-    pub checksum: u32,
-}
-
-impl RaptorBlock {
-    /// Encode to bytes: `[esi:4][count:2][size:2][len:4][data:N][crc:4]`
-    pub fn encode(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(16 + self.data.len());
-        bytes.extend_from_slice(&self.esi.to_be_bytes());
-        bytes.extend_from_slice(&self.source_count.to_be_bytes());
-        bytes.extend_from_slice(&self.symbol_size.to_be_bytes());
-        bytes.extend_from_slice(&self.original_len.to_be_bytes());
-        bytes.extend_from_slice(&self.data);
-        bytes.extend_from_slice(&self.checksum.to_be_bytes());
-        bytes
-    }
-
-    /// Decode from bytes.
-    pub fn decode(bytes: &[u8]) -> Result<Self> {
-        if bytes.len() < 17 {
-            return Err(Error::FountainBlockTooShort {
-                size: bytes.len(),
-                minimum: 17,
-            });
-        }
-
-        let esi = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-        let source_count = u16::from_be_bytes([bytes[4], bytes[5]]);
-        let symbol_size = u16::from_be_bytes([bytes[6], bytes[7]]);
-        let original_len = u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]);
-
-        let data_end = 12 + symbol_size as usize;
-        if bytes.len() < data_end + 4 {
-            return Err(Error::FountainBlockTooShort {
-                size: bytes.len(),
-                minimum: data_end + 4,
-            });
-        }
-
-        let data = bytes[12..data_end].to_vec();
-        let checksum = u32::from_be_bytes([
-            bytes[data_end],
-            bytes[data_end + 1],
-            bytes[data_end + 2],
-            bytes[data_end + 3],
-        ]);
-
-        let computed = crc::compute(&data);
-        if computed != checksum {
-            return Err(Error::CrcMismatch {
-                expected: checksum,
-                actual: computed,
-            });
-        }
-
-        Ok(Self {
-            esi,
-            source_count,
-            symbol_size,
-            original_len,
-            data,
-            checksum,
-        })
-    }
-}
+/// Default block size optimized for QR codes with L correction level.
+/// Matches the LT encoder default for API compatibility.
+pub const DEFAULT_BLOCK_SIZE: usize = 1500;
 
 /// Raptor Encoder - generates encoded symbols from source data.
 ///
 /// Uses systematic encoding: first K symbols are source data directly,
 /// remaining symbols are repair symbols generated via LT encoding over
 /// pre-coded intermediate symbols.
+///
+/// ## API Compatibility
+///
+/// This encoder is API-compatible with [`crate::fountain::LTEncoder`]:
+/// - `source_count()` returns number of source blocks (K)
+/// - `block_size()` returns block size in bytes
+/// - `next_block()` returns [`EncodedBlock`]
+/// - `generate_block(index)` returns specific block
 pub struct RaptorEncoder {
     /// Source symbols
     source: Vec<Vec<u8>>,
@@ -132,62 +70,66 @@ pub struct RaptorEncoder {
     k: usize,
     /// Number of parity symbols
     p: usize,
-    /// Symbol size in bytes
-    symbol_size: usize,
+    /// Block size in bytes
+    block_size: usize,
     /// Original data length
     original_len: usize,
-    /// Next ESI to generate
-    next_esi: u32,
+    /// Next index to generate
+    next_index: u32,
 }
 
 impl RaptorEncoder {
-    /// Create encoder with specified symbol size.
-    pub fn new(data: &[u8], symbol_size: usize) -> Self {
-        assert!(symbol_size > 0, "symbol_size must be > 0");
+    /// Create encoder with specified block size.
+    pub fn new(data: &[u8], block_size: usize) -> Self {
+        assert!(block_size > 0, "block_size must be > 0");
 
         let original_len = data.len();
-        let k = if data.is_empty() { 1 } else { data.len().div_ceil(symbol_size) };
+        let k = if data.is_empty() { 1 } else { data.len().div_ceil(block_size) };
 
-        // Split source data into K symbols
+        // Split source data into K blocks
         let mut source = Vec::with_capacity(k);
         for i in 0..k {
-            let start = i * symbol_size;
-            let end = ((i + 1) * symbol_size).min(data.len());
-            let mut symbol = if start < data.len() {
+            let start = i * block_size;
+            let end = ((i + 1) * block_size).min(data.len());
+            let mut block = if start < data.len() {
                 data[start..end].to_vec()
             } else {
                 Vec::new()
             };
-            symbol.resize(symbol_size, 0);
-            source.push(symbol);
+            block.resize(block_size, 0);
+            source.push(block);
         }
 
-        // Generate parity symbols using LDPC-like structure
+        // Generate parity blocks using LDPC-like structure
         // P = ceil(K * 0.05) + 3 provides good redundancy
+        // WARNING: This formula is FROZEN - changing it breaks compatibility!
         let p = (k as f64 * 0.05).ceil() as usize + 3;
-        let parity = Self::generate_parity(&source, p, symbol_size);
+        let parity = Self::generate_parity(&source, p, block_size);
 
         Self {
             source,
             parity,
             k,
             p,
-            symbol_size,
+            block_size,
             original_len,
-            next_esi: 0,
+            next_index: 0,
         }
     }
 
-    /// Generate parity symbols using LDPC-like XOR combinations.
-    fn generate_parity(source: &[Vec<u8>], p: usize, symbol_size: usize) -> Vec<Vec<u8>> {
+    /// Generate parity blocks using LDPC-like XOR combinations.
+    ///
+    /// WARNING: This structure is FROZEN. The seed formula (i + 0x12345678)
+    /// and degree formula (K/4) must not change or decoding will break!
+    fn generate_parity(source: &[Vec<u8>], p: usize, block_size: usize) -> Vec<Vec<u8>> {
         let k = source.len();
-        let mut parity = vec![vec![0u8; symbol_size]; p];
+        let mut parity = vec![vec![0u8; block_size]; p];
 
         for i in 0..p {
+            // FROZEN: seed = i + 0x12345678
             let mut rng = PseudoRng::new(i as u64 + 0x12345678);
 
-            // Each parity symbol XORs a subset of source symbols
-            // Use degree ~K/4 for good coverage
+            // FROZEN: degree = K/4, clamped to [2, K]
             let degree = (k / 4).max(2).min(k);
 
             let mut indices: Vec<usize> = (0..k).collect();
@@ -195,69 +137,71 @@ impl RaptorEncoder {
                 if indices.is_empty() { break; }
                 let idx = rng.next_usize() % indices.len();
                 let src_idx = indices.swap_remove(idx);
-                xor_symbol(&mut parity[i], &source[src_idx]);
+                xor_block(&mut parity[i], &source[src_idx]);
             }
         }
 
         parity
     }
 
-    /// Generate the next encoded symbol.
-    pub fn next_block(&mut self) -> RaptorBlock {
-        let block = self.generate_block(self.next_esi);
-        self.next_esi = self.next_esi.wrapping_add(1);
+    /// Generate the next encoded block.
+    pub fn next_block(&mut self) -> EncodedBlock {
+        let block = self.generate_block(self.next_index);
+        self.next_index = self.next_index.wrapping_add(1);
         block
     }
 
-    /// Generate a specific encoded symbol by ESI.
-    pub fn generate_block(&self, esi: u32) -> RaptorBlock {
-        let data = self.encode_symbol(esi);
+    /// Generate a specific encoded block by index.
+    ///
+    /// Deterministic: same index always produces same block.
+    pub fn generate_block(&self, index: u32) -> EncodedBlock {
+        let data = self.encode_block(index);
         let checksum = crc::compute(&data);
 
-        RaptorBlock {
-            esi,
+        EncodedBlock {
+            index,
             source_count: self.k as u16,
-            symbol_size: self.symbol_size as u16,
+            block_size: self.block_size as u16,
             original_len: self.original_len as u32,
             data,
             checksum,
         }
     }
 
-    /// Encode a single symbol.
-    fn encode_symbol(&self, esi: u32) -> Vec<u8> {
-        let esi = esi as usize;
+    /// Encode a single block by index.
+    fn encode_block(&self, index: u32) -> Vec<u8> {
+        let index = index as usize;
 
-        // First K ESIs: systematic (direct source symbols)
-        if esi < self.k {
-            return self.source[esi].clone();
+        // First K indices: systematic (direct source blocks)
+        if index < self.k {
+            return self.source[index].clone();
         }
 
-        // Next P ESIs: parity symbols directly
-        if esi < self.k + self.p {
-            return self.parity[esi - self.k].clone();
+        // Next P indices: parity blocks directly
+        if index < self.k + self.p {
+            return self.parity[index - self.k].clone();
         }
 
-        // Remaining ESIs: LT-encoded repair symbols
-        // XOR combination of source + parity symbols
+        // Remaining indices: LT-encoded repair blocks
+        // XOR combination of source + parity blocks
         let total = self.k + self.p;
-        let mut rng = PseudoRng::new(esi as u64);
+        let mut rng = PseudoRng::new(index as u64);
 
         // Degree distribution optimized for Raptor
         let degree = self.sample_degree(&mut rng, total);
 
-        let mut result = vec![0u8; self.symbol_size];
+        let mut result = vec![0u8; self.block_size];
         let mut indices: Vec<usize> = (0..total).collect();
 
         for _ in 0..degree.min(total) {
             if indices.is_empty() { break; }
             let idx = rng.next_usize() % indices.len();
-            let sym_idx = indices.swap_remove(idx);
+            let blk_idx = indices.swap_remove(idx);
 
-            if sym_idx < self.k {
-                xor_symbol(&mut result, &self.source[sym_idx]);
+            if blk_idx < self.k {
+                xor_block(&mut result, &self.source[blk_idx]);
             } else {
-                xor_symbol(&mut result, &self.parity[sym_idx - self.k]);
+                xor_block(&mut result, &self.parity[blk_idx - self.k]);
             }
         }
 
@@ -265,11 +209,17 @@ impl RaptorEncoder {
     }
 
     /// Sample degree from optimized distribution.
+    ///
+    /// Distribution tuned for low overhead:
+    /// - 5% degree 1 (seeds for decoding)
+    /// - 40% degree 2 (most useful for propagation)
+    /// - 30% degree 3
+    /// - 15% degree 4
+    /// - 7% degree 5-10
+    /// - 3% degree 10-20
     fn sample_degree(&self, rng: &mut PseudoRng, n: usize) -> usize {
         if n <= 2 { return 1; }
 
-        // Degree distribution tuned for low overhead
-        // Heavy on degree 2-3 which are most useful for propagation
         let r = rng.next_f64();
 
         if r < 0.05 { 1 }
@@ -280,19 +230,19 @@ impl RaptorEncoder {
         else { (n / 2).max(10).min(20) }
     }
 
-    /// Number of source symbols.
+    /// Number of source blocks (K).
     pub fn source_count(&self) -> usize {
         self.k
     }
 
-    /// Number of parity symbols.
+    /// Number of parity blocks (P).
     pub fn parity_count(&self) -> usize {
         self.p
     }
 
-    /// Symbol size in bytes.
-    pub fn symbol_size(&self) -> usize {
-        self.symbol_size
+    /// Block size in bytes.
+    pub fn block_size(&self) -> usize {
+        self.block_size
     }
 
     /// Original data length.
@@ -301,74 +251,82 @@ impl RaptorEncoder {
     }
 }
 
-/// Raptor Decoder - reconstructs source data from received symbols.
+/// Raptor Decoder - reconstructs source data from received blocks.
 ///
-/// Uses belief propagation with Gaussian elimination fallback for
+/// Uses belief propagation with parity recovery fallback for
 /// efficient decoding.
+///
+/// ## API Compatibility
+///
+/// This decoder is API-compatible with [`crate::fountain::LTDecoder`]:
+/// - `from_block(&block)` creates decoder from first block
+/// - `add_block(&block)` adds a block, returns true when complete
+/// - `is_complete()`, `progress()`, `get_data()` work identically
 pub struct RaptorDecoder {
     k: usize,
     p: usize,
-    symbol_size: usize,
+    block_size: usize,
     original_len: usize,
-    /// Decoded source symbols (None if not yet decoded)
+    /// Decoded source blocks (None if not yet decoded)
     decoded_source: Vec<Option<Vec<u8>>>,
-    /// Decoded parity symbols (None if not yet decoded)
+    /// Decoded parity blocks (None if not yet decoded)
     decoded_parity: Vec<Option<Vec<u8>>>,
-    /// Pending equations: (symbol_data, indices into combined space)
+    /// Pending equations: (block_data, indices into combined space)
     pending: Vec<(Vec<u8>, Vec<usize>)>,
-    /// Track received ESIs
-    seen_esis: HashSet<u32>,
+    /// Track received block indices
+    seen_indices: HashSet<u32>,
 }
 
 impl RaptorDecoder {
     /// Create decoder with known parameters.
-    pub fn new(source_count: u16, symbol_size: u16, original_len: usize) -> Self {
+    pub fn new(source_count: u16, block_size: u16, original_len: usize) -> Self {
         let k = source_count as usize;
+        // FROZEN: parity count formula must match encoder
         let p = (k as f64 * 0.05).ceil() as usize + 3;
 
         Self {
             k,
             p,
-            symbol_size: symbol_size as usize,
+            block_size: block_size as usize,
             original_len,
             decoded_source: vec![None; k],
             decoded_parity: vec![None; p],
             pending: Vec::new(),
-            seen_esis: HashSet::new(),
+            seen_indices: HashSet::new(),
         }
     }
 
     /// Create decoder from first received block.
-    pub fn from_block(block: &RaptorBlock) -> Self {
-        Self::new(block.source_count, block.symbol_size, block.original_len as usize)
+    pub fn from_block(block: &EncodedBlock) -> Self {
+        Self::new(block.source_count, block.block_size, block.original_len as usize)
     }
 
     /// Add a received block. Returns true if decoding is complete.
-    pub fn add_block(&mut self, block: &RaptorBlock) -> bool {
+    pub fn add_block(&mut self, block: &EncodedBlock) -> bool {
         if self.is_complete() {
             return true;
         }
 
         // Skip duplicates
-        if self.seen_esis.contains(&block.esi) {
+        if self.seen_indices.contains(&block.index) {
             return self.is_complete();
         }
-        self.seen_esis.insert(block.esi);
+        self.seen_indices.insert(block.index);
 
-        let esi = block.esi as usize;
+        let index = block.index as usize;
 
-        // Systematic source symbol
-        if esi < self.k {
-            if self.decoded_source[esi].is_none() {
-                self.decoded_source[esi] = Some(block.data.clone());
+        // Systematic source block
+        if index < self.k {
+            if self.decoded_source[index].is_none() {
+                self.decoded_source[index] = Some(block.data.clone());
                 self.propagate();
             }
             return self.is_complete();
         }
 
-        // Parity symbol
-        if esi < self.k + self.p {
-            let parity_idx = esi - self.k;
+        // Parity block
+        if index < self.k + self.p {
+            let parity_idx = index - self.k;
             if self.decoded_parity[parity_idx].is_none() {
                 self.decoded_parity[parity_idx] = Some(block.data.clone());
                 self.propagate();
@@ -376,9 +334,9 @@ impl RaptorDecoder {
             return self.is_complete();
         }
 
-        // LT-encoded repair symbol
+        // LT-encoded repair block
         let total = self.k + self.p;
-        let mut rng = PseudoRng::new(esi as u64);
+        let mut rng = PseudoRng::new(index as u64);
         let degree = self.sample_degree(&mut rng, total);
 
         let mut indices = Vec::with_capacity(degree);
@@ -392,12 +350,12 @@ impl RaptorDecoder {
 
         // Try immediate decoding
         let unknown: Vec<usize> = indices.iter()
-            .filter(|&&i| self.get_symbol(i).is_none())
+            .filter(|&&i| self.get_block(i).is_none())
             .copied()
             .collect();
 
         if unknown.is_empty() {
-            // Redundant
+            // Redundant block
             return self.is_complete();
         }
 
@@ -408,13 +366,13 @@ impl RaptorDecoder {
 
             for &i in &indices {
                 if i != target {
-                    if let Some(sym) = self.get_symbol(i) {
-                        xor_symbol(&mut data, sym);
+                    if let Some(blk) = self.get_block(i) {
+                        xor_block(&mut data, blk);
                     }
                 }
             }
 
-            self.set_symbol(target, data);
+            self.set_block(target, data);
             self.propagate();
         } else {
             // Store for later
@@ -424,6 +382,7 @@ impl RaptorDecoder {
         self.is_complete()
     }
 
+    /// Sample degree (must match encoder distribution).
     fn sample_degree(&self, rng: &mut PseudoRng, n: usize) -> usize {
         if n <= 2 { return 1; }
 
@@ -437,7 +396,7 @@ impl RaptorDecoder {
         else { (n / 2).max(10).min(20) }
     }
 
-    fn get_symbol(&self, idx: usize) -> Option<&Vec<u8>> {
+    fn get_block(&self, idx: usize) -> Option<&Vec<u8>> {
         if idx < self.k {
             self.decoded_source[idx].as_ref()
         } else {
@@ -445,7 +404,7 @@ impl RaptorDecoder {
         }
     }
 
-    fn set_symbol(&mut self, idx: usize, data: Vec<u8>) {
+    fn set_block(&mut self, idx: usize, data: Vec<u8>) {
         if idx < self.k {
             self.decoded_source[idx] = Some(data);
         } else if idx - self.k < self.p {
@@ -453,19 +412,19 @@ impl RaptorDecoder {
         }
     }
 
-    /// Belief propagation to decode more symbols.
+    /// Belief propagation to decode more blocks.
     fn propagate(&mut self) {
         let mut changed = true;
         while changed {
             changed = false;
 
-            // Process pending equations - collect decoded symbols first
+            // Process pending equations - collect decoded blocks first
             let mut to_remove = Vec::new();
             let mut to_decode = Vec::new();
 
             for (idx, (data, indices)) in self.pending.iter().enumerate() {
                 let unknown: Vec<usize> = indices.iter()
-                    .filter(|&&i| self.get_symbol(i).is_none())
+                    .filter(|&&i| self.get_block(i).is_none())
                     .copied()
                     .collect();
 
@@ -477,8 +436,8 @@ impl RaptorDecoder {
 
                     for &i in indices.iter() {
                         if i != target {
-                            if let Some(sym) = self.get_symbol(i) {
-                                xor_symbol(&mut result, sym);
+                            if let Some(blk) = self.get_block(i) {
+                                xor_block(&mut result, blk);
                             }
                         }
                     }
@@ -489,9 +448,9 @@ impl RaptorDecoder {
                 }
             }
 
-            // Apply decoded symbols
+            // Apply decoded blocks
             for (target, data) in to_decode {
-                self.set_symbol(target, data);
+                self.set_block(target, data);
             }
 
             // Remove processed equations (in reverse order to preserve indices)
@@ -499,22 +458,22 @@ impl RaptorDecoder {
                 self.pending.swap_remove(idx);
             }
 
-            // Try to use parity equations if source symbols stuck
+            // Try to use parity equations if source blocks are stuck
             if !changed && !self.is_complete() {
                 changed = self.try_parity_recovery();
             }
         }
     }
 
-    /// Try to recover source symbols using parity equations.
+    /// Try to recover source blocks using parity equations.
     fn try_parity_recovery(&mut self) -> bool {
-        // For each decoded parity symbol, check if it can help
+        // For each decoded parity block, check if it can help
         for parity_idx in 0..self.p {
             if self.decoded_parity[parity_idx].is_none() {
                 continue;
             }
 
-            // Regenerate the parity equation
+            // Regenerate the parity equation (FROZEN formula)
             let mut rng = PseudoRng::new(parity_idx as u64 + 0x12345678);
             let degree = (self.k / 4).max(2).min(self.k);
 
@@ -527,7 +486,7 @@ impl RaptorDecoder {
                 source_indices.push(available.swap_remove(idx));
             }
 
-            // Check how many source symbols are unknown
+            // Check how many source blocks are unknown
             let unknown: Vec<usize> = source_indices.iter()
                 .filter(|&&i| self.decoded_source[i].is_none())
                 .copied()
@@ -540,8 +499,8 @@ impl RaptorDecoder {
 
                 for &i in &source_indices {
                     if i != target {
-                        if let Some(sym) = &self.decoded_source[i] {
-                            xor_symbol(&mut result, sym);
+                        if let Some(blk) = &self.decoded_source[i] {
+                            xor_block(&mut result, blk);
                         }
                     }
                 }
@@ -565,17 +524,22 @@ impl RaptorDecoder {
         self.decoded_source.iter().filter(|s| s.is_some()).count() as f64 / self.k as f64
     }
 
-    /// Number of unique blocks received.
+    /// Number of unique blocks received (excluding duplicates).
     pub fn unique_blocks_received(&self) -> usize {
-        self.seen_esis.len()
+        self.seen_indices.len()
     }
 
     /// Number of blocks received (alias for compatibility).
     pub fn blocks_received(&self) -> usize {
-        self.seen_esis.len()
+        self.seen_indices.len()
     }
 
-    /// Source symbol count.
+    /// Number of decoded source blocks.
+    pub fn decoded_count(&self) -> usize {
+        self.decoded_source.iter().filter(|s| s.is_some()).count()
+    }
+
+    /// Source block count (K).
     pub fn source_count(&self) -> usize {
         self.k
     }
@@ -586,18 +550,18 @@ impl RaptorDecoder {
             return None;
         }
 
-        let mut data = Vec::with_capacity(self.k * self.symbol_size);
-        for symbol in &self.decoded_source {
-            data.extend_from_slice(symbol.as_ref()?);
+        let mut data = Vec::with_capacity(self.k * self.block_size);
+        for block in &self.decoded_source {
+            data.extend_from_slice(block.as_ref()?);
         }
         data.truncate(self.original_len);
         Some(data)
     }
 }
 
-/// XOR one symbol into another.
+/// XOR one block into another.
 #[inline]
-fn xor_symbol(dest: &mut [u8], src: &[u8]) {
+fn xor_block(dest: &mut [u8], src: &[u8]) {
     for (d, s) in dest.iter_mut().zip(src.iter()) {
         *d ^= s;
     }
@@ -641,18 +605,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn raptor_block_roundtrip() {
-        let block = RaptorBlock {
-            esi: 42,
+    fn raptor_encoded_block_roundtrip() {
+        // Test that Raptor uses the same EncodedBlock format as LT codes
+        let block = EncodedBlock {
+            index: 42,
             source_count: 10,
-            symbol_size: 64,
+            block_size: 64,
             original_len: 500,
             data: vec![0xAB; 64],
             checksum: crc::compute(&vec![0xAB; 64]),
         };
 
         let encoded = block.encode();
-        let decoded = RaptorBlock::decode(&encoded).unwrap();
+        let decoded = EncodedBlock::decode(&encoded).unwrap();
         assert_eq!(block, decoded);
     }
 
@@ -817,7 +782,7 @@ mod tests {
 
     #[test]
     fn compare_raptor_vs_lt() {
-        use crate::fountain::{LTEncoder, LTDecoder};
+        use crate::fountain::{LegacyLTEncoder, LegacyLTDecoder};
 
         println!("\n=== Raptor vs LT Comparison ===");
         println!("{:>8} {:>6} {:>12} {:>12} {:>10}", "Size", "K", "LT blocks", "Raptor", "Savings");
@@ -829,9 +794,9 @@ mod tests {
             // LT test (average of 5 runs)
             let mut lt_total = 0;
             for _ in 0..5 {
-                let mut lt_enc = LTEncoder::new(&data, block_size);
+                let mut lt_enc = LegacyLTEncoder::new(&data, block_size);
                 let k = lt_enc.source_count();
-                let mut lt_dec = LTDecoder::new(k as u16, block_size as u16, size);
+                let mut lt_dec = LegacyLTDecoder::new(k as u16, block_size as u16, size);
                 let mut lt_blocks = 0;
                 while !lt_dec.is_complete() {
                     lt_dec.add_block(&lt_enc.next_block());

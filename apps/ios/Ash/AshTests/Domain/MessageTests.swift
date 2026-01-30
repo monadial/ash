@@ -93,8 +93,11 @@ struct MessageTests {
             timestamp: Date(),
             isOutgoing: isOutgoing,
             expiresAt: expiresAt,
+            serverExpiresAt: isOutgoing ? Date().addingTimeInterval(300) : nil,
             deliveryStatus: isOutgoing ? .sent : .none,
-            sequence: sequence
+            sequence: sequence,
+            blobId: nil,
+            authTag: nil
         )
     }
 
@@ -163,27 +166,27 @@ struct MessageTests {
         }
     }
 
-    @Test func outgoing_withDefaultExpiry_expiresIn5Minutes() {
+    @Test func outgoing_withDefaultExpiry_serverExpiresIn5Minutes() {
         let message = Message.outgoing(text: "Test", sequence: 0)
 
-        guard let expiresAt = message.expiresAt else {
-            Issue.record("Expected expiry date")
+        guard let serverExpiresAt = message.serverExpiresAt else {
+            Issue.record("Expected server expiry date")
             return
         }
 
-        let interval = expiresAt.timeIntervalSince(message.timestamp)
+        let interval = serverExpiresAt.timeIntervalSince(message.timestamp)
         #expect(interval >= 299 && interval <= 301) // ~300 seconds
     }
 
     @Test func outgoing_withCustomExpiry() {
-        let message = Message.outgoing(text: "Test", sequence: 0, expiresIn: 60)
+        let message = Message.outgoing(text: "Test", sequence: 0, serverTTLSeconds: 60)
 
-        guard let expiresAt = message.expiresAt else {
-            Issue.record("Expected expiry date")
+        guard let serverExpiresAt = message.serverExpiresAt else {
+            Issue.record("Expected server expiry date")
             return
         }
 
-        let interval = expiresAt.timeIntervalSince(message.timestamp)
+        let interval = serverExpiresAt.timeIntervalSince(message.timestamp)
         #expect(interval >= 59 && interval <= 61)
     }
 
@@ -200,7 +203,7 @@ struct MessageTests {
     }
 
     @Test func incoming_createsIncomingMessage() {
-        let message = Message.incoming(content: .text("Hello"), sequence: 0)
+        let message = Message.incoming(content: .text("Hello"), sequence: 0, disappearingSeconds: nil, blobId: UUID())
 
         #expect(message.isOutgoing == false)
     }
@@ -208,7 +211,9 @@ struct MessageTests {
     @Test func incoming_withLocationContent() {
         let message = Message.incoming(
             content: .location(latitude: 40.7, longitude: -74.0),
-            sequence: 0
+            sequence: 0,
+            disappearingSeconds: nil,
+            blobId: UUID()
         )
 
         if case .location(let lat, let lon) = message.content {
@@ -230,8 +235,11 @@ struct MessageTests {
             timestamp: timestamp,
             isOutgoing: true,
             expiresAt: nil,
+            serverExpiresAt: nil,
             deliveryStatus: .sent,
-            sequence: 0
+            sequence: 0,
+            blobId: nil,
+            authTag: nil
         )
         let message2 = Message(
             id: id,
@@ -239,8 +247,11 @@ struct MessageTests {
             timestamp: timestamp,
             isOutgoing: true,
             expiresAt: nil,
+            serverExpiresAt: nil,
             deliveryStatus: .sent,
-            sequence: 0
+            sequence: 0,
+            blobId: nil,
+            authTag: nil
         )
 
         #expect(message1 == message2)
@@ -254,8 +265,11 @@ struct MessageTests {
             timestamp: timestamp,
             isOutgoing: true,
             expiresAt: nil,
+            serverExpiresAt: nil,
             deliveryStatus: .sent,
-            sequence: 0
+            sequence: 0,
+            blobId: nil,
+            authTag: nil
         )
         let message2 = Message(
             id: UUID(),
@@ -263,8 +277,11 @@ struct MessageTests {
             timestamp: timestamp,
             isOutgoing: true,
             expiresAt: nil,
+            serverExpiresAt: nil,
             deliveryStatus: .sent,
-            sequence: 0
+            sequence: 0,
+            blobId: nil,
+            authTag: nil
         )
 
         #expect(message1 != message2)
@@ -279,8 +296,11 @@ struct MessageTests {
             timestamp: timestamp,
             isOutgoing: true,
             expiresAt: nil,
+            serverExpiresAt: nil,
             deliveryStatus: .sent,
-            sequence: 0
+            sequence: 0,
+            blobId: nil,
+            authTag: nil
         )
         let message2 = Message(
             id: id,
@@ -288,8 +308,11 @@ struct MessageTests {
             timestamp: timestamp,
             isOutgoing: true,
             expiresAt: nil,
+            serverExpiresAt: nil,
             deliveryStatus: .sent,
-            sequence: 0
+            sequence: 0,
+            blobId: nil,
+            authTag: nil
         )
 
         #expect(message1.hashValue == message2.hashValue)
@@ -304,7 +327,7 @@ struct MessageTests {
     }
 
     @Test func deliveryStatus_incoming_hasNoStatus() {
-        let message = Message.incoming(content: .text("Test"), sequence: 0)
+        let message = Message.incoming(content: .text("Test"), sequence: 0, disappearingSeconds: nil, blobId: UUID())
 
         #expect(message.deliveryStatus == .none)
     }

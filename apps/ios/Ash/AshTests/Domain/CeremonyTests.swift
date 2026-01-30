@@ -320,7 +320,7 @@ final class CeremonyFountainCodeTests: XCTestCase {
             version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -328,7 +328,8 @@ final class CeremonyFountainCodeTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: blockSize,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         XCTAssertGreaterThan(generator.sourceCount(), 0)
@@ -346,7 +347,7 @@ final class CeremonyFountainCodeTests: XCTestCase {
             version: 1,
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -354,7 +355,8 @@ final class CeremonyFountainCodeTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: blockSize,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let receiver = FountainFrameReceiver(passphrase: testPassphrase)
@@ -378,7 +380,7 @@ final class CeremonyFountainCodeTests: XCTestCase {
             version: 1,
             ttlSeconds: 604800,
             disappearingMessagesSeconds: 0,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -386,7 +388,8 @@ final class CeremonyFountainCodeTests: XCTestCase {
             metadata: metadata,
             padBytes: padBytes,
             blockSize: blockSize,
-            passphrase: "custom-passphrase"
+            passphrase: "custom-passphrase",
+            method: .raptor
         )
 
         let receiver = FountainFrameReceiver(passphrase: "custom-passphrase")
@@ -408,7 +411,7 @@ final class CeremonyFountainCodeTests: XCTestCase {
             version: 1,
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 3600,
-            conversationFlags: 0x000B,
+            notificationFlags: 0x000B,
             relayUrl: "https://roundtrip.test"
         )
 
@@ -416,7 +419,8 @@ final class CeremonyFountainCodeTests: XCTestCase {
             metadata: metadata,
             padBytes: originalPad,
             blockSize: blockSize,
-            passphrase: testPassphrase
+            passphrase: testPassphrase,
+            method: .raptor
         )
 
         let receiver = FountainFrameReceiver(passphrase: testPassphrase)
@@ -433,7 +437,7 @@ final class CeremonyFountainCodeTests: XCTestCase {
         XCTAssertEqual(result?.metadata.ttlSeconds, 86400)
         XCTAssertEqual(result?.metadata.disappearingMessagesSeconds, 3600)
         XCTAssertEqual(result?.metadata.relayUrl, "https://roundtrip.test")
-        XCTAssertEqual(result?.metadata.conversationFlags, 0x000B)
+        XCTAssertEqual(result?.metadata.notificationFlags, 0x000B)
 
         // Verify pad data
         XCTAssertEqual(result?.pad, originalPad, "Pad data should match after roundtrip")

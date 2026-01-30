@@ -256,6 +256,11 @@ pub async fn submit_message(
 
     // Store the blob (fixed 5-minute TTL)
     let conversation_id = req.conversation_id;
+    let received_at = chrono::Utc::now();
+    // Calculate expiry time using same logic as store (for client synchronization)
+    let expires_at = received_at
+        + chrono::Duration::from_std(crate::config::MESSAGE_TTL).expect("valid duration");
+
     let blob_id = state
         .store
         .store_blob(conversation_id.clone(), ciphertext.clone(), req.sequence)
@@ -266,8 +271,6 @@ pub async fn submit_message(
             StoreError::QueueFull => ApiError::QueueFull,
             StoreError::DatabaseError(_) => ApiError::Internal,
         })?;
-
-    let received_at = chrono::Utc::now();
 
     tracing::info!(
         blob_id = %blob_id,
@@ -309,6 +312,7 @@ pub async fn submit_message(
     Ok(Json(SubmitMessageResponse {
         accepted: true,
         blob_id,
+        expires_at,
     }))
 }
 

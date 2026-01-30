@@ -10,13 +10,15 @@ private enum SettingsKey: String {
     case lockOnBackground = "ash.settings.lockOnBackground"
     case relayServerURL = "ash.settings.relayServerURL"
     case defaultExtendedTTL = "ash.settings.defaultExtendedTTL"
+    case hasCompletedOnboarding = "ash.settings.hasCompletedOnboarding"
 }
 
-protocol SettingsServiceProtocol: Sendable {
+protocol SettingsServiceProtocol: AnyObject, Sendable {
     var isBiometricLockEnabled: Bool { get set }
     var lockOnBackground: Bool { get set }
     var relayServerURL: String { get set }
     var defaultExtendedTTL: Bool { get set }
+    var hasCompletedOnboarding: Bool { get set }
 }
 
 final class SettingsService: SettingsServiceProtocol, @unchecked Sendable {
@@ -61,5 +63,10 @@ final class SettingsService: SettingsServiceProtocol, @unchecked Sendable {
     var defaultExtendedTTL: Bool {
         get { defaults.bool(forKey: SettingsKey.defaultExtendedTTL.rawValue) }
         set { defaults.set(newValue, forKey: SettingsKey.defaultExtendedTTL.rawValue) }
+    }
+
+    var hasCompletedOnboarding: Bool {
+        get { defaults.bool(forKey: SettingsKey.hasCompletedOnboarding.rawValue) }
+        set { defaults.set(newValue, forKey: SettingsKey.hasCompletedOnboarding.rawValue) }
     }
 }

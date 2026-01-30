@@ -59,25 +59,44 @@ struct AshApp: App {
     /// Track if push notifications have been set up
     @State private var pushNotificationsSetUp = false
 
+    /// Track if onboarding has been completed
+    @State private var hasCompletedOnboarding: Bool?
+
     var body: some Scene {
         WindowGroup {
             ZStack {
                 Group {
-                    if let viewModel = appViewModel {
-                        RootView(viewModel: viewModel, lockViewModel: lockViewModel)
-                            .withDependencies(dependencies)
+                    if let completed = hasCompletedOnboarding {
+                        if !completed {
+                            // Show onboarding for first-time users
+                            OnboardingScreen {
+                                dependencies.settingsService.hasCompletedOnboarding = true
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    hasCompletedOnboarding = true
+                                }
+                            }
+                        } else if let viewModel = appViewModel {
+                            RootView(viewModel: viewModel, lockViewModel: lockViewModel)
+                                .withDependencies(dependencies)
+                        } else {
+                            LoadingScreen()
+                                .task {
+                                    appViewModel = AppViewModel(dependencies: dependencies)
+                                }
+                        }
                     } else {
+                        // Loading state while checking onboarding status
                         LoadingScreen()
                             .task {
-                                appViewModel = AppViewModel(dependencies: dependencies)
+                                hasCompletedOnboarding = dependencies.settingsService.hasCompletedOnboarding
                             }
                     }
                 }
                 .tint(Color.ashSecure)
                 .preferredColorScheme(nil) // Support both light and dark
 
-                // Lock screen overlay
-                if lockViewModel.isLocked {
+                // Lock screen overlay (only show after onboarding)
+                if hasCompletedOnboarding == true && lockViewModel.isLocked {
                     LockScreen(viewModel: lockViewModel)
                         .transition(.opacity)
                 }

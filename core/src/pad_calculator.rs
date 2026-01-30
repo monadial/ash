@@ -16,15 +16,17 @@
 //!
 //! ```
 //! use ash_core::pad_calculator::{PadCalculator, calculate_pad_stats};
+//! use ash_core::TransferMethod;
 //!
-//! // Calculate stats for a 256 KB pad
+//! // Calculate stats for a 256 KB pad with Raptor codes
 //! let stats = calculate_pad_stats(256 * 1024);
 //!
 //! println!("Messages at 100 bytes avg: {}", stats.messages_at_avg(100));
-//! println!("QR codes needed: {}", stats.qr_codes_needed);
-//! println!("Auth overhead per message: {} bytes", stats.auth_overhead_per_message);
+//! println!("Source blocks: {}", stats.source_blocks);
+//! println!("Expected frames (Raptor): {}", stats.expected_frames(TransferMethod::Raptor));
 //! ```
 
+use crate::frame::TransferMethod;
 use crate::mac::AUTH_KEY_SIZE;
 use crate::message::HEADER_SIZE;
 
@@ -39,10 +41,65 @@ pub const FRAME_OVERHEAD: usize = HEADER_SIZE;
 /// Default QR block size for ceremony transfer (bytes per QR code).
 pub const DEFAULT_QR_BLOCK_SIZE: usize = 1500;
 
+/// Metadata overhead in bytes (version + ttl + disappearing + flags + url_len + typical url).
+pub const METADATA_OVERHEAD: usize = 50;
+
 /// Reserved bytes at pad start for token derivation.
 ///
 /// The first 160 bytes are used for conversation ID, auth token, and burn token.
 pub const RESERVED_FOR_TOKENS: usize = 160;
+
+/// Calculate expected frames needed for successful transfer.
+///
+/// # Arguments
+///
+/// * `source_blocks` - Number of source blocks (K)
+/// * `method` - Transfer method
+///
+/// # Returns
+///
+/// Expected number of frames to scan for successful decoding.
+pub fn expected_frames(source_blocks: usize, method: TransferMethod) -> usize {
+    match method {
+        // Raptor: K + 2-5 blocks, we use 5% + 3 for safety margin
+        TransferMethod::Raptor => {
+            let overhead = (source_blocks as f64 * 0.05) as usize + 3;
+            source_blocks + overhead
+        }
+        // LT codes: K + O(√K), we use 15% + √K
+        TransferMethod::LT => {
+            let sqrt_k = (source_blocks as f64).sqrt() as usize;
+            let overhead = (source_blocks as f64 * 0.15) as usize + sqrt_k;
+            source_blocks + overhead
+        }
+        // Sequential: exactly K frames (all must be received)
+        TransferMethod::Sequential => source_blocks,
+    }
+}
+
+/// Calculate redundancy blocks to pre-generate beyond source count.
+///
+/// This is used for QR pre-generation to ensure enough frames are ready.
+pub fn redundancy_blocks(source_blocks: usize, method: TransferMethod) -> usize {
+    const MIN_REDUNDANCY: usize = 15;
+    const REDUNDANCY_PERCENTAGE: f64 = 0.15;
+
+    match method {
+        TransferMethod::Raptor => {
+            // Raptor needs less redundancy (2-5 blocks typical)
+            std::cmp::max(MIN_REDUNDANCY, (source_blocks as f64 * REDUNDANCY_PERCENTAGE) as usize)
+        }
+        TransferMethod::LT => {
+            // LT needs more redundancy: O(√K)
+            let sqrt_k = (source_blocks as f64).sqrt() as usize;
+            std::cmp::max(20, sqrt_k * 2)
+        }
+        TransferMethod::Sequential => {
+            // Sequential: cycle through source blocks once more
+            source_blocks
+        }
+    }
+}
 
 /// Pad usage statistics and calculations.
 #[derive(Debug, Clone, PartialEq)]
@@ -56,14 +113,38 @@ pub struct PadStats {
     /// Authentication overhead per message (64 bytes).
     pub auth_overhead_per_message: usize,
 
-    /// Number of QR codes needed to transfer this pad.
-    pub qr_codes_needed: usize,
+    /// Number of source blocks (K) for fountain encoding.
+    pub source_blocks: usize,
 
     /// Bytes per QR code used in calculation.
     pub bytes_per_qr: usize,
 
+    /// DEPRECATED: Use expected_frames() instead.
+    /// This is kept for backwards compatibility but represents source blocks only.
+    pub qr_codes_needed: usize,
+
     /// Estimated ceremony transfer time at given QR scan rate.
     pub estimated_transfer_seconds: f64,
+}
+
+impl PadStats {
+    /// Calculate expected frames for a given transfer method.
+    ///
+    /// This is the number of frames needed for successful transfer,
+    /// accounting for erasure coding overhead.
+    pub fn expected_frames(&self, method: TransferMethod) -> usize {
+        expected_frames(self.source_blocks, method)
+    }
+
+    /// Calculate redundancy blocks to pre-generate for a given transfer method.
+    pub fn redundancy_blocks(&self, method: TransferMethod) -> usize {
+        redundancy_blocks(self.source_blocks, method)
+    }
+
+    /// Calculate total frames to pre-generate (source + redundancy).
+    pub fn frames_to_generate(&self, method: TransferMethod) -> usize {
+        self.source_blocks + self.redundancy_blocks(method)
+    }
 }
 
 impl PadStats {
@@ -148,21 +229,30 @@ pub fn calculate_pad_stats(pad_size: usize) -> PadStats {
 pub fn calculate_pad_stats_with_qr_size(pad_size: usize, qr_block_size: usize) -> PadStats {
     let usable_bytes = pad_size.saturating_sub(RESERVED_FOR_TOKENS);
 
-    // QR codes needed: ceiling division
-    let qr_codes_needed = if qr_block_size == 0 {
+    // Total data to encode: pad + metadata
+    let total_data = pad_size + METADATA_OVERHEAD;
+
+    // Source blocks (K): ceiling division of total data by block size
+    let source_blocks = if qr_block_size == 0 {
         0
     } else {
-        (pad_size + qr_block_size - 1) / qr_block_size
+        (total_data + qr_block_size - 1) / qr_block_size
     };
 
+    // qr_codes_needed is deprecated, kept for compatibility (same as source_blocks)
+    let qr_codes_needed = source_blocks;
+
     // Estimate transfer time at 10 QR codes per second scan rate
+    // Use Raptor overhead for estimate
     let qr_scan_rate = 10.0;
-    let estimated_transfer_seconds = qr_codes_needed as f64 / qr_scan_rate;
+    let expected = expected_frames(source_blocks, TransferMethod::Raptor);
+    let estimated_transfer_seconds = expected as f64 / qr_scan_rate;
 
     PadStats {
         pad_size,
         usable_bytes,
         auth_overhead_per_message: AUTH_OVERHEAD,
+        source_blocks,
         qr_codes_needed,
         bytes_per_qr: qr_block_size,
         estimated_transfer_seconds,
@@ -206,14 +296,20 @@ impl PadCalculator {
     pub fn calculate(&self) -> PadStats {
         let usable_bytes = self.pad_size.saturating_sub(RESERVED_FOR_TOKENS);
 
-        let qr_codes_needed = if self.qr_block_size == 0 {
+        // Total data to encode: pad + metadata
+        let total_data = self.pad_size + METADATA_OVERHEAD;
+
+        let source_blocks = if self.qr_block_size == 0 {
             0
         } else {
-            (self.pad_size + self.qr_block_size - 1) / self.qr_block_size
+            (total_data + self.qr_block_size - 1) / self.qr_block_size
         };
 
+        let qr_codes_needed = source_blocks;
+
         let estimated_transfer_seconds = if self.qr_scan_rate > 0.0 {
-            qr_codes_needed as f64 / self.qr_scan_rate
+            let expected = expected_frames(source_blocks, TransferMethod::Raptor);
+            expected as f64 / self.qr_scan_rate
         } else {
             0.0
         };
@@ -222,6 +318,7 @@ impl PadCalculator {
             pad_size: self.pad_size,
             usable_bytes,
             auth_overhead_per_message: AUTH_OVERHEAD,
+            source_blocks,
             qr_codes_needed,
             bytes_per_qr: self.qr_block_size,
             estimated_transfer_seconds,
@@ -329,8 +426,9 @@ mod tests {
     fn transfer_time_estimate() {
         let stats = calculate_pad_stats(64 * 1024);
 
-        // 44 QR codes at 10/second = 4.4 seconds
-        assert!((stats.estimated_transfer_seconds - 4.4).abs() < 0.1);
+        // 44 source blocks + Raptor overhead (5% + 3) = 49 expected frames
+        // 49 frames at 10/second = 4.9 seconds
+        assert!((stats.estimated_transfer_seconds - 4.9).abs() < 0.1);
     }
 
     #[test]
@@ -364,10 +462,11 @@ mod tests {
 
         assert_eq!(stats.pad_size, 256 * 1024);
         assert_eq!(stats.bytes_per_qr, 2000);
-        // 262144 / 2000 = 131.07 -> 132 QR codes
+        // (262144 + 50) / 2000 = 131.097 -> 132 source blocks
         assert_eq!(stats.qr_codes_needed, 132);
-        // 132 / 15 = 8.8 seconds
-        assert!((stats.estimated_transfer_seconds - 8.8).abs() < 0.1);
+        // 132 source blocks + Raptor overhead (5% + 3) = 141 expected frames
+        // 141 / 15 = 9.4 seconds
+        assert!((stats.estimated_transfer_seconds - 9.4).abs() < 0.1);
     }
 
     #[test]

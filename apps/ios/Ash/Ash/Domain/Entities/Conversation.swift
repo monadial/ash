@@ -242,8 +242,8 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         persistenceConsent = try container.decodeIfPresent(Bool.self, forKey: .persistenceConsent) ?? false
         authToken = try container.decodeIfPresent(String.self, forKey: .authToken) ?? ""
         burnToken = try container.decodeIfPresent(String.self, forKey: .burnToken) ?? ""
-        messagePaddingEnabled = try container.decodeIfPresent(Bool.self, forKey: .messagePaddingEnabled) ?? false
-        messagePaddingSize = try container.decodeIfPresent(MessagePaddingSize.self, forKey: .messagePaddingSize) ?? .bytes32
+        messagePaddingEnabled = try container.decodeIfPresent(Bool.self, forKey: .messagePaddingEnabled) ?? true
+        messagePaddingSize = try container.decodeIfPresent(MessagePaddingSize.self, forKey: .messagePaddingSize) ?? .default
     }
 
     func encode(to encoder: Encoder) throws {
@@ -290,8 +290,8 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
         messageRetention: MessageRetention = .fiveMinutes,
         disappearingMessages: DisappearingMessages = .off,
         accentColor: ConversationColor = .indigo,
-        messagePaddingEnabled: Bool = false,
-        messagePaddingSize: MessagePaddingSize = .bytes32,
+        messagePaddingEnabled: Bool = true,
+        messagePaddingSize: MessagePaddingSize = .default,
         relayCursor: String? = nil,
         activitySequence: UInt64 = 0,
         peerBurnedAt: Date? = nil,
@@ -394,9 +394,15 @@ struct Conversation: Identifiable, Equatable, Hashable, Sendable, Codable {
 
     // MARK: - Business Logic
 
+    /// Authentication overhead per message (64 bytes for Wegman-Carter MAC)
+    /// Matches AUTH_OVERHEAD in CryptoService.swift
+    private static let authOverhead: UInt64 = 64
+
     /// Calculate if there's enough pad remaining for a message
+    /// Accounts for auth overhead: 64 bytes auth + plaintext length
     func canSendMessage(ofLength length: Int) -> Bool {
-        return sendOffset + UInt64(length) + peerConsumed <= totalBytes
+        let totalConsumption = Self.authOverhead + UInt64(length)
+        return sendOffset + totalConsumption + peerConsumed <= totalBytes
     }
 
     /// Calculate the actual pad byte offset for encryption
@@ -461,8 +467,8 @@ extension Conversation {
         messageRetention: MessageRetention = .fiveMinutes,
         disappearingMessages: DisappearingMessages = .off,
         accentColor: ConversationColor = .indigo,
-        messagePaddingEnabled: Bool = false,
-        messagePaddingSize: MessagePaddingSize = .bytes32,
+        messagePaddingEnabled: Bool = true,
+        messagePaddingSize: MessagePaddingSize = .default,
         persistenceConsent: Bool = false,
         authToken: String,
         burnToken: String

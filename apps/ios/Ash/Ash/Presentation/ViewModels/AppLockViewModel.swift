@@ -35,7 +35,7 @@ final class AppLockViewModel {
     var isBiometricLockEnabled: Bool {
         get { settingsService.isBiometricLockEnabled }
         set {
-            var settings = settingsService
+            let settings = settingsService
             settings.isBiometricLockEnabled = newValue
             if newValue && !isLocked {
                 // Don't lock immediately when enabling
@@ -46,7 +46,7 @@ final class AppLockViewModel {
     var lockOnBackground: Bool {
         get { settingsService.lockOnBackground }
         set {
-            var settings = settingsService
+            let settings = settingsService
             settings.lockOnBackground = newValue
         }
     }

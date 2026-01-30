@@ -13,6 +13,102 @@ enum CeremonyRole: String, Sendable {
     case receiver  // Scans QR codes from sender
 }
 
+// MARK: - QR Frame Calculator
+
+/// Calculates QR frame counts for ceremony transfer.
+///
+/// Uses the Rust core library via FFI for accurate calculations that match
+/// actual fountain code behavior.
+///
+/// Block size: 1500 bytes payload per frame
+/// Frame format: 12 bytes header + 1500 bytes payload + 4 bytes CRC = 1516 bytes
+/// Metadata overhead: ~50 bytes (17 fixed + ~30 relay URL)
+enum QRFrameCalculator {
+    /// Block size used for fountain encoding (from core)
+    static var blockSize: Int {
+        Int(getDefaultBlockSize())
+    }
+
+    /// Metadata overhead in bytes (from core)
+    static var metadataOverhead: Int {
+        Int(getMetadataOverhead())
+    }
+
+    /// Calculate source block count (K) for given pad size
+    static func sourceBlocks(padBytes: Int) -> Int {
+        Int(calculateSourceBlocks(padBytes: UInt64(padBytes), blockSize: UInt32(blockSize)))
+    }
+
+    /// Calculate expected frames needed for successful transfer
+    /// - Parameters:
+    ///   - padBytes: Size of pad in bytes
+    ///   - method: Transfer method (affects overhead)
+    /// - Returns: Expected number of frames to scan
+    static func expectedFrames(padBytes: Int, method: CeremonyTransferMethod) -> Int {
+        Int(calculateExpectedFrames(
+            padBytes: UInt64(padBytes),
+            blockSize: UInt32(blockSize),
+            method: method.ffiMethod
+        ))
+    }
+
+    /// Calculate frames to pre-generate (source + redundancy)
+    static func framesToGenerate(padBytes: Int, method: CeremonyTransferMethod) -> Int {
+        Int(calculateFramesToGenerate(
+            padBytes: UInt64(padBytes),
+            blockSize: UInt32(blockSize),
+            method: method.ffiMethod
+        ))
+    }
+
+    /// Generate detailed calculation breakdown
+    static func calculationBreakdown(padBytes: Int, method: CeremonyTransferMethod) -> String {
+        let k = sourceBlocks(padBytes: padBytes)
+        let frames = expectedFrames(padBytes: padBytes, method: method)
+        let totalData = padBytes + metadataOverhead
+
+        switch method {
+        case .raptor:
+            return "(\(totalData) bytes ÷ \(blockSize)) × 1.05 + 3 = \(frames)"
+        case .lt:
+            return "(\(totalData) bytes ÷ \(blockSize)) × 1.15 + √\(k) = \(frames)"
+        case .sequential:
+            return "(\(totalData) bytes ÷ \(blockSize)) = \(frames)"
+        }
+    }
+}
+
+// MARK: - Dynamic QR Size
+
+/// Calculates optimal QR code size based on screen dimensions
+enum QRSizeCalculator {
+    /// Calculate optimal QR code size for current device
+    /// Smaller screens get smaller QR codes to maintain scannability
+    static func optimalSize(for screenWidth: CGFloat) -> CGFloat {
+        // Base size for large phones (iPhone Pro Max ~430pt width)
+        // Scale down proportionally for smaller screens
+        let baseWidth: CGFloat = 430
+        let baseQRSize: CGFloat = 380
+        let minQRSize: CGFloat = 280  // Minimum for reliable scanning
+        let maxQRSize: CGFloat = 400  // Maximum useful size
+
+        let scaleFactor = screenWidth / baseWidth
+        let calculatedSize = baseQRSize * scaleFactor
+
+        return min(max(calculatedSize, minQRSize), maxQRSize)
+    }
+
+    /// Block size adjusted for screen (smaller screens may need smaller blocks)
+    /// Returns block size that produces QR codes fitting well on screen
+    static func optimalBlockSize(for screenWidth: CGFloat) -> UInt32 {
+        // For now, use fixed block size as QR version 23-24 works well
+        // Future: could reduce block size for smaller screens
+        return 1500
+    }
+}
+
+// MARK: - Pad Size Option
+
 /// Pad size selection for ceremony UI.
 /// This is a Swift-side enum for UI purposes, separate from core constraints.
 /// Core accepts any size between 32KB and 1GB.
@@ -57,21 +153,36 @@ enum PadSizeOption: String, CaseIterable, Identifiable {
         }
     }
 
-    /// User-friendly description
-    var description: String {
+    /// User-friendly description with method-specific frame count
+    func description(for method: CeremonyTransferMethod) -> String {
         guard let bytes = presetBytes else {
             return "Choose your own size"
         }
-        return "~\(estimatedMessages(for: bytes)) messages, ~\(approximateFrames(for: bytes)) QR frames"
+        let messages = estimatedMessages(for: bytes)
+        let frames = QRFrameCalculator.expectedFrames(padBytes: Int(bytes), method: method)
+        return "~\(messages) messages, ~\(frames) QR frames"
     }
 
-    /// Approximate QR frames needed for transfer
-    func approximateFrames(for bytes: UInt64) -> Int {
-        // Extended frame format: 6 bytes header + 4 bytes CRC = 10 bytes overhead
-        // Max payload 900 bytes → effective payload ~890 bytes
-        // +1 for metadata frame (frame 0)
-        let effectivePayload: UInt64 = 890
-        return Int((bytes + effectivePayload - 1) / effectivePayload) + 1
+    /// Legacy description using Raptor as default
+    var description: String {
+        description(for: .raptor)
+    }
+
+    /// Expected QR frames needed for transfer
+    func expectedFrames(for bytes: UInt64, method: CeremonyTransferMethod) -> Int {
+        QRFrameCalculator.expectedFrames(padBytes: Int(bytes), method: method)
+    }
+
+    /// Approximate QR frames for preset sizes (Raptor default)
+    var approximateFrames: Int {
+        guard let bytes = presetBytes else { return 0 }
+        return QRFrameCalculator.expectedFrames(padBytes: Int(bytes), method: .raptor)
+    }
+
+    /// Get frames for preset with specific method
+    func approximateFrames(for method: CeremonyTransferMethod) -> Int {
+        guard let bytes = presetBytes else { return 0 }
+        return QRFrameCalculator.expectedFrames(padBytes: Int(bytes), method: method)
     }
 
     /// Estimated number of messages this pad can support.
@@ -93,10 +204,10 @@ enum PadSizeOption: String, CaseIterable, Identifiable {
         return estimatedMessages(for: bytes)
     }
 
-    /// Approximate QR frames for preset sizes
-    var approximateFrames: Int {
-        guard let bytes = presetBytes else { return 0 }
-        return approximateFrames(for: bytes)
+    /// Calculation breakdown for display
+    func calculationBreakdown(for method: CeremonyTransferMethod) -> String {
+        guard let bytes = presetBytes else { return "" }
+        return QRFrameCalculator.calculationBreakdown(padBytes: Int(bytes), method: method)
     }
 }
 
@@ -143,6 +254,64 @@ enum MessagePaddingSize: String, Codable, CaseIterable, Sendable, Equatable {
         case 3: return .bytes256
         case 4: return .bytes512
         default: return .bytes32
+        }
+    }
+
+    /// Default padding size from Info.plist (ASH_MESSAGE_PADDING_SIZE)
+    static var `default`: MessagePaddingSize {
+        guard let plistValue = Bundle.main.object(forInfoDictionaryKey: "ASH_MESSAGE_PADDING_SIZE") as? Int else {
+            return .bytes32
+        }
+        switch plistValue {
+        case 32: return .bytes32
+        case 64: return .bytes64
+        case 128: return .bytes128
+        case 256: return .bytes256
+        case 512: return .bytes512
+        default: return .bytes32
+        }
+    }
+}
+
+/// Transfer method for QR ceremony (domain layer wrapper).
+///
+/// Wraps the FFI TransferMethod enum with additional display properties.
+/// Determines which erasure coding strategy is used for pad transfer.
+/// All methods use the same wire format, so receivers auto-adapt.
+enum CeremonyTransferMethod: String, Codable, CaseIterable, Sendable {
+    /// Raptor codes - near-optimal, K + 2-5 blocks overhead (recommended)
+    case raptor
+    /// LT codes - legacy fountain codes, K + O(sqrt(K)) blocks overhead
+    case lt
+    /// Sequential - plain numbered frames, no erasure coding
+    case sequential
+
+    var displayName: String {
+        switch self {
+        case .raptor: return "Raptor"
+        case .lt: return "LT Codes"
+        case .sequential: return "Sequential"
+        }
+    }
+
+    var descriptionText: String {
+        switch self {
+        case .raptor: return "Near-optimal erasure coding with minimal overhead"
+        case .lt: return "Legacy fountain codes with moderate overhead"
+        case .sequential: return "Plain numbered frames, no error recovery"
+        }
+    }
+
+    var isRecommended: Bool {
+        self == .raptor
+    }
+
+    /// Convert to FFI TransferMethod for core library calls
+    var ffiMethod: TransferMethod {
+        switch self {
+        case .raptor: return .raptor
+        case .lt: return .lt
+        case .sequential: return .sequential
         }
     }
 }
@@ -264,12 +433,6 @@ struct CeremonyState: Equatable {
 
     /// Disappearing messages setting (client-side display TTL)
     var disappearingMessages: DisappearingMessages = .off
-
-    /// Whether message padding is enabled (hides message length)
-    var messagePaddingEnabled: Bool = false
-
-    /// Minimum message size when padding is enabled
-    var messagePaddingSize: MessagePaddingSize = .bytes32
 
     /// Consent checkboxes state
     var consent: ConsentState = ConsentState()

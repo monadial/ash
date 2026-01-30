@@ -54,6 +54,7 @@ name = "ash-backend"
 version = "0.1.0"
 dependencies = [
  "a2",
+ "ash-core",
  "axum",
  "axum-test",
  "base64 0.22.1",
@@ -76,6 +77,10 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
 ]
+
+[[package]]
+name = "ash-core"
+version = "0.1.0"
 
 [[package]]
 name = "assert-json-diff"

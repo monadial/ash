@@ -298,6 +298,8 @@ pub struct RegisterDeviceResponse {
 pub struct SubmitMessageResponse {
     pub accepted: bool,
     pub blob_id: Uuid,
+    /// Server-calculated expiry time (for client timer synchronization).
+    pub expires_at: DateTime<Utc>,
 }
 
 /// Poll messages response.

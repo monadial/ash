@@ -24,6 +24,14 @@ enum MessageContent: Equatable, Hashable, Sendable, Codable {
         }
     }
 
+    /// Message type for authenticated encryption frame
+    var messageType: MessageType {
+        switch self {
+        case .text: return .text
+        case .location: return .location
+        }
+    }
+
     // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
@@ -93,6 +101,9 @@ struct Message: Identifiable, Equatable, Hashable, Sendable {
     /// Whether the message content has been securely wiped (pad bytes zeroed)
     /// When true, the original content should not be displayed
     var isContentWiped: Bool = false
+    /// Authentication tag (32 bytes) for message integrity verification display
+    /// Present for incoming messages with authenticated encryption
+    let authTag: [UInt8]?
 
     // MARK: - Computed Properties
 
@@ -152,7 +163,8 @@ extension Message {
             serverExpiresAt: Date().addingTimeInterval(serverTTLSeconds),
             deliveryStatus: .sending,
             sequence: sequence,
-            blobId: nil
+            blobId: nil,
+            authTag: nil  // Outgoing messages don't have auth tag
         )
     }
 
@@ -172,7 +184,8 @@ extension Message {
             serverExpiresAt: Date().addingTimeInterval(serverTTLSeconds),
             deliveryStatus: .sending,
             sequence: sequence,
-            blobId: nil
+            blobId: nil,
+            authTag: nil  // Outgoing messages don't have auth tag
         )
     }
 
@@ -180,11 +193,13 @@ extension Message {
     /// - Parameters:
     ///   - disappearingSeconds: If set, message will expire after this many seconds (disappearing messages)
     ///   - blobId: Server blob ID for ACK
+    ///   - authTag: Authentication tag (32 bytes) for integrity verification display
     static func incoming(
         content: MessageContent,
         sequence: UInt64,
         disappearingSeconds: TimeInterval?,
-        blobId: UUID
+        blobId: UUID,
+        authTag: [UInt8]? = nil
     ) -> Message {
         Message(
             id: UUID(),
@@ -195,7 +210,8 @@ extension Message {
             serverExpiresAt: nil,  // Incoming messages don't need server expiry tracking
             deliveryStatus: .none,
             sequence: sequence,
-            blobId: blobId
+            blobId: blobId,
+            authTag: authTag
         )
     }
 
@@ -214,6 +230,14 @@ extension Message {
     func withBlobId(_ blobId: UUID) -> Message {
         var copy = self
         copy.blobId = blobId
+        return copy
+    }
+
+    /// Create a copy with server-provided expiry time
+    /// This replaces the client-calculated estimate with the actual server expiry
+    func withServerExpiresAt(_ expiresAt: Date) -> Message {
+        var copy = self
+        copy.serverExpiresAt = expiresAt
         return copy
     }
 

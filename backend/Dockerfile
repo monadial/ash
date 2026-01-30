@@ -27,7 +27,9 @@ WORKDIR /app
 # Copy manifests first for better caching
 # Remove dev-dependencies that have path references outside the build context
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo "fn main() {}" > src/main.rs && \
+RUN mkdir src && \
+    echo "fn main() {}" > src/main.rs && \
+    echo "" > src/lib.rs && \
     sed -i '/^\[dev-dependencies\]/,/^\[/{ /ash-core/d }' Cargo.toml && \
     cargo build --release && \
     rm -rf src

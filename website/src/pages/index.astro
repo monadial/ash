@@ -163,30 +163,38 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
         </p>
       </div>
 
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6 justify-items-center">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-6 justify-items-center">
         <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/onboarding.png" />
+          <PhoneMockup image="/screenshots/onboarding.png" size="sm" class="sm:hidden" />
+          <PhoneMockup image="/screenshots/onboarding.png" size="md" class="hidden sm:block lg:hidden" />
+          <PhoneMockup image="/screenshots/onboarding.png" size="lg" class="hidden lg:block" />
           <h3 class="font-semibold mt-6 mb-2">Welcome</h3>
           <p class="text-text-secondary text-sm text-center max-w-[200px]">
             Clean onboarding explains the unique security model
           </p>
         </div>
         <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/conversations.png" />
+          <PhoneMockup image="/screenshots/conversations.png" size="sm" class="sm:hidden" />
+          <PhoneMockup image="/screenshots/conversations.png" size="md" class="hidden sm:block lg:hidden" />
+          <PhoneMockup image="/screenshots/conversations.png" size="lg" class="hidden lg:block" />
           <h3 class="font-semibold mt-6 mb-2">Conversations</h3>
           <p class="text-text-secondary text-sm text-center max-w-[200px]">
             See pad usage at a glance with visual indicators
           </p>
         </div>
         <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/messaging.png" />
+          <PhoneMockup image="/screenshots/messaging.png" size="sm" class="sm:hidden" />
+          <PhoneMockup image="/screenshots/messaging.png" size="md" class="hidden sm:block lg:hidden" />
+          <PhoneMockup image="/screenshots/messaging.png" size="lg" class="hidden lg:block" />
           <h3 class="font-semibold mt-6 mb-2">Messaging</h3>
           <p class="text-text-secondary text-sm text-center max-w-[200px]">
             Familiar chat interface with delivery confirmations
           </p>
         </div>
         <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/settings.png" />
+          <PhoneMockup image="/screenshots/settings.png" size="sm" class="sm:hidden" />
+          <PhoneMockup image="/screenshots/settings.png" size="md" class="hidden sm:block lg:hidden" />
+          <PhoneMockup image="/screenshots/settings.png" size="lg" class="hidden lg:block" />
           <h3 class="font-semibold mt-6 mb-2">Settings</h3>
           <p class="text-text-secondary text-sm text-center max-w-[200px]">
             Full control over security and privacy options

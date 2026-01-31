@@ -3,23 +3,49 @@ interface Props {
   label?: string
   image?: string
   class?: string
+  size?: 'sm' | 'md' | 'lg'
 }
 
 const {
   label,
   image,
+  size = 'md',
   class: className = ''
 } = Astro.props
+
+const sizeClasses = {
+  sm: 'w-[200px] h-[414px] rounded-[2rem]',
+  md: 'w-[240px] h-[497px] rounded-[2.5rem]',
+  lg: 'w-[280px] h-[580px] rounded-[3rem]'
+}
+
+const screenRadius = {
+  sm: 'rounded-[1.8rem]',
+  md: 'rounded-[2.3rem]',
+  lg: 'rounded-[2.8rem]'
+}
+
+const islandSize = {
+  sm: 'w-20 h-6 top-3',
+  md: 'w-24 h-7 top-3',
+  lg: 'w-28 h-8 top-4'
+}
+
+const homeIndicator = {
+  sm: 'w-24',
+  md: 'w-28',
+  lg: 'w-32'
+}
 ---
 
 <div class={`relative ${className}`}>
   <!-- Phone frame -->
-  <div class="relative mx-auto w-[280px] h-[580px] bg-[#1a1a1a] rounded-[3rem] border-4 border-[#2a2a2a] shadow-2xl shadow-black/50">
+  <div class={`relative mx-auto ${sizeClasses[size]} bg-[#1a1a1a] border-4 border-[#2a2a2a] shadow-2xl shadow-black/50`}>
     <!-- Dynamic Island -->
-    <div class="absolute top-4 left-1/2 -translate-x-1/2 w-28 h-8 bg-black rounded-full z-10"></div>
+    <div class={`absolute ${islandSize[size]} left-1/2 -translate-x-1/2 bg-black rounded-full z-10`}></div>
 
     <!-- Screen content -->
-    <div class="absolute inset-[3px] rounded-[2.8rem] bg-black overflow-hidden">
+    <div class={`absolute inset-[3px] ${screenRadius[size]} bg-black overflow-hidden`}>
       {image ? (
         <img
           src={image}
@@ -42,6 +68,6 @@ const {
     </div>
 
     <!-- Home indicator -->
-    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/20 rounded-full z-10"></div>
+    <div class={`absolute bottom-2 left-1/2 -translate-x-1/2 ${homeIndicator[size]} h-1 bg-white/20 rounded-full z-10`}></div>
   </div>
 </div>

@@ -7,7 +7,10 @@
 //! 4. Burn operations
 
 use ash_backend::{apns, auth, build_router, config::Config, handlers::AppState, store::Store};
-use ash_core::{auth as core_auth, frame, mnemonic, AuthKey, CeremonyMetadata, MessageFrame, MessageType, Pad, PadSize, Role, TransferMethod, AUTH_KEY_SIZE};
+use ash_core::{
+    auth as core_auth, frame, mnemonic, AuthKey, CeremonyMetadata, MessageFrame, MessageType, Pad,
+    PadSize, Role, TransferMethod, AUTH_KEY_SIZE,
+};
 use axum::http::{header, StatusCode};
 use axum_test::TestServer;
 use serde_json::{json, Value};
@@ -51,8 +54,14 @@ fn perform_ceremony() -> (CeremonyParty, CeremonyParty) {
 
     // Create ceremony frames using fountain codes
     let metadata = CeremonyMetadata::default();
-    let mut generator =
-        frame::create_fountain_ceremony(&metadata, initiator_pad.as_bytes(), 256, None, TransferMethod::Sequential).unwrap();
+    let mut generator = frame::create_fountain_ceremony(
+        &metadata,
+        initiator_pad.as_bytes(),
+        256,
+        None,
+        TransferMethod::Sequential,
+    )
+    .unwrap();
 
     // Responder receives frames
     let mut receiver = frame::FountainFrameReceiver::new(None);
@@ -167,7 +176,10 @@ async fn test_e2e_initiator_sends_responder_receives() {
     let plaintext = b"Hello from initiator via OTP!";
 
     // Consume pad bytes for authentication and encryption
-    let auth_bytes = initiator.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
+    let auth_bytes = initiator
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
     let auth_key = AuthKey::from_slice(&auth_bytes);
     let enc_key = initiator
         .pad
@@ -179,7 +191,8 @@ async fn test_e2e_initiator_sends_responder_receives() {
     let wire_data = frame.encode();
 
     // Submit to backend as base64
-    let ciphertext_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
+    let ciphertext_b64 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
 
     let submit_response = server
         .post("/v1/messages")
@@ -281,7 +294,8 @@ async fn test_e2e_responder_sends_initiator_receives() {
 
     let frame = MessageFrame::encrypt(MessageType::Text, plaintext, &enc_key, &auth_key).unwrap();
     let wire_data = frame.encode();
-    let ciphertext_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
+    let ciphertext_b64 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
 
     server
         .post("/v1/messages")
@@ -349,10 +363,16 @@ async fn test_e2e_bidirectional_message_exchange() {
 
     // === Message 1: Initiator -> Responder ===
     let msg1 = b"Message 1 from initiator";
-    let auth1 = initiator.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
+    let auth1 = initiator
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
     let enc1 = initiator.pad.consume(msg1.len(), Role::Initiator).unwrap();
-    let frame1 = MessageFrame::encrypt(MessageType::Text, msg1, &enc1, &AuthKey::from_slice(&auth1)).unwrap();
-    let wire1 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame1.encode());
+    let frame1 =
+        MessageFrame::encrypt(MessageType::Text, msg1, &enc1, &AuthKey::from_slice(&auth1))
+            .unwrap();
+    let wire1 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame1.encode());
 
     server
         .post("/v1/messages")
@@ -367,10 +387,16 @@ async fn test_e2e_bidirectional_message_exchange() {
 
     // === Message 2: Responder -> Initiator ===
     let msg2 = b"Message 2 from responder";
-    let auth2 = responder.pad.consume(AUTH_KEY_SIZE, Role::Responder).unwrap();
+    let auth2 = responder
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Responder)
+        .unwrap();
     let enc2 = responder.pad.consume(msg2.len(), Role::Responder).unwrap();
-    let frame2 = MessageFrame::encrypt(MessageType::Text, msg2, &enc2, &AuthKey::from_slice(&auth2)).unwrap();
-    let wire2 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame2.encode());
+    let frame2 =
+        MessageFrame::encrypt(MessageType::Text, msg2, &enc2, &AuthKey::from_slice(&auth2))
+            .unwrap();
+    let wire2 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame2.encode());
 
     server
         .post("/v1/messages")
@@ -385,10 +411,16 @@ async fn test_e2e_bidirectional_message_exchange() {
 
     // === Message 3: Initiator -> Responder ===
     let msg3 = b"Message 3 from initiator";
-    let auth3 = initiator.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
+    let auth3 = initiator
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
     let enc3 = initiator.pad.consume(msg3.len(), Role::Initiator).unwrap();
-    let frame3 = MessageFrame::encrypt(MessageType::Text, msg3, &enc3, &AuthKey::from_slice(&auth3)).unwrap();
-    let wire3 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame3.encode());
+    let frame3 =
+        MessageFrame::encrypt(MessageType::Text, msg3, &enc3, &AuthKey::from_slice(&auth3))
+            .unwrap();
+    let wire3 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame3.encode());
 
     server
         .post("/v1/messages")
@@ -438,13 +470,21 @@ async fn test_e2e_location_message() {
     // Send location (6 decimal places = ~10cm precision)
     let location = b"37.774929,-122.419416";
 
-    let auth_bytes = initiator.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
+    let auth_bytes = initiator
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
     let auth_key = AuthKey::from_slice(&auth_bytes);
-    let enc_key = initiator.pad.consume(location.len(), Role::Initiator).unwrap();
+    let enc_key = initiator
+        .pad
+        .consume(location.len(), Role::Initiator)
+        .unwrap();
 
-    let frame = MessageFrame::encrypt(MessageType::Location, location, &enc_key, &auth_key).unwrap();
+    let frame =
+        MessageFrame::encrypt(MessageType::Location, location, &enc_key, &auth_key).unwrap();
     let wire_data = frame.encode();
-    let ciphertext_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
+    let ciphertext_b64 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
 
     server
         .post("/v1/messages")
@@ -472,8 +512,14 @@ async fn test_e2e_location_message() {
     let received_wire =
         base64::Engine::decode(&base64::engine::general_purpose::STANDARD, received_b64).unwrap();
 
-    let resp_auth_bytes = responder.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
-    let resp_enc_key = responder.pad.consume(location.len(), Role::Initiator).unwrap();
+    let resp_auth_bytes = responder
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
+    let resp_enc_key = responder
+        .pad
+        .consume(location.len(), Role::Initiator)
+        .unwrap();
 
     let received_frame = MessageFrame::decode(&received_wire).unwrap();
     assert_eq!(received_frame.msg_type, MessageType::Location);
@@ -506,8 +552,14 @@ async fn test_e2e_burn_with_derived_tokens() {
 
     // Submit a message
     let plaintext = b"Message to be burned";
-    let auth_bytes = initiator.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
-    let enc_key = initiator.pad.consume(plaintext.len(), Role::Initiator).unwrap();
+    let auth_bytes = initiator
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
+    let enc_key = initiator
+        .pad
+        .consume(plaintext.len(), Role::Initiator)
+        .unwrap();
     let frame = MessageFrame::encrypt(
         MessageType::Text,
         plaintext,
@@ -515,7 +567,8 @@ async fn test_e2e_burn_with_derived_tokens() {
         &AuthKey::from_slice(&auth_bytes),
     )
     .unwrap();
-    let ciphertext = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame.encode());
+    let ciphertext =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame.encode());
 
     server
         .post("/v1/messages")
@@ -649,8 +702,14 @@ async fn test_e2e_pad_consumption_tracking() {
         let msg = format!("Message number {}", i);
         let msg_bytes = msg.as_bytes();
 
-        let auth_bytes = initiator.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
-        let enc_key = initiator.pad.consume(msg_bytes.len(), Role::Initiator).unwrap();
+        let auth_bytes = initiator
+            .pad
+            .consume(AUTH_KEY_SIZE, Role::Initiator)
+            .unwrap();
+        let enc_key = initiator
+            .pad
+            .consume(msg_bytes.len(), Role::Initiator)
+            .unwrap();
 
         let frame = MessageFrame::encrypt(
             MessageType::Text,
@@ -659,7 +718,8 @@ async fn test_e2e_pad_consumption_tracking() {
             &AuthKey::from_slice(&auth_bytes),
         )
         .unwrap();
-        let ciphertext = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame.encode());
+        let ciphertext =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &frame.encode());
 
         server
             .post("/v1/messages")
@@ -701,9 +761,15 @@ async fn test_e2e_tampered_message_rejected() {
 
     // Initiator sends message
     let plaintext = b"Secret message";
-    let auth_bytes = initiator.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
+    let auth_bytes = initiator
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
     let auth_key = AuthKey::from_slice(&auth_bytes);
-    let enc_key = initiator.pad.consume(plaintext.len(), Role::Initiator).unwrap();
+    let enc_key = initiator
+        .pad
+        .consume(plaintext.len(), Role::Initiator)
+        .unwrap();
 
     let frame = MessageFrame::encrypt(MessageType::Text, plaintext, &enc_key, &auth_key).unwrap();
     let mut wire_data = frame.encode();
@@ -712,7 +778,8 @@ async fn test_e2e_tampered_message_rejected() {
     let tamper_pos = wire_data.len() / 2;
     wire_data[tamper_pos] ^= 0x01;
 
-    let ciphertext_b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
+    let ciphertext_b64 =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &wire_data);
 
     server
         .post("/v1/messages")
@@ -740,11 +807,18 @@ async fn test_e2e_tampered_message_rejected() {
     let received_wire =
         base64::Engine::decode(&base64::engine::general_purpose::STANDARD, received_b64).unwrap();
 
-    let resp_auth_bytes = responder.pad.consume(AUTH_KEY_SIZE, Role::Initiator).unwrap();
-    let resp_enc_key = responder.pad.consume(plaintext.len(), Role::Initiator).unwrap();
+    let resp_auth_bytes = responder
+        .pad
+        .consume(AUTH_KEY_SIZE, Role::Initiator)
+        .unwrap();
+    let resp_enc_key = responder
+        .pad
+        .consume(plaintext.len(), Role::Initiator)
+        .unwrap();
 
     let received_frame = MessageFrame::decode(&received_wire).unwrap();
-    let decrypt_result = received_frame.decrypt(&resp_enc_key, &AuthKey::from_slice(&resp_auth_bytes));
+    let decrypt_result =
+        received_frame.decrypt(&resp_enc_key, &AuthKey::from_slice(&resp_auth_bytes));
 
     // Decryption should fail due to authentication failure
     assert!(decrypt_result.is_err());

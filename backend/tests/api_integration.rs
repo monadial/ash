@@ -323,10 +323,8 @@ async fn test_poll_messages_returns_submitted_messages() {
         .assert_status_ok();
 
     // Submit a message
-    let ciphertext = base64::Engine::encode(
-        &base64::engine::general_purpose::STANDARD,
-        b"test-message",
-    );
+    let ciphertext =
+        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, b"test-message");
 
     server
         .post("/v1/messages")

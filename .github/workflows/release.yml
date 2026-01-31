@@ -8,10 +8,6 @@ on:
 permissions:
   contents: write
 
-env:
-  REGISTRY: rg.fr-par.scw.cloud
-  IMAGE_NAME: ash-backend
-
 jobs:
   create-release:
     name: Create Release
@@ -82,38 +78,6 @@ jobs:
       - name: Build release
         working-directory: core
         run: cargo build --release
-
-  build-backend:
-    name: Build & Push Backend
-    runs-on: ubuntu-latest
-    needs: create-release
-    environment: prod
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Scaleway Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: nologin
-          password: ${{ secrets.SCW_SECRET_KEY }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ secrets.SCW_PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ needs.create-release.outputs.version }}
-            ${{ env.REGISTRY }}/${{ secrets.SCW_PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          platforms: linux/amd64
 
   build-ios:
     name: Build iOS App
@@ -263,36 +227,6 @@ jobs:
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
           rm -f ~/.appstoreconnect/private_keys/*.p8 || true
 
-  deploy-backend:
-    name: Deploy Backend
-    runs-on: ubuntu-latest
-    needs: [create-release, build-backend]
-    environment: prod
-
-    steps:
-      - name: Deploy to Serverless Container
-        env:
-          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
-          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
-        run: |
-          curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
-
-          scw container container redeploy \
-            $(scw container container list name=ash-prod-backend -o json | jq -r '.[0].id') \
-            region=fr-par \
-            --wait
-
-      - name: Health Check
-        env:
-          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
-          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
-        run: |
-          sleep 30
-          CONTAINER_URL=$(scw container container list name=ash-prod-backend -o json | jq -r '.[0].domain_name')
-          curl -sf "https://${CONTAINER_URL}/health" || echo "Health check pending..."
-
   deploy-website:
     name: Deploy Website
     runs-on: ubuntu-latest
@@ -329,7 +263,7 @@ jobs:
   release-summary:
     name: Release Summary
     runs-on: ubuntu-latest
-    needs: [create-release, build-core, build-ios, deploy-backend, deploy-website]
+    needs: [create-release, build-core, build-ios, deploy-website]
     if: always()
 
     steps:
@@ -341,5 +275,6 @@ jobs:
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Core Library | ${{ needs.build-core.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| iOS App | ${{ needs.build-ios.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Backend | ${{ needs.deploy-backend.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Website | ${{ needs.deploy-website.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Backend deployment is handled by deploy-backend.yml (triggered by v* tag via CI Backend)_" >> $GITHUB_STEP_SUMMARY

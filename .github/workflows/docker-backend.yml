@@ -1,0 +1,124 @@
+name: Docker Backend
+
+on:
+  workflow_call:
+    inputs:
+      image_tag:
+        required: true
+        type: string
+      push:
+        required: false
+        type: boolean
+        default: true
+      artifact_run_id:
+        required: true
+        type: string
+    secrets:
+      SCW_SECRET_KEY:
+        required: true
+
+env:
+  REGISTRY: rg.nl-ams.scw.cloud/ash-backend
+  IMAGE_NAME: ash-backend
+
+jobs:
+  build-image-amd64:
+    name: Build Image (amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ash-backend-linux-amd64
+          path: backend/
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Make binary executable
+        run: chmod +x backend/ash-backend
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Scaleway Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.artifact
+          push: ${{ inputs.push }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}-amd64
+          platforms: linux/amd64
+
+  build-image-arm64:
+    name: Build Image (arm64)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ash-backend-linux-arm64
+          path: backend/
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Make binary executable
+        run: chmod +x backend/ash-backend
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Scaleway Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.artifact
+          push: ${{ inputs.push }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}-arm64
+          platforms: linux/arm64
+
+  create-manifest:
+    name: Create Multi-arch Manifest
+    needs: [build-image-amd64, build-image-arm64]
+    runs-on: ubuntu-latest
+    if: ${{ inputs.push }}
+    steps:
+      - name: Login to Scaleway Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Create and push manifest
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          TAG="${{ inputs.image_tag }}"
+
+          # Create manifest for the specific tag
+          docker buildx imagetools create -t ${IMAGE}:${TAG} \
+            ${IMAGE}:${TAG}-amd64 \
+            ${IMAGE}:${TAG}-arm64
+
+      - name: Summary
+        run: |
+          echo "### Docker Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY

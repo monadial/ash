@@ -84,114 +84,23 @@ jobs:
           echo "- **Image Tag:** ${{ steps.env.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
 
-  # Build for amd64
-  build-amd64:
-    name: Build (amd64)
+  # Build and push Docker images
+  docker:
+    name: Build & Push Docker
     needs: setup
     if: needs.setup.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    environment: ${{ needs.setup.outputs.environment }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Scaleway Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: nologin
-          password: ${{ secrets.SCW_SECRET_KEY }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}-amd64
-          cache-from: type=gha,scope=amd64-${{ needs.setup.outputs.environment }}
-          cache-to: type=gha,mode=max,scope=amd64-${{ needs.setup.outputs.environment }}
-          platforms: linux/amd64
-
-  # Build for arm64
-  build-arm64:
-    name: Build (arm64)
-    needs: setup
-    if: needs.setup.outputs.should_deploy == 'true'
-    runs-on: ubuntu-24.04-arm
-    environment: ${{ needs.setup.outputs.environment }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Scaleway Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: nologin
-          password: ${{ secrets.SCW_SECRET_KEY }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}-arm64
-          cache-from: type=gha,scope=arm64-${{ needs.setup.outputs.environment }}
-          cache-to: type=gha,mode=max,scope=arm64-${{ needs.setup.outputs.environment }}
-          platforms: linux/arm64
-
-  # Create multi-arch manifest
-  create-manifest:
-    name: Create Multi-arch Manifest
-    needs: [setup, build-amd64, build-arm64]
-    runs-on: ubuntu-latest
-    environment: ${{ needs.setup.outputs.environment }}
-
-    steps:
-      - name: Login to Scaleway Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: nologin
-          password: ${{ secrets.SCW_SECRET_KEY }}
-
-      - name: Create and push manifest
-        run: |
-          TAG="${{ needs.setup.outputs.image_tag }}"
-          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-
-          # Create manifest for the specific tag
-          docker buildx imagetools create -t ${IMAGE}:${TAG} \
-            ${IMAGE}:${TAG}-amd64 \
-            ${IMAGE}:${TAG}-arm64
-
-          # Also tag as latest-{environment}
-          docker buildx imagetools create -t ${IMAGE}:latest-${{ needs.setup.outputs.environment }} \
-            ${IMAGE}:${TAG}-amd64 \
-            ${IMAGE}:${TAG}-arm64
-
-      - name: Summary
-        run: |
-          echo "### Build Complete" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+    uses: ./.github/workflows/docker-backend.yml
+    with:
+      image_tag: ${{ needs.setup.outputs.image_tag }}
+      push: true
+      artifact_run_id: ${{ github.event.workflow_run.id || github.run_id }}
+    secrets:
+      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
 
   # Deploy to Scaleway (Blue-Green)
   deploy:
     name: Deploy (${{ needs.setup.outputs.environment }})
-    needs: [setup, create-manifest]
+    needs: [setup, docker]
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.environment }}
 

@@ -188,7 +188,7 @@ jobs:
           echo "- **Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Platforms:** linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
 
-  # Deploy to Scaleway
+  # Deploy to Scaleway (Blue-Green)
   deploy:
     name: Deploy (${{ needs.setup.outputs.environment }})
     needs: [setup, create-manifest]
@@ -217,6 +217,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.7.0"
+          terraform_wrapper: false
 
       - name: Terraform Init
         working-directory: infra/scaleway
@@ -224,12 +225,31 @@ jobs:
           terraform init \
             -backend-config="key=scaleway/${{ needs.setup.outputs.environment }}/terraform.tfstate"
 
-      - name: Terraform Plan
+      - name: Determine active slot (Blue-Green)
+        id: slot
+        working-directory: infra/scaleway
+        run: |
+          # Get current active slot from state, default to blue if not set
+          CURRENT_SLOT=$(terraform output -raw active_slot 2>/dev/null || echo "blue")
+
+          # Flip to the other slot for this deployment
+          if [ "$CURRENT_SLOT" = "blue" ]; then
+            NEW_SLOT="green"
+          else
+            NEW_SLOT="blue"
+          fi
+
+          echo "current_slot=$CURRENT_SLOT" >> $GITHUB_OUTPUT
+          echo "new_slot=$NEW_SLOT" >> $GITHUB_OUTPUT
+          echo "Switching from $CURRENT_SLOT to $NEW_SLOT"
+
+      - name: Terraform Plan (Blue-Green)
         working-directory: infra/scaleway
         run: |
           terraform plan \
             -var-file="environments/${{ needs.setup.outputs.environment }}.tfvars" \
             -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
+            -var="active_slot=${{ steps.slot.outputs.new_slot }}" \
             -out=tfplan
 
       - name: Terraform Apply
@@ -248,10 +268,16 @@ jobs:
           if [ -n "$RELAY_URL" ]; then
             echo "Checking health at ${RELAY_URL}/health"
             # Retry a few times as DNS/SSL might take a moment
-            for i in 1 2 3; do
-              curl -sf "${RELAY_URL}/health" && echo "Health check passed!" && break || echo "Attempt $i failed, retrying..."
+            for i in 1 2 3 4 5; do
+              if curl -sf "${RELAY_URL}/health"; then
+                echo "Health check passed!"
+                exit 0
+              fi
+              echo "Attempt $i failed, retrying in 10s..."
               sleep 10
             done
+            echo "Health check failed after 5 attempts"
+            exit 1
           fi
 
       - name: Summary
@@ -259,15 +285,15 @@ jobs:
         run: |
           RELAY_URL=$(terraform output -raw relay_url 2>/dev/null || echo "N/A")
           CUSTOM_DOMAIN=$(terraform output -raw custom_domain 2>/dev/null || echo "N/A")
-          echo "### Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          ACTIVE_SLOT=$(terraform output -raw active_slot 2>/dev/null || echo "N/A")
+          echo "### Deployment Complete (Blue-Green)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Environment** | ${{ needs.setup.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Active Slot** | 🟢 ${ACTIVE_SLOT} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Previous Slot** | ${{ steps.slot.outputs.current_slot }} (destroyed) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Image Tag** | \`${{ needs.setup.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Relay URL** | ${RELAY_URL} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Domain** | \`${CUSTOM_DOMAIN}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **CPU** | 250 mvcpu |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Memory** | 256 MB |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Scaling** | 1-1 |" >> $GITHUB_STEP_SUMMARY
           echo "| **Region** | nl-ams |" >> $GITHUB_STEP_SUMMARY

@@ -1,14 +1,13 @@
 name: Deploy Backend
 
 on:
-  push:
-    # Beta: push to main (with path filter)
+  # Trigger after CI Backend completes successfully
+  workflow_run:
+    workflows: ["CI Backend"]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'backend/**'
-      - 'infra/scaleway/**'
-      - '.github/workflows/deploy-backend.yml'
-    # Production: version tags
+  # Production: version tags
+  push:
     tags:
       - 'v*'
   release:
@@ -33,6 +32,10 @@ jobs:
   setup:
     name: Setup
     runs-on: ubuntu-latest
+    # Skip if triggered by workflow_run and CI failed
+    if: |
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
     outputs:
       environment: ${{ steps.env.outputs.environment }}
       image_tag: ${{ steps.env.outputs.image_tag }}
@@ -59,7 +62,13 @@ jobs:
             echo "environment=prod" >> $GITHUB_OUTPUT
             echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
-          # Push to main -> beta
+          # Triggered by CI Backend workflow_run -> beta
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            SHA="${{ github.event.workflow_run.head_sha }}"
+            echo "environment=beta" >> $GITHUB_OUTPUT
+            echo "image_tag=sha-${SHA::7}" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          # Push to main -> beta (fallback, shouldn't happen with new triggers)
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "environment=beta" >> $GITHUB_OUTPUT
             echo "image_tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
@@ -86,6 +95,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -118,6 +129,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -197,6 +210,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3

@@ -20,9 +20,7 @@ terraform {
     bucket                      = "ash-backend-tf-state"
     key                         = "scaleway/terraform.tfstate"  # Overridden by -backend-config
     region                      = "nl-ams"
-    endpoints = {
-      s3 = "https://s3.nl-ams.scw.cloud"
-    }
+    endpoint = "https://s3.nl-ams.scw.cloud"
     skip_credentials_validation = true
     skip_region_validation      = true
     skip_requesting_account_id  = true

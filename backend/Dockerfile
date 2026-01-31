@@ -34,9 +34,13 @@ RUN mkdir src && \
     cargo build --release && \
     rm -rf src
 
-# Copy source and build
+# Copy source and build - remove cached ash-backend artifacts to force rebuild
 COPY src ./src
-RUN cargo build --release --bin ash-backend
+RUN rm -rf target/release/.fingerprint/ash-backend-* \
+           target/release/deps/ash_backend* \
+           target/release/deps/libash_backend* \
+           target/release/incremental/ash_backend* \
+    && cargo build --release --bin ash-backend
 
 # Verify binary exists and strip it (extra strip for good measure)
 RUN strip /app/target/release/ash-backend

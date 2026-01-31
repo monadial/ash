@@ -94,8 +94,8 @@ jobs:
       image_tag: ${{ needs.setup.outputs.image_tag }}
       push: true
       artifact_run_id: ${{ github.event.workflow_run.id || github.run_id }}
-    secrets:
-      SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+      environment: ${{ needs.setup.outputs.environment }}
+    secrets: inherit
 
   # Deploy to Scaleway (Blue-Green)
   deploy:

@@ -84,11 +84,93 @@ jobs:
           echo "- **Image Tag:** ${{ steps.env.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
 
+  # Build binaries (only for manual dispatch or tag push)
+  build-linux-amd64:
+    name: Build Binary (amd64)
+    runs-on: ubuntu-latest
+    needs: setup
+    if: |
+      needs.setup.outputs.should_deploy == 'true' &&
+      github.event_name != 'workflow_run'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-cargo-backend-release-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-backend-release-
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ash-backend-linux-amd64
+          path: backend/target/release/ash-backend
+          retention-days: 7
+
+  build-linux-arm64:
+    name: Build Binary (arm64)
+    runs-on: ubuntu-24.04-arm
+    needs: setup
+    if: |
+      needs.setup.outputs.should_deploy == 'true' &&
+      github.event_name != 'workflow_run'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            backend/target/
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-backend-release-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-cargo-backend-release-
+
+      - name: Build release binary
+        run: cargo build --release --locked
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ash-backend-linux-arm64
+          path: backend/target/release/ash-backend
+          retention-days: 7
+
   # Build and push Docker images
   docker:
     name: Build & Push Docker
-    needs: setup
-    if: needs.setup.outputs.should_deploy == 'true'
+    needs: [setup, build-linux-amd64, build-linux-arm64]
+    if: |
+      always() &&
+      needs.setup.outputs.should_deploy == 'true' &&
+      needs.setup.result == 'success' &&
+      (needs.build-linux-amd64.result == 'success' || needs.build-linux-amd64.result == 'skipped') &&
+      (needs.build-linux-arm64.result == 'success' || needs.build-linux-arm64.result == 'skipped')
     uses: ./.github/workflows/docker-backend.yml
     with:
       image_tag: ${{ needs.setup.outputs.image_tag }}

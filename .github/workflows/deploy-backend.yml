@@ -6,22 +6,9 @@ on:
     workflows: ["CI Backend"]
     types: [completed]
     branches: [main]
-  # Production: version tags
-  push:
-    tags:
-      - 'v*'
+  # Production: version tags (CI Backend also triggers on tags, which then triggers this)
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy'
-        required: true
-        default: 'beta'
-        type: choice
-        options:
-          - beta
-          - prod
 
 env:
   REGISTRY: rg.nl-ams.scw.cloud/ash-backend
@@ -45,33 +32,24 @@ jobs:
       - name: Determine environment and tag
         id: env
         run: |
-          # Manual dispatch
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
-            echo "image_tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
           # GitHub Release -> prod
-          elif [ "${{ github.event_name }}" = "release" ]; then
+          if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
             echo "environment=prod" >> $GITHUB_OUTPUT
             echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
-          # Version tag push -> prod
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG="${{ github.ref_name }}"
-            echo "environment=prod" >> $GITHUB_OUTPUT
-            echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          # Triggered by CI Backend workflow_run -> beta
+          # Triggered by CI Backend workflow_run
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             SHA="${{ github.event.workflow_run.head_sha }}"
-            echo "environment=beta" >> $GITHUB_OUTPUT
-            echo "image_tag=sha-${SHA::7}" >> $GITHUB_OUTPUT
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
-          # Push to main -> beta (fallback, shouldn't happen with new triggers)
-          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "environment=beta" >> $GITHUB_OUTPUT
-            echo "image_tag=sha-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            REF="${{ github.event.workflow_run.head_branch }}"
+            # Check if this was triggered by a tag
+            if [[ "$REF" == v* ]]; then
+              echo "environment=prod" >> $GITHUB_OUTPUT
+              echo "image_tag=${REF}" >> $GITHUB_OUTPUT
+            else
+              echo "environment=beta" >> $GITHUB_OUTPUT
+              echo "image_tag=sha-${SHA::7}" >> $GITHUB_OUTPUT
+            fi
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           else
             echo "should_deploy=false" >> $GITHUB_OUTPUT
@@ -84,98 +62,16 @@ jobs:
           echo "- **Image Tag:** ${{ steps.env.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
 
-  # Build binaries (only for manual dispatch or tag push)
-  build-linux-amd64:
-    name: Build Binary (amd64)
-    runs-on: ubuntu-latest
-    needs: setup
-    if: |
-      needs.setup.outputs.should_deploy == 'true' &&
-      github.event_name != 'workflow_run'
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Restore cargo cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            backend/target/
-          key: ${{ runner.os }}-cargo-backend-release-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-backend-release-
-
-      - name: Build release binary
-        run: cargo build --release --locked
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ash-backend-linux-amd64
-          path: backend/target/release/ash-backend
-          retention-days: 7
-
-  build-linux-arm64:
-    name: Build Binary (arm64)
-    runs-on: ubuntu-24.04-arm
-    needs: setup
-    if: |
-      needs.setup.outputs.should_deploy == 'true' &&
-      github.event_name != 'workflow_run'
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Restore cargo cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            backend/target/
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-backend-release-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-${{ runner.arch }}-cargo-backend-release-
-
-      - name: Build release binary
-        run: cargo build --release --locked
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ash-backend-linux-arm64
-          path: backend/target/release/ash-backend
-          retention-days: 7
-
   # Build and push Docker images
   docker:
     name: Build & Push Docker
-    needs: [setup, build-linux-amd64, build-linux-arm64]
-    if: |
-      always() &&
-      needs.setup.outputs.should_deploy == 'true' &&
-      needs.setup.result == 'success' &&
-      (needs.build-linux-amd64.result == 'success' || needs.build-linux-amd64.result == 'skipped') &&
-      (needs.build-linux-arm64.result == 'success' || needs.build-linux-arm64.result == 'skipped')
+    needs: setup
+    if: needs.setup.outputs.should_deploy == 'true'
     uses: ./.github/workflows/docker-backend.yml
     with:
       image_tag: ${{ needs.setup.outputs.image_tag }}
       push: true
-      artifact_run_id: ${{ github.event.workflow_run.id || github.run_id }}
+      artifact_run_id: ${{ github.event.workflow_run.id }}
       environment: ${{ needs.setup.outputs.environment }}
     secrets: inherit
 

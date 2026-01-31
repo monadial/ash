@@ -12,6 +12,7 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/ci-backend.yml'
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always

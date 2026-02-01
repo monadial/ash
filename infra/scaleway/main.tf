@@ -74,7 +74,7 @@ resource "scaleway_container" "blue" {
   cpu_limit      = var.container_cpu_limit
   memory_limit   = var.container_memory_limit
   min_scale      = local.is_blue_active ? var.container_min_scale : 0
-  max_scale      = local.is_blue_active ? var.container_max_scale : 0
+  max_scale      = var.container_max_scale  # Must be >= 1
   timeout        = 300
   privacy        = "public"
   protocol       = "http1"
@@ -115,7 +115,7 @@ resource "scaleway_container" "green" {
   cpu_limit      = var.container_cpu_limit
   memory_limit   = var.container_memory_limit
   min_scale      = local.is_green_active ? var.container_min_scale : 0
-  max_scale      = local.is_green_active ? var.container_max_scale : 0
+  max_scale      = var.container_max_scale  # Must be >= 1
   timeout        = 300
   privacy        = "public"
   protocol       = "http1"

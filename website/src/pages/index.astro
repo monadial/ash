@@ -42,11 +42,13 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
 
       <!-- Phone Mockups -->
       <div class="relative h-125 lg:h-150 animate-fade-in delay-2 hidden lg:block">
-        <div class="absolute top-8 right-8 transform rotate-6 opacity-60 scale-90">
-          <PhoneMockup image="/screenshots/messaging.png" label="Messages" />
-        </div>
-        <div class="absolute top-16 left-4 z-10">
-          <PhoneMockup image="/screenshots/conversations.png" label="Conversations" />
+        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 flex items-end justify-center">
+          <div class="transform -rotate-6 -translate-x-4 z-10">
+            <PhoneMockup image="/screenshots/newconversations.jpeg" label="Conversations" />
+          </div>
+          <div class="transform rotate-6 translate-x-4 -ml-16">
+            <PhoneMockup image="/screenshots/streamingpad.jpeg" label="Streaming QR" />
+          </div>
         </div>
       </div>
     </div>
@@ -98,8 +100,8 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
 
   <!-- How It Works -->
   <section class="py-24">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="text-center mb-16">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-20">
         <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">How It Works</span>
         <h2 class="text-4xl font-bold mt-4">Four steps to unbreakable privacy</h2>
         <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
@@ -107,98 +109,89 @@ import ProtocolDemo from '../components/ProtocolDemo.tsx'
         </p>
       </div>
 
-      <div class="grid md:grid-cols-4 gap-8">
-        <div class="text-center">
-          <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">1</div>
-          <h3 class="font-semibold text-lg mb-3">Meet Your Contact</h3>
-          <p class="text-text-secondary text-sm">
-            You need to meet the person you want to message in real life. This is the foundation of security — you know exactly who you're talking to.
-          </p>
-          <p class="text-text-muted text-xs mt-2">
-            Coffee shop, office, anywhere private works.
-          </p>
+      <div class="space-y-24">
+        <!-- Step 1 -->
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <div class="order-2 lg:order-1">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-brand rounded-xl flex items-center justify-center text-xl font-bold text-white shrink-0">1</div>
+              <h3 class="font-semibold text-2xl">Create the Pad</h3>
+            </div>
+            <p class="text-text-secondary text-lg mb-4">
+              Meet your contact in person. One device initiates and generates the One-Time Pad — the encryption key you'll share.
+            </p>
+            <p class="text-text-muted mb-4">
+              Choose pad size based on how many messages you need. Larger pads allow more messages but take longer to transfer.
+            </p>
+            <div class="bg-bg-elevated rounded-xl p-4 text-sm">
+              <p class="text-text-secondary mb-2">
+                <span class="text-brand-light font-medium">How pad usage works:</span> Each message consumes about 100 bytes of your pad — 64 bytes for authentication, plus your message length (minimum 32 bytes).
+              </p>
+              <p class="text-text-muted text-xs">
+                A 256 KB pad gives you ~1,500 messages. A short "OK" uses the same minimum as a longer text up to 32 characters.
+              </p>
+            </div>
+          </div>
+          <div class="order-1 lg:order-2 flex justify-center">
+            <PhoneMockup image="/screenshots/newconversations.jpeg" size="md" />
+          </div>
         </div>
-        <div class="text-center">
-          <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">2</div>
-          <h3 class="font-semibold text-lg mb-3">Scan QR Codes</h3>
-          <p class="text-text-secondary text-sm">
-            Both phones create and scan QR codes. This shares a secret key between your devices — a key that never touches the internet.
-          </p>
-          <p class="text-text-muted text-xs mt-2">
-            Takes about 30 seconds. Confirm with a 6-word phrase.
-          </p>
-        </div>
-        <div class="text-center">
-          <div class="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">3</div>
-          <h3 class="font-semibold text-lg mb-3">Send Messages</h3>
-          <p class="text-text-secondary text-sm">
-            Message normally through the app. Each message uses up a tiny piece of your shared key, and that piece is destroyed forever after use.
-          </p>
-          <p class="text-text-muted text-xs mt-2">
-            Depending on key size, you can send 25-800+ messages.
-          </p>
-        </div>
-        <div class="text-center">
-          <div class="w-16 h-16 bg-danger rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold text-white">4</div>
-          <h3 class="font-semibold text-lg mb-3">Burn When Done</h3>
-          <p class="text-text-secondary text-sm">
-            When you're finished, burn the conversation. All remaining key material is destroyed, making it mathematically impossible to recover any messages.
-          </p>
-          <p class="text-text-muted text-xs mt-2">
-            Gone forever. No backups. No traces.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- App Screenshots -->
-  <section class="py-24 bg-bg-subtle border-y border-border overflow-hidden">
-    <div class="max-w-7xl mx-auto px-6">
-      <div class="text-center mb-16">
-        <span class="text-brand-light text-sm font-semibold uppercase tracking-wider">The App</span>
-        <h2 class="text-4xl font-bold mt-4">Beautiful and secure</h2>
-        <p class="text-text-secondary mt-4 max-w-2xl mx-auto">
-          ASH is designed to be simple and intuitive while providing mathematically perfect security.
-        </p>
-      </div>
+        <!-- Step 2 -->
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <div class="flex justify-center">
+            <PhoneMockup image="/screenshots/streamingpad.jpeg" size="md" />
+          </div>
+          <div>
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-brand rounded-xl flex items-center justify-center text-xl font-bold text-white shrink-0">2</div>
+              <h3 class="font-semibold text-2xl">Transfer via QR</h3>
+            </div>
+            <p class="text-text-secondary text-lg mb-4">
+              The initiator displays streaming QR codes while the receiver scans them. The key transfers directly between devices — never touching the internet.
+            </p>
+            <p class="text-text-muted">
+              Both devices then display a 6-word phrase. Verify they match out loud to confirm the transfer was successful.
+            </p>
+          </div>
+        </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 sm:gap-6 justify-items-center">
-        <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/onboarding.png" size="sm" class="sm:hidden" />
-          <PhoneMockup image="/screenshots/onboarding.png" size="md" class="hidden sm:block lg:hidden" />
-          <PhoneMockup image="/screenshots/onboarding.png" size="lg" class="hidden lg:block" />
-          <h3 class="font-semibold mt-6 mb-2">Welcome</h3>
-          <p class="text-text-secondary text-sm text-center max-w-[200px]">
-            Clean onboarding explains the unique security model
-          </p>
+        <!-- Step 3 -->
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <div class="order-2 lg:order-1">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-brand rounded-xl flex items-center justify-center text-xl font-bold text-white shrink-0">3</div>
+              <h3 class="font-semibold text-2xl">Send Messages</h3>
+            </div>
+            <p class="text-text-secondary text-lg mb-4">
+              Message normally through the app. Each message uses up a tiny piece of your shared key, and that piece is destroyed forever after use.
+            </p>
+            <p class="text-text-muted">
+              Depending on key size, you can send hundreds to thousands of messages. Track your remaining pad in the conversation view.
+            </p>
+          </div>
+          <div class="order-1 lg:order-2 flex justify-center">
+            <PhoneMockup image="/screenshots/incoming-verified.png" size="md" />
+          </div>
         </div>
-        <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/conversations.png" size="sm" class="sm:hidden" />
-          <PhoneMockup image="/screenshots/conversations.png" size="md" class="hidden sm:block lg:hidden" />
-          <PhoneMockup image="/screenshots/conversations.png" size="lg" class="hidden lg:block" />
-          <h3 class="font-semibold mt-6 mb-2">Conversations</h3>
-          <p class="text-text-secondary text-sm text-center max-w-[200px]">
-            See pad usage at a glance with visual indicators
-          </p>
-        </div>
-        <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/messaging.png" size="sm" class="sm:hidden" />
-          <PhoneMockup image="/screenshots/messaging.png" size="md" class="hidden sm:block lg:hidden" />
-          <PhoneMockup image="/screenshots/messaging.png" size="lg" class="hidden lg:block" />
-          <h3 class="font-semibold mt-6 mb-2">Messaging</h3>
-          <p class="text-text-secondary text-sm text-center max-w-[200px]">
-            Familiar chat interface with delivery confirmations
-          </p>
-        </div>
-        <div class="flex flex-col items-center">
-          <PhoneMockup image="/screenshots/settings.png" size="sm" class="sm:hidden" />
-          <PhoneMockup image="/screenshots/settings.png" size="md" class="hidden sm:block lg:hidden" />
-          <PhoneMockup image="/screenshots/settings.png" size="lg" class="hidden lg:block" />
-          <h3 class="font-semibold mt-6 mb-2">Settings</h3>
-          <p class="text-text-secondary text-sm text-center max-w-[200px]">
-            Full control over security and privacy options
-          </p>
+
+        <!-- Step 4 -->
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+          <div class="flex justify-center">
+            <PhoneMockup image="/screenshots/burned.png" size="md" />
+          </div>
+          <div>
+            <div class="flex items-center gap-4 mb-6">
+              <div class="w-12 h-12 bg-danger rounded-xl flex items-center justify-center text-xl font-bold text-white shrink-0">4</div>
+              <h3 class="font-semibold text-2xl">Burn When Done</h3>
+            </div>
+            <p class="text-text-secondary text-lg mb-4">
+              When you're finished, burn the conversation. All remaining key material is destroyed, making it mathematically impossible to recover any messages.
+            </p>
+            <p class="text-text-muted">
+              Gone forever. No backups. No traces. No one — not even with a court order — can ever read those messages.
+            </p>
+          </div>
         </div>
       </div>
     </div>

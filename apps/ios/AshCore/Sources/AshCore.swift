@@ -751,14 +751,14 @@ public struct FfiConverterTypeFountainFrameGenerator: FfiConverter {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFountainFrameGenerator_lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameGenerator {
+public nonisolated func FfiConverterTypeFountainFrameGenerator_lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameGenerator {
     return try FfiConverterTypeFountainFrameGenerator.lift(pointer)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFountainFrameGenerator_lower(_ value: FountainFrameGenerator) -> UnsafeMutableRawPointer {
+public nonisolated func FfiConverterTypeFountainFrameGenerator_lower(_ value: FountainFrameGenerator) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFountainFrameGenerator.lower(value)
 }
 
@@ -1025,14 +1025,14 @@ public struct FfiConverterTypeFountainFrameReceiver: FfiConverter {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFountainFrameReceiver_lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameReceiver {
+public nonisolated func FfiConverterTypeFountainFrameReceiver_lift(_ pointer: UnsafeMutableRawPointer) throws -> FountainFrameReceiver {
     return try FfiConverterTypeFountainFrameReceiver.lift(pointer)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFountainFrameReceiver_lower(_ value: FountainFrameReceiver) -> UnsafeMutableRawPointer {
+public nonisolated func FfiConverterTypeFountainFrameReceiver_lower(_ value: FountainFrameReceiver) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFountainFrameReceiver.lower(value)
 }
 
@@ -1410,14 +1410,14 @@ public struct FfiConverterTypePad: FfiConverter {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypePad_lift(_ pointer: UnsafeMutableRawPointer) throws -> Pad {
+public nonisolated func FfiConverterTypePad_lift(_ pointer: UnsafeMutableRawPointer) throws -> Pad {
     return try FfiConverterTypePad.lift(pointer)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypePad_lower(_ value: Pad) -> UnsafeMutableRawPointer {
+public nonisolated func FfiConverterTypePad_lower(_ value: Pad) -> UnsafeMutableRawPointer {
     return FfiConverterTypePad.lower(value)
 }
 
@@ -1505,14 +1505,14 @@ public struct FfiConverterTypeAuthTokens: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeAuthTokens_lift(_ buf: RustBuffer) throws -> AuthTokens {
+public nonisolated func FfiConverterTypeAuthTokens_lift(_ buf: RustBuffer) throws -> AuthTokens {
     return try FfiConverterTypeAuthTokens.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeAuthTokens_lower(_ value: AuthTokens) -> RustBuffer {
+public nonisolated func FfiConverterTypeAuthTokens_lower(_ value: AuthTokens) -> RustBuffer {
     return FfiConverterTypeAuthTokens.lower(value)
 }
 
@@ -1677,14 +1677,14 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeCeremonyMetadata_lift(_ buf: RustBuffer) throws -> CeremonyMetadata {
+public nonisolated func FfiConverterTypeCeremonyMetadata_lift(_ buf: RustBuffer) throws -> CeremonyMetadata {
     return try FfiConverterTypeCeremonyMetadata.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeCeremonyMetadata_lower(_ value: CeremonyMetadata) -> RustBuffer {
+public nonisolated func FfiConverterTypeCeremonyMetadata_lower(_ value: CeremonyMetadata) -> RustBuffer {
     return FfiConverterTypeCeremonyMetadata.lower(value)
 }
 
@@ -1772,14 +1772,14 @@ public struct FfiConverterTypeDecryptedMessage: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeDecryptedMessage_lift(_ buf: RustBuffer) throws -> DecryptedMessage {
+public nonisolated func FfiConverterTypeDecryptedMessage_lift(_ buf: RustBuffer) throws -> DecryptedMessage {
     return try FfiConverterTypeDecryptedMessage.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeDecryptedMessage_lower(_ value: DecryptedMessage) -> RustBuffer {
+public nonisolated func FfiConverterTypeDecryptedMessage_lower(_ value: DecryptedMessage) -> RustBuffer {
     return FfiConverterTypeDecryptedMessage.lower(value)
 }
 
@@ -1867,14 +1867,14 @@ public struct FfiConverterTypeFountainCeremonyResult: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFountainCeremonyResult_lift(_ buf: RustBuffer) throws -> FountainCeremonyResult {
+public nonisolated func FfiConverterTypeFountainCeremonyResult_lift(_ buf: RustBuffer) throws -> FountainCeremonyResult {
     return try FfiConverterTypeFountainCeremonyResult.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeFountainCeremonyResult_lower(_ value: FountainCeremonyResult) -> RustBuffer {
+public nonisolated func FfiConverterTypeFountainCeremonyResult_lower(_ value: FountainCeremonyResult) -> RustBuffer {
     return FfiConverterTypeFountainCeremonyResult.lower(value)
 }
 
@@ -2157,14 +2157,14 @@ public struct FfiConverterTypePadSize: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypePadSize_lift(_ buf: RustBuffer) throws -> PadSize {
+public nonisolated func FfiConverterTypePadSize_lift(_ buf: RustBuffer) throws -> PadSize {
     return try FfiConverterTypePadSize.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypePadSize_lower(_ value: PadSize) -> RustBuffer {
+public nonisolated func FfiConverterTypePadSize_lower(_ value: PadSize) -> RustBuffer {
     return FfiConverterTypePadSize.lower(value)
 }
 
@@ -2234,14 +2234,14 @@ public struct FfiConverterTypeRole: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeRole_lift(_ buf: RustBuffer) throws -> Role {
+public nonisolated func FfiConverterTypeRole_lift(_ buf: RustBuffer) throws -> Role {
     return try FfiConverterTypeRole.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeRole_lower(_ value: Role) -> RustBuffer {
+public nonisolated func FfiConverterTypeRole_lower(_ value: Role) -> RustBuffer {
     return FfiConverterTypeRole.lower(value)
 }
 
@@ -2320,14 +2320,14 @@ public struct FfiConverterTypeTransferMethod: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeTransferMethod_lift(_ buf: RustBuffer) throws -> TransferMethod {
+public nonisolated func FfiConverterTypeTransferMethod_lift(_ buf: RustBuffer) throws -> TransferMethod {
     return try FfiConverterTypeTransferMethod.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeTransferMethod_lower(_ value: TransferMethod) -> RustBuffer {
+public nonisolated func FfiConverterTypeTransferMethod_lower(_ value: TransferMethod) -> RustBuffer {
     return FfiConverterTypeTransferMethod.lower(value)
 }
 
@@ -2438,7 +2438,7 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
  * Calculate expected frames needed for successful transfer.
  * This is the number displayed in UI as "~X QR frames".
  */
-public func calculateExpectedFrames(padBytes: UInt64, blockSize: UInt32, method: TransferMethod) -> UInt32 {
+public nonisolated func calculateExpectedFrames(padBytes: UInt64, blockSize: UInt32, method: TransferMethod) -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_calculate_expected_frames(
         FfiConverterUInt64.lower(padBytes),
@@ -2450,7 +2450,7 @@ public func calculateExpectedFrames(padBytes: UInt64, blockSize: UInt32, method:
 /**
  * Calculate total frames to pre-generate (source + redundancy).
  */
-public func calculateFramesToGenerate(padBytes: UInt64, blockSize: UInt32, method: TransferMethod) -> UInt32 {
+public nonisolated func calculateFramesToGenerate(padBytes: UInt64, blockSize: UInt32, method: TransferMethod) -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_calculate_frames_to_generate(
         FfiConverterUInt64.lower(padBytes),
@@ -2463,7 +2463,7 @@ public func calculateFramesToGenerate(padBytes: UInt64, blockSize: UInt32, metho
  * Calculate total pad consumption for a message
  * Returns: auth_overhead (64) + plaintext_length
  */
-public func calculatePadConsumption(plaintextLength: UInt32) -> UInt32 {
+public nonisolated func calculatePadConsumption(plaintextLength: UInt32) -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_calculate_pad_consumption(
         FfiConverterUInt32.lower(plaintextLength),$0
@@ -2474,7 +2474,7 @@ public func calculatePadConsumption(plaintextLength: UInt32) -> UInt32 {
  * Calculate redundancy blocks to pre-generate beyond source count.
  * This is used for QR pre-generation to ensure enough frames are ready.
  */
-public func calculateRedundancyBlocks(sourceBlocks: UInt32, method: TransferMethod) -> UInt32 {
+public nonisolated func calculateRedundancyBlocks(sourceBlocks: UInt32, method: TransferMethod) -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_calculate_redundancy_blocks(
         FfiConverterUInt32.lower(sourceBlocks),
@@ -2486,7 +2486,7 @@ public func calculateRedundancyBlocks(sourceBlocks: UInt32, method: TransferMeth
  * Calculate source blocks (K) for given pad size and block size.
  * Includes metadata overhead in calculation.
  */
-public func calculateSourceBlocks(padBytes: UInt64, blockSize: UInt32) -> UInt32 {
+public nonisolated func calculateSourceBlocks(padBytes: UInt64, blockSize: UInt32) -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_calculate_source_blocks(
         FfiConverterUInt64.lower(padBytes),
@@ -2502,7 +2502,7 @@ public func calculateSourceBlocks(padBytes: UInt64, blockSize: UInt32) -> UInt32
  * Passphrase is required for encrypting the QR frames.
  * Method selects the transfer strategy (Raptor recommended).
  */
-public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8], blockSize: UInt32, passphrase: String, method: TransferMethod)throws  -> FountainFrameGenerator {
+public nonisolated func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8], blockSize: UInt32, passphrase: String, method: TransferMethod)throws  -> FountainFrameGenerator {
     return try  FfiConverterTypeFountainFrameGenerator.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_create_fountain_generator(
         FfiConverterTypeCeremonyMetadata.lower(metadata),
@@ -2551,7 +2551,7 @@ public nonisolated func decryptAuthenticated(authKey: [UInt8], encryptionKey: [U
 /**
  * Derive all tokens at once (conversation_id, auth_token, burn_token)
  */
-public func deriveAllTokens(padBytes: [UInt8])throws  -> AuthTokens {
+public nonisolated func deriveAllTokens(padBytes: [UInt8])throws  -> AuthTokens {
     return try  FfiConverterTypeAuthTokens.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_derive_all_tokens(
         FfiConverterSequenceUInt8.lower(padBytes),$0
@@ -2562,7 +2562,7 @@ public func deriveAllTokens(padBytes: [UInt8])throws  -> AuthTokens {
  * Derive auth token from pad bytes (hex-encoded, 64 chars)
  * Used for API authentication (messages, polling, registration)
  */
-public func deriveAuthToken(padBytes: [UInt8])throws  -> String {
+public nonisolated func deriveAuthToken(padBytes: [UInt8])throws  -> String {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_derive_auth_token(
         FfiConverterSequenceUInt8.lower(padBytes),$0
@@ -2573,7 +2573,7 @@ public func deriveAuthToken(padBytes: [UInt8])throws  -> String {
  * Derive burn token from pad bytes (hex-encoded, 64 chars)
  * Used specifically for burn operations (defense in depth)
  */
-public func deriveBurnToken(padBytes: [UInt8])throws  -> String {
+public nonisolated func deriveBurnToken(padBytes: [UInt8])throws  -> String {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_derive_burn_token(
         FfiConverterSequenceUInt8.lower(padBytes),$0
@@ -2583,7 +2583,7 @@ public func deriveBurnToken(padBytes: [UInt8])throws  -> String {
 /**
  * Derive conversation ID from pad bytes (hex-encoded, 64 chars)
  */
-public func deriveConversationId(padBytes: [UInt8])throws  -> String {
+public nonisolated func deriveConversationId(padBytes: [UInt8])throws  -> String {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_derive_conversation_id(
         FfiConverterSequenceUInt8.lower(padBytes),$0
@@ -2653,7 +2653,7 @@ public nonisolated func generateMnemonicWithCount(padBytes: [UInt8], wordCount: 
 /**
  * Authentication overhead per message (64 bytes for Wegman-Carter MAC)
  */
-public func getAuthOverhead() -> UInt32 {
+public nonisolated func getAuthOverhead() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_get_auth_overhead($0
     )
@@ -2662,7 +2662,7 @@ public func getAuthOverhead() -> UInt32 {
 /**
  * Get default QR block size.
  */
-public func getDefaultBlockSize() -> UInt32 {
+public nonisolated func getDefaultBlockSize() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_get_default_block_size($0
     )
@@ -2671,7 +2671,7 @@ public func getDefaultBlockSize() -> UInt32 {
 /**
  * Get maximum passphrase length
  */
-public func getMaxPassphraseLength() -> UInt32 {
+public nonisolated func getMaxPassphraseLength() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_get_max_passphrase_length($0
     )
@@ -2680,7 +2680,7 @@ public func getMaxPassphraseLength() -> UInt32 {
 /**
  * Get metadata overhead constant (bytes added to pad for ceremony encoding).
  */
-public func getMetadataOverhead() -> UInt32 {
+public nonisolated func getMetadataOverhead() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_get_metadata_overhead($0
     )
@@ -2689,7 +2689,7 @@ public func getMetadataOverhead() -> UInt32 {
 /**
  * Get minimum passphrase length
  */
-public func getMinPassphraseLength() -> UInt32 {
+public nonisolated func getMinPassphraseLength() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_get_min_passphrase_length($0
     )
@@ -2698,7 +2698,7 @@ public func getMinPassphraseLength() -> UInt32 {
 /**
  * Get pad size in bytes for a given PadSize
  */
-public func getPadSizeBytes(size: PadSize) -> UInt64 {
+public nonisolated func getPadSizeBytes(size: PadSize) -> UInt64 {
     return try!  FfiConverterUInt64.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_get_pad_size_bytes(
         FfiConverterTypePadSize.lower(size),$0
@@ -2710,7 +2710,7 @@ public func getPadSizeBytes(size: PadSize) -> UInt64 {
  * This prevents the compiler from optimizing away the zeroing.
  * Use this for wiping sensitive data from memory.
  */
-public func secureZeroBytes(data: [UInt8]) {try! rustCall() {
+public nonisolated func secureZeroBytes(data: [UInt8]) {try! rustCall() {
     uniffi_ash_bindings_fn_func_secure_zero_bytes(
         FfiConverterSequenceUInt8.lower(data),$0
     )
@@ -2719,7 +2719,7 @@ public func secureZeroBytes(data: [UInt8]) {try! rustCall() {
 /**
  * Validate passphrase meets requirements (4-64 printable ASCII chars)
  */
-public func validatePassphrase(passphrase: String) -> Bool {
+public nonisolated func validatePassphrase(passphrase: String) -> Bool {
     return try!  FfiConverterBool.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_validate_passphrase(
         FfiConverterString.lower(passphrase),$0

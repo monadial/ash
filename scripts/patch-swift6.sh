@@ -44,23 +44,8 @@ s/^(private func uniffiEnsureInitialized)/private nonisolated func uniffiEnsureI
 # Patch initializationResult global variable
 s/^(private var initializationResult)/nonisolated(unsafe) private var initializationResult/
 
-# Patch public functions - createFrames
-s/^(public func createFrames)/public nonisolated func createFrames/
-
-# Patch public functions - decrypt
-s/^(public func decrypt)/public nonisolated func decrypt/
-
-# Patch public functions - encrypt
-s/^(public func encrypt)/public nonisolated func encrypt/
-
-# Patch public functions - generateMnemonic (exact match)
-s/^(public func generateMnemonic\(padBytes)/public nonisolated func generateMnemonic(padBytes/
-
-# Patch public functions - generateMnemonicWithCount
-s/^(public func generateMnemonicWithCount)/public nonisolated func generateMnemonicWithCount/
-
-# Patch public functions - reconstructPad
-s/^(public func reconstructPad)/public nonisolated func reconstructPad/
+# Patch ALL public functions (that do not already have nonisolated)
+s/^(public func )/public nonisolated func /
 
 # Patch LocalizedError extension errorDescription
 s/(public var errorDescription)/public nonisolated var errorDescription/

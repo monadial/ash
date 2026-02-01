@@ -225,7 +225,7 @@ fileprivate enum UniffiInternalError: LocalizedError {
     case unexpectedStaleHandle
     case rustPanic(_ message: String)
 
-    public nonisolated var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .bufferOverflow: return "Reading the requested value would read past the end of the buffer"
         case .incompleteData: return "The buffer still has data after lifting its containing value"
@@ -266,18 +266,18 @@ fileprivate extension RustCallStatus {
     }
 }
 
-private nonisolated func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
+private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     let neverThrow: ((RustBuffer) throws -> Never)? = nil
     return try makeRustCall(callback, errorHandler: neverThrow)
 }
 
-private nonisolated func rustCallWithError<T, E: Swift.Error>(
+private func rustCallWithError<T, E: Swift.Error>(
     _ errorHandler: @escaping (RustBuffer) throws -> E,
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
-private nonisolated func makeRustCall<T, E: Swift.Error>(
+private func makeRustCall<T, E: Swift.Error>(
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T,
     errorHandler: ((RustBuffer) throws -> E)?
 ) throws -> T {
@@ -288,7 +288,7 @@ private nonisolated func makeRustCall<T, E: Swift.Error>(
     return returnedVal
 }
 
-private nonisolated func uniffiCheckCallStatus<E: Swift.Error>(
+private func uniffiCheckCallStatus<E: Swift.Error>(
     callStatus: RustCallStatus,
     errorHandler: ((RustBuffer) throws -> E)?
 ) throws {
@@ -769,7 +769,8 @@ public func FfiConverterTypeFountainFrameGenerator_lower(_ value: FountainFrameG
  * Fountain frame receiver for QR scanning.
  *
  * Collects scanned blocks and tracks decoding progress.
- * Can decode from ANY sufficient subset of blocks.
+ * Automatically detects transfer method from first received block
+ * and uses the appropriate decoder (Raptor, LT, or Sequential).
  */
 public protocol FountainFrameReceiverProtocol : AnyObject {
     
@@ -778,6 +779,7 @@ public protocol FountainFrameReceiverProtocol : AnyObject {
      *
      * Returns true if decoding is now complete, false if more blocks needed.
      * Duplicate blocks are safely ignored.
+     * Transfer method is auto-detected from block 0.
      */
     func addFrame(frameBytes: [UInt8]) throws  -> Bool
     
@@ -785,6 +787,12 @@ public protocol FountainFrameReceiverProtocol : AnyObject {
      * Number of blocks received (including duplicates).
      */
     func blocksReceived()  -> UInt32
+    
+    /**
+     * Get the detected transfer method.
+     * Returns null if block 0 hasn't been received yet.
+     */
+    func detectedMethod()  -> TransferMethod?
     
     /**
      * Get the decoded ceremony result.
@@ -820,7 +828,8 @@ public protocol FountainFrameReceiverProtocol : AnyObject {
  * Fountain frame receiver for QR scanning.
  *
  * Collects scanned blocks and tracks decoding progress.
- * Can decode from ANY sufficient subset of blocks.
+ * Automatically detects transfer method from first received block
+ * and uses the appropriate decoder (Raptor, LT, or Sequential).
  */
 open class FountainFrameReceiver:
     FountainFrameReceiverProtocol {
@@ -889,6 +898,7 @@ public convenience init(passphrase: String) {
      *
      * Returns true if decoding is now complete, false if more blocks needed.
      * Duplicate blocks are safely ignored.
+     * Transfer method is auto-detected from block 0.
      */
 open func addFrame(frameBytes: [UInt8])throws  -> Bool {
     return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
@@ -904,6 +914,17 @@ open func addFrame(frameBytes: [UInt8])throws  -> Bool {
 open func blocksReceived() -> UInt32 {
     return try!  FfiConverterUInt32.lift(try! rustCall() {
     uniffi_ash_bindings_fn_method_fountainframereceiver_blocks_received(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Get the detected transfer method.
+     * Returns null if block 0 hasn't been received yet.
+     */
+open func detectedMethod() -> TransferMethod? {
+    return try!  FfiConverterOptionTypeTransferMethod.lift(try! rustCall() {
+    uniffi_ash_bindings_fn_method_fountainframereceiver_detected_method(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -1535,6 +1556,10 @@ public struct CeremonyMetadata {
      */
     public let notificationFlags: UInt16
     /**
+     * Transfer method used for QR ceremony (Raptor, LT, or Sequential)
+     */
+    public let transferMethod: TransferMethod
+    /**
      * Relay server URL
      */
     public let relayUrl: String
@@ -1572,12 +1597,16 @@ public struct CeremonyMetadata {
          * Default: 0x000B (new message + expiring + delivery failed)
          */notificationFlags: UInt16, 
         /**
+         * Transfer method used for QR ceremony (Raptor, LT, or Sequential)
+         */transferMethod: TransferMethod, 
+        /**
          * Relay server URL
          */relayUrl: String) {
         self.version = version
         self.ttlSeconds = ttlSeconds
         self.disappearingMessagesSeconds = disappearingMessagesSeconds
         self.notificationFlags = notificationFlags
+        self.transferMethod = transferMethod
         self.relayUrl = relayUrl
     }
 }
@@ -1598,6 +1627,9 @@ extension CeremonyMetadata: Equatable, Hashable {
         if lhs.notificationFlags != rhs.notificationFlags {
             return false
         }
+        if lhs.transferMethod != rhs.transferMethod {
+            return false
+        }
         if lhs.relayUrl != rhs.relayUrl {
             return false
         }
@@ -1609,6 +1641,7 @@ extension CeremonyMetadata: Equatable, Hashable {
         hasher.combine(ttlSeconds)
         hasher.combine(disappearingMessagesSeconds)
         hasher.combine(notificationFlags)
+        hasher.combine(transferMethod)
         hasher.combine(relayUrl)
     }
 }
@@ -1625,6 +1658,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
                 ttlSeconds: FfiConverterUInt64.read(from: &buf), 
                 disappearingMessagesSeconds: FfiConverterUInt32.read(from: &buf), 
                 notificationFlags: FfiConverterUInt16.read(from: &buf), 
+                transferMethod: FfiConverterTypeTransferMethod.read(from: &buf), 
                 relayUrl: FfiConverterString.read(from: &buf)
         )
     }
@@ -1634,6 +1668,7 @@ public struct FfiConverterTypeCeremonyMetadata: FfiConverterRustBuffer {
         FfiConverterUInt64.write(value.ttlSeconds, into: &buf)
         FfiConverterUInt32.write(value.disappearingMessagesSeconds, into: &buf)
         FfiConverterUInt16.write(value.notificationFlags, into: &buf)
+        FfiConverterTypeTransferMethod.write(value.transferMethod, into: &buf)
         FfiConverterString.write(value.relayUrl, into: &buf)
     }
 }
@@ -2031,7 +2066,7 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
 extension AshError: Equatable, Hashable {}
 
 extension AshError: Foundation.LocalizedError {
-    public nonisolated var errorDescription: String? {
+    public var errorDescription: String? {
         String(reflecting: self)
     }
 }
@@ -2329,6 +2364,30 @@ fileprivate struct FfiConverterOptionTypeFountainCeremonyResult: FfiConverterRus
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeTransferMethod: FfiConverterRustBuffer {
+    typealias SwiftType = TransferMethod?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeTransferMethod.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeTransferMethod.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [UInt8]
 
@@ -2458,7 +2517,7 @@ public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8
  * Decrypt ciphertext using OTP (XOR with key)
  * WARNING: No authentication - use decrypt_authenticated for new code
  */
-public nonisolated func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UInt8] {
+public func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_decrypt(
         FfiConverterSequenceUInt8.lower(key),
@@ -2480,7 +2539,7 @@ public nonisolated func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UI
  * # Returns
  * Tuple of (plaintext, message_type)
  */
-public nonisolated func decryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], encodedFrame: [UInt8])throws  -> DecryptedMessage {
+public func decryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], encodedFrame: [UInt8])throws  -> DecryptedMessage {
     return try  FfiConverterTypeDecryptedMessage.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_decrypt_authenticated(
         FfiConverterSequenceUInt8.lower(authKey),
@@ -2535,7 +2594,7 @@ public func deriveConversationId(padBytes: [UInt8])throws  -> String {
  * Encrypt plaintext using OTP (XOR with key)
  * WARNING: No authentication - use encrypt_authenticated for new code
  */
-public nonisolated func encrypt(key: [UInt8], plaintext: [UInt8])throws  -> [UInt8] {
+public func encrypt(key: [UInt8], plaintext: [UInt8])throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_encrypt(
         FfiConverterSequenceUInt8.lower(key),
@@ -2560,7 +2619,7 @@ public nonisolated func encrypt(key: [UInt8], plaintext: [UInt8])throws  -> [UIn
  * # Returns
  * Encoded message frame: [version][type][length][ciphertext][32-byte tag]
  */
-public nonisolated func encryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], plaintext: [UInt8], msgType: UInt8)throws  -> [UInt8] {
+public func encryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], plaintext: [UInt8], msgType: UInt8)throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_encrypt_authenticated(
         FfiConverterSequenceUInt8.lower(authKey),
@@ -2573,7 +2632,7 @@ public nonisolated func encryptAuthenticated(authKey: [UInt8], encryptionKey: [U
 /**
  * Generate 6-word mnemonic checksum from pad bytes
  */
-public nonisolated func generateMnemonic(padBytes: [UInt8]) -> [String] {
+public func generateMnemonic(padBytes: [UInt8]) -> [String] {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_generate_mnemonic(
         FfiConverterSequenceUInt8.lower(padBytes),$0
@@ -2583,7 +2642,7 @@ public nonisolated func generateMnemonic(padBytes: [UInt8]) -> [String] {
 /**
  * Generate mnemonic with custom word count
  */
-public nonisolated func generateMnemonicWithCount(padBytes: [UInt8], wordCount: UInt32) -> [String] {
+public func generateMnemonicWithCount(padBytes: [UInt8], wordCount: UInt32) -> [String] {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_generate_mnemonic_with_count(
         FfiConverterSequenceUInt8.lower(padBytes),
@@ -2675,6 +2734,7 @@ private enum InitializationResult {
 }
 // Use a global variable to perform the versioning checks. Swift ensures that
 // the code inside is only computed once.
+// nonisolated(unsafe) is safe here because this is lazily initialized once and never mutated after.
 nonisolated(unsafe) private var initializationResult: InitializationResult = {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
@@ -2776,6 +2836,9 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     if (uniffi_ash_bindings_checksum_method_fountainframereceiver_blocks_received() != 21566) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ash_bindings_checksum_method_fountainframereceiver_detected_method() != 46976) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ash_bindings_checksum_method_fountainframereceiver_get_result() != 17120) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2846,7 +2909,7 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     return InitializationResult.ok
 }()
 
-private nonisolated func uniffiEnsureInitialized() {
+private func uniffiEnsureInitialized() {
     switch initializationResult {
     case .ok:
         break

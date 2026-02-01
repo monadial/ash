@@ -3,10 +3,10 @@
 # =============================================================================
 #
 # Blue-Green deployment strategy:
-# 1. Deploy new version to inactive slot
-# 2. Health check passes
-# 3. Switch DNS to new slot
-# 4. Remove old container (min_scale=0 when inactive)
+# 1. Both slots always exist (no destruction during switch)
+# 2. Active slot: min_scale=1+ (running instances)
+# 3. Inactive slot: min_scale=0 (exists but no instances)
+# 4. Deploy: create new slot -> health check -> switch DNS -> scale down old
 #
 # Usage:
 #   # Deploy to blue slot
@@ -23,11 +23,9 @@ locals {
   # Environment-specific settings
   is_prod = var.environment == "prod"
 
-  # Blue-green slot configuration
-  slots = {
-    blue  = var.active_slot == "blue"
-    green = var.active_slot == "green"
-  }
+  # Blue-green slot configuration - determines scaling, not existence
+  is_blue_active  = var.active_slot == "blue"
+  is_green_active = var.active_slot == "green"
 
   # DNS configuration
   # prod: eu.relay.ashprotocol.app
@@ -64,18 +62,19 @@ data "scaleway_container_namespace" "main" {
 # =============================================================================
 # Blue-Green Containers
 # =============================================================================
+# Both containers always exist. Active slot has min_scale=1+, inactive has min_scale=0.
+# This ensures we never destroy the old container before the new one is healthy.
 
-# Blue slot - only created when active
+# Blue slot - always exists, scaling controlled by active_slot
 resource "scaleway_container" "blue" {
-  count          = local.slots.blue ? 1 : 0
   name           = "relay-${var.environment}-blue"
   namespace_id   = data.scaleway_container_namespace.main.id
   registry_image = "${data.scaleway_registry_namespace.main.endpoint}/ash-backend:${var.image_tag}"
   port           = 8080
   cpu_limit      = var.container_cpu_limit
   memory_limit   = var.container_memory_limit
-  min_scale      = var.container_min_scale
-  max_scale      = var.container_max_scale
+  min_scale      = local.is_blue_active ? var.container_min_scale : 0
+  max_scale      = local.is_blue_active ? var.container_max_scale : 0
   timeout        = 300
   privacy        = "public"
   protocol       = "http1"
@@ -100,19 +99,23 @@ resource "scaleway_container" "blue" {
     failure_threshold = 3
     interval          = "30s"
   }
+
+  # Ensure new container is created before old one is modified
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-# Green slot - only created when active
+# Green slot - always exists, scaling controlled by active_slot
 resource "scaleway_container" "green" {
-  count          = local.slots.green ? 1 : 0
   name           = "relay-${var.environment}-green"
   namespace_id   = data.scaleway_container_namespace.main.id
   registry_image = "${data.scaleway_registry_namespace.main.endpoint}/ash-backend:${var.image_tag}"
   port           = 8080
   cpu_limit      = var.container_cpu_limit
   memory_limit   = var.container_memory_limit
-  min_scale      = var.container_min_scale
-  max_scale      = var.container_max_scale
+  min_scale      = local.is_green_active ? var.container_min_scale : 0
+  max_scale      = local.is_green_active ? var.container_max_scale : 0
   timeout        = 300
   privacy        = "public"
   protocol       = "http1"
@@ -137,6 +140,11 @@ resource "scaleway_container" "green" {
     failure_threshold = 3
     interval          = "30s"
   }
+
+  # Ensure new container is created before old one is modified
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # =============================================================================
@@ -144,18 +152,9 @@ resource "scaleway_container" "green" {
 # =============================================================================
 
 locals {
-  # Get the active container's domain name
-  active_container_domain = var.active_slot == "blue" ? (
-    length(scaleway_container.blue) > 0 ? scaleway_container.blue[0].domain_name : ""
-  ) : (
-    length(scaleway_container.green) > 0 ? scaleway_container.green[0].domain_name : ""
-  )
-
-  active_container_id = var.active_slot == "blue" ? (
-    length(scaleway_container.blue) > 0 ? scaleway_container.blue[0].id : ""
-  ) : (
-    length(scaleway_container.green) > 0 ? scaleway_container.green[0].id : ""
-  )
+  # Get the active container's domain name and ID
+  active_container_domain = local.is_blue_active ? scaleway_container.blue.domain_name : scaleway_container.green.domain_name
+  active_container_id     = local.is_blue_active ? scaleway_container.blue.id : scaleway_container.green.id
 }
 
 # =============================================================================

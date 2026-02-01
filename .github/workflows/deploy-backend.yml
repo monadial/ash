@@ -1,12 +1,11 @@
 name: Deploy Backend
 
 on:
-  # Trigger after CI Backend completes successfully
+  # Trigger after CI Backend completes successfully (main branch or tags)
   workflow_run:
     workflows: ["CI Backend"]
     types: [completed]
-    branches: [main]
-  # Production: version tags (CI Backend also triggers on tags, which then triggers this)
+  # Production: GitHub Release publishes
   release:
     types: [published]
 
@@ -42,15 +41,29 @@ jobs:
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             SHA="${{ github.event.workflow_run.head_sha }}"
             REF="${{ github.event.workflow_run.head_branch }}"
-            # Check if this was triggered by a tag
+            EVENT="${{ github.event.workflow_run.event }}"
+
+            # Skip PR runs - only deploy from push events
+            if [ "$EVENT" = "pull_request" ]; then
+              echo "Skipping deployment for PR"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            # Check if this was triggered by a version tag (v*)
             if [[ "$REF" == v* ]]; then
               echo "environment=prod" >> $GITHUB_OUTPUT
               echo "image_tag=${REF}" >> $GITHUB_OUTPUT
-            else
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+            # Main branch -> beta
+            elif [ "$REF" = "main" ]; then
               echo "environment=beta" >> $GITHUB_OUTPUT
               echo "image_tag=sha-${SHA::7}" >> $GITHUB_OUTPUT
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+            else
+              echo "Skipping deployment for branch: $REF"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
             fi
-            echo "should_deploy=true" >> $GITHUB_OUTPUT
           else
             echo "should_deploy=false" >> $GITHUB_OUTPUT
           fi

@@ -225,7 +225,7 @@ fileprivate enum UniffiInternalError: LocalizedError {
     case unexpectedStaleHandle
     case rustPanic(_ message: String)
 
-    public var errorDescription: String? {
+    public nonisolated var errorDescription: String? {
         switch self {
         case .bufferOverflow: return "Reading the requested value would read past the end of the buffer"
         case .incompleteData: return "The buffer still has data after lifting its containing value"
@@ -266,18 +266,18 @@ fileprivate extension RustCallStatus {
     }
 }
 
-private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
+private nonisolated func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     let neverThrow: ((RustBuffer) throws -> Never)? = nil
     return try makeRustCall(callback, errorHandler: neverThrow)
 }
 
-private func rustCallWithError<T, E: Swift.Error>(
+private nonisolated func rustCallWithError<T, E: Swift.Error>(
     _ errorHandler: @escaping (RustBuffer) throws -> E,
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
-private func makeRustCall<T, E: Swift.Error>(
+private nonisolated func makeRustCall<T, E: Swift.Error>(
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T,
     errorHandler: ((RustBuffer) throws -> E)?
 ) throws -> T {
@@ -288,7 +288,7 @@ private func makeRustCall<T, E: Swift.Error>(
     return returnedVal
 }
 
-private func uniffiCheckCallStatus<E: Swift.Error>(
+private nonisolated func uniffiCheckCallStatus<E: Swift.Error>(
     callStatus: RustCallStatus,
     errorHandler: ((RustBuffer) throws -> E)?
 ) throws {
@@ -2066,7 +2066,7 @@ public struct FfiConverterTypeAshError: FfiConverterRustBuffer {
 extension AshError: Equatable, Hashable {}
 
 extension AshError: Foundation.LocalizedError {
-    public var errorDescription: String? {
+    public nonisolated var errorDescription: String? {
         String(reflecting: self)
     }
 }
@@ -2517,7 +2517,7 @@ public func createFountainGenerator(metadata: CeremonyMetadata, padBytes: [UInt8
  * Decrypt ciphertext using OTP (XOR with key)
  * WARNING: No authentication - use decrypt_authenticated for new code
  */
-public func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UInt8] {
+public nonisolated func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_decrypt(
         FfiConverterSequenceUInt8.lower(key),
@@ -2539,7 +2539,7 @@ public func decrypt(key: [UInt8], ciphertext: [UInt8])throws  -> [UInt8] {
  * # Returns
  * Tuple of (plaintext, message_type)
  */
-public func decryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], encodedFrame: [UInt8])throws  -> DecryptedMessage {
+public nonisolated func decryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], encodedFrame: [UInt8])throws  -> DecryptedMessage {
     return try  FfiConverterTypeDecryptedMessage.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_decrypt_authenticated(
         FfiConverterSequenceUInt8.lower(authKey),
@@ -2594,7 +2594,7 @@ public func deriveConversationId(padBytes: [UInt8])throws  -> String {
  * Encrypt plaintext using OTP (XOR with key)
  * WARNING: No authentication - use encrypt_authenticated for new code
  */
-public func encrypt(key: [UInt8], plaintext: [UInt8])throws  -> [UInt8] {
+public nonisolated func encrypt(key: [UInt8], plaintext: [UInt8])throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_encrypt(
         FfiConverterSequenceUInt8.lower(key),
@@ -2619,7 +2619,7 @@ public func encrypt(key: [UInt8], plaintext: [UInt8])throws  -> [UInt8] {
  * # Returns
  * Encoded message frame: [version][type][length][ciphertext][32-byte tag]
  */
-public func encryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], plaintext: [UInt8], msgType: UInt8)throws  -> [UInt8] {
+public nonisolated func encryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], plaintext: [UInt8], msgType: UInt8)throws  -> [UInt8] {
     return try  FfiConverterSequenceUInt8.lift(try rustCallWithError(FfiConverterTypeAshError.lift) {
     uniffi_ash_bindings_fn_func_encrypt_authenticated(
         FfiConverterSequenceUInt8.lower(authKey),
@@ -2632,7 +2632,7 @@ public func encryptAuthenticated(authKey: [UInt8], encryptionKey: [UInt8], plain
 /**
  * Generate 6-word mnemonic checksum from pad bytes
  */
-public func generateMnemonic(padBytes: [UInt8]) -> [String] {
+public nonisolated func generateMnemonic(padBytes: [UInt8]) -> [String] {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_generate_mnemonic(
         FfiConverterSequenceUInt8.lower(padBytes),$0
@@ -2642,7 +2642,7 @@ public func generateMnemonic(padBytes: [UInt8]) -> [String] {
 /**
  * Generate mnemonic with custom word count
  */
-public func generateMnemonicWithCount(padBytes: [UInt8], wordCount: UInt32) -> [String] {
+public nonisolated func generateMnemonicWithCount(padBytes: [UInt8], wordCount: UInt32) -> [String] {
     return try!  FfiConverterSequenceString.lift(try! rustCall() {
     uniffi_ash_bindings_fn_func_generate_mnemonic_with_count(
         FfiConverterSequenceUInt8.lower(padBytes),
@@ -2909,7 +2909,7 @@ nonisolated(unsafe) private var initializationResult: InitializationResult = {
     return InitializationResult.ok
 }()
 
-private func uniffiEnsureInitialized() {
+private nonisolated func uniffiEnsureInitialized() {
     switch initializationResult {
     case .ok:
         break

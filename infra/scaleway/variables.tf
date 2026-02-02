@@ -41,17 +41,6 @@ variable "environment" {
   }
 }
 
-variable "active_slot" {
-  description = "Active deployment slot for blue-green deployment (blue or green)"
-  type        = string
-  default     = "blue"
-
-  validation {
-    condition     = contains(["blue", "green"], var.active_slot)
-    error_message = "Active slot must be 'blue' or 'green'."
-  }
-}
-
 # =============================================================================
 # Container Configuration
 # =============================================================================

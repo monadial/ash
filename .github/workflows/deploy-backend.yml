@@ -88,7 +88,7 @@ jobs:
       environment: ${{ needs.setup.outputs.environment }}
     secrets: inherit
 
-  # Deploy to Scaleway (Blue-Green)
+  # Deploy to Scaleway
   deploy:
     name: Deploy (${{ needs.setup.outputs.environment }})
     needs: [setup, docker]
@@ -125,31 +125,12 @@ jobs:
           terraform init \
             -backend-config="key=scaleway/${{ needs.setup.outputs.environment }}/terraform.tfstate"
 
-      - name: Determine active slot (Blue-Green)
-        id: slot
-        working-directory: infra/scaleway
-        run: |
-          # Get current active slot from state, default to blue if not set
-          CURRENT_SLOT=$(terraform output -raw active_slot 2>/dev/null || echo "blue")
-
-          # Flip to the other slot for this deployment
-          if [ "$CURRENT_SLOT" = "blue" ]; then
-            NEW_SLOT="green"
-          else
-            NEW_SLOT="blue"
-          fi
-
-          echo "current_slot=$CURRENT_SLOT" >> $GITHUB_OUTPUT
-          echo "new_slot=$NEW_SLOT" >> $GITHUB_OUTPUT
-          echo "Switching from $CURRENT_SLOT to $NEW_SLOT"
-
-      - name: Terraform Plan (Blue-Green)
+      - name: Terraform Plan
         working-directory: infra/scaleway
         run: |
           terraform plan \
             -var-file="environments/${{ needs.setup.outputs.environment }}.tfvars" \
             -var="image_tag=${{ needs.setup.outputs.image_tag }}" \
-            -var="active_slot=${{ steps.slot.outputs.new_slot }}" \
             -out=tfplan
 
       - name: Terraform Apply
@@ -185,14 +166,11 @@ jobs:
         run: |
           RELAY_URL=$(terraform output -raw relay_url 2>/dev/null || echo "N/A")
           CUSTOM_DOMAIN=$(terraform output -raw custom_domain 2>/dev/null || echo "N/A")
-          ACTIVE_SLOT=$(terraform output -raw active_slot 2>/dev/null || echo "N/A")
-          echo "### Deployment Complete (Blue-Green)" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|---------|-------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Environment** | ${{ needs.setup.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Active Slot** | 🟢 ${ACTIVE_SLOT} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Previous Slot** | ${{ steps.slot.outputs.current_slot }} (destroyed) |" >> $GITHUB_STEP_SUMMARY
           echo "| **Image Tag** | \`${{ needs.setup.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Relay URL** | ${RELAY_URL} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Domain** | \`${CUSTOM_DOMAIN}\` |" >> $GITHUB_STEP_SUMMARY

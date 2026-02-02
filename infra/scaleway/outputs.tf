@@ -1,16 +1,11 @@
 # =============================================================================
-# Outputs - Blue-Green Deployment
+# Outputs
 # =============================================================================
 
 # Environment
 output "environment" {
   description = "Deployment environment"
   value       = var.environment
-}
-
-output "active_slot" {
-  description = "Currently active deployment slot"
-  value       = var.active_slot
 }
 
 # Registry
@@ -24,15 +19,15 @@ output "registry_namespace" {
   value       = data.scaleway_registry_namespace.main.id
 }
 
-# Active Container
+# Container
 output "container_endpoint" {
-  description = "Active container endpoint URL"
-  value       = local.active_container_domain
+  description = "Container endpoint URL"
+  value       = scaleway_container.relay.domain_name
 }
 
 output "container_id" {
-  description = "Active container ID"
-  value       = local.active_container_id
+  description = "Container ID"
+  value       = scaleway_container.relay.id
 }
 
 # Custom Domain
@@ -44,7 +39,7 @@ output "custom_domain" {
 
 output "relay_url" {
   description = "Full relay URL"
-  value       = local.create_dns ? "https://${local.full_domain}" : "https://${local.active_container_domain}"
+  value       = local.create_dns ? "https://${local.full_domain}" : "https://${scaleway_container.relay.domain_name}"
   sensitive   = true
 }
 
@@ -62,11 +57,5 @@ output "docker_push_command" {
 # Health Check
 output "health_check_url" {
   description = "Health check endpoint"
-  value       = "https://${local.active_container_domain}/health"
-}
-
-# Next Deployment Info
-output "next_slot" {
-  description = "Slot to use for next deployment"
-  value       = var.active_slot == "blue" ? "green" : "blue"
+  value       = "https://${scaleway_container.relay.domain_name}/health"
 }

@@ -195,8 +195,9 @@ impl ExpiryWorker {
         // Send push notification (best-effort)
         let apns = self.apns.clone();
         let devices = devices.clone();
+        let conv_id = conversation_id.to_string();
         tokio::spawn(async move {
-            apns.send_to_devices(&devices).await;
+            apns.send_to_devices(&devices, Some(&conv_id)).await;
         });
     }
 }

@@ -257,6 +257,8 @@ dictionary CeremonyMetadata {
     ///
     /// Default: 0x000B (new message + expiring + delivery failed)
     u16 notification_flags;
+    /// Transfer method used for QR ceremony (Raptor, LT, or Sequential)
+    TransferMethod transfer_method;
     /// Relay server URL
     string relay_url;
 };
@@ -396,7 +398,8 @@ interface FountainFrameGenerator {
 /// Fountain frame receiver for QR scanning.
 ///
 /// Collects scanned blocks and tracks decoding progress.
-/// Can decode from ANY sufficient subset of blocks.
+/// Automatically detects transfer method from first received block
+/// and uses the appropriate decoder (Raptor, LT, or Sequential).
 interface FountainFrameReceiver {
     /// Create a new receiver.
     /// Passphrase is required and must match the sender's passphrase.
@@ -406,6 +409,7 @@ interface FountainFrameReceiver {
     ///
     /// Returns true if decoding is now complete, false if more blocks needed.
     /// Duplicate blocks are safely ignored.
+    /// Transfer method is auto-detected from block 0.
     [Throws=AshError]
     boolean add_frame(sequence<u8> frame_bytes);
 
@@ -425,6 +429,10 @@ interface FountainFrameReceiver {
     /// Number of source blocks needed for complete decoding.
     /// Returns 0 before the first block is received.
     u32 source_count();
+
+    /// Get the detected transfer method.
+    /// Returns null if block 0 hasn't been received yet.
+    TransferMethod? detected_method();
 
     /// Get the decoded ceremony result.
     /// Returns null if decoding is not complete.

@@ -15,6 +15,7 @@
 //! Each bit represents a specific notification type that can be enabled/disabled.
 
 use crate::error::{Error, Result};
+use crate::frame::TransferMethod;
 
 /// Maximum relay URL length in bytes.
 const MAX_RELAY_URL_LEN: usize = 256;
@@ -137,17 +138,18 @@ impl NotificationFlags {
 /// - Server TTL (how long messages stay on relay)
 /// - Disappearing messages (how long messages show on screen)
 /// - Notification preferences
+/// - Transfer method (Raptor, LT, or Sequential)
 /// - Relay URL
 ///
-/// Binary format (v1):
+/// Binary format (v2):
 /// ```text
-/// [version: u8][ttl: u64 BE][disappearing: u32 BE][flags: u16 BE][url_len: u16 BE][url: bytes]
+/// [version: u8][ttl: u64 BE][disappearing: u32 BE][flags: u16 BE][transfer_method: u8][url_len: u16 BE][url: bytes]
 /// ```
 ///
-/// Total: 17 bytes + url_length
+/// Total: 18 bytes + url_length
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CeremonyMetadata {
-    /// Protocol version (always 1)
+    /// Protocol version (2 for current format)
     pub version: u8,
 
     /// Message TTL in seconds (how long messages stay on relay)
@@ -159,8 +161,12 @@ pub struct CeremonyMetadata {
     /// Otherwise: seconds until message disappears from UI after viewing
     pub disappearing_messages_seconds: u32,
 
-    /// Notification preferences (v2+)
+    /// Notification preferences
     pub notification_flags: NotificationFlags,
+
+    /// Transfer method used for QR ceremony (Raptor, LT, or Sequential)
+    /// This tells the receiver which decoder to use
+    pub transfer_method: TransferMethod,
 
     /// Relay server URL (e.g., `https://relay.ash.app`)
     pub relay_url: String,
@@ -173,13 +179,14 @@ impl Default for CeremonyMetadata {
             ttl_seconds: DEFAULT_TTL_SECONDS,
             disappearing_messages_seconds: 0, // Off by default
             notification_flags: NotificationFlags::default_flags(),
+            transfer_method: TransferMethod::default(),
             relay_url: String::new(),
         }
     }
 }
 
 impl CeremonyMetadata {
-    /// Create new ceremony metadata with default notification flags.
+    /// Create new ceremony metadata with default notification flags and Raptor transfer.
     ///
     /// # Arguments
     ///
@@ -195,10 +202,11 @@ impl CeremonyMetadata {
         disappearing_messages_seconds: u32,
         relay_url: String,
     ) -> Result<Self> {
-        Self::with_flags(
+        Self::with_all(
             ttl_seconds,
             disappearing_messages_seconds,
             NotificationFlags::default_flags(),
+            TransferMethod::default(),
             relay_url,
         )
     }
@@ -221,6 +229,35 @@ impl CeremonyMetadata {
         notification_flags: NotificationFlags,
         relay_url: String,
     ) -> Result<Self> {
+        Self::with_all(
+            ttl_seconds,
+            disappearing_messages_seconds,
+            notification_flags,
+            TransferMethod::default(),
+            relay_url,
+        )
+    }
+
+    /// Create new ceremony metadata with all options.
+    ///
+    /// # Arguments
+    ///
+    /// * `ttl_seconds` - Message TTL in seconds (default 300, max 604800)
+    /// * `disappearing_messages_seconds` - Display TTL in seconds (0 = off)
+    /// * `notification_flags` - Push notification preferences
+    /// * `transfer_method` - QR transfer method (Raptor, LT, or Sequential)
+    /// * `relay_url` - Relay server URL
+    ///
+    /// # Errors
+    ///
+    /// Returns error if relay URL is too long.
+    pub fn with_all(
+        ttl_seconds: u64,
+        disappearing_messages_seconds: u32,
+        notification_flags: NotificationFlags,
+        transfer_method: TransferMethod,
+        relay_url: String,
+    ) -> Result<Self> {
         if relay_url.len() > MAX_RELAY_URL_LEN {
             return Err(Error::MetadataUrlTooLong {
                 len: relay_url.len(),
@@ -240,20 +277,21 @@ impl CeremonyMetadata {
             ttl_seconds,
             disappearing_messages_seconds,
             notification_flags,
+            transfer_method,
             relay_url,
         })
     }
 
     /// Encode metadata to bytes for frame payload.
     ///
-    /// Binary format (v1):
+    /// Binary format (v2):
     /// ```text
-    /// [version: u8][ttl: u64 BE][disappearing: u32 BE][flags: u16 BE][url_len: u16 BE][url: bytes]
+    /// [version: u8][ttl: u64 BE][disappearing: u32 BE][flags: u16 BE][transfer_method: u8][url_len: u16 BE][url: bytes]
     /// ```
     pub fn encode(&self) -> Vec<u8> {
         let url_bytes = self.relay_url.as_bytes();
-        // 1 + 8 + 4 + 2 + 2 + url_len = 17 + url_len
-        let mut bytes = Vec::with_capacity(17 + url_bytes.len());
+        // 1 + 8 + 4 + 2 + 1 + 2 + url_len = 18 + url_len
+        let mut bytes = Vec::with_capacity(18 + url_bytes.len());
 
         // Version (1 byte)
         bytes.push(self.version);
@@ -266,6 +304,9 @@ impl CeremonyMetadata {
 
         // Notification flags (2 bytes, big-endian)
         bytes.extend_from_slice(&self.notification_flags.bits().to_be_bytes());
+
+        // Transfer method (1 byte)
+        bytes.push(self.transfer_method.to_byte());
 
         // URL length (2 bytes, big-endian)
         bytes.extend_from_slice(&(url_bytes.len() as u16).to_be_bytes());
@@ -282,11 +323,11 @@ impl CeremonyMetadata {
     ///
     /// Returns error if bytes are malformed or too short.
     pub fn decode(bytes: &[u8]) -> Result<Self> {
-        // Minimum size: version(1) + ttl(8) + disappearing(4) + flags(2) + url_len(2) = 17 bytes
-        if bytes.len() < 17 {
+        // Minimum size: version(1) + ttl(8) + disappearing(4) + flags(2) + transfer(1) + url_len(2) = 18 bytes
+        if bytes.len() < 18 {
             return Err(Error::MetadataTooShort {
                 size: bytes.len(),
-                minimum: 17,
+                minimum: 18,
             });
         }
 
@@ -306,16 +347,18 @@ impl CeremonyMetadata {
         let notification_flags =
             NotificationFlags::from_bits(u16::from_be_bytes([bytes[13], bytes[14]]));
 
-        let url_len = u16::from_be_bytes([bytes[15], bytes[16]]) as usize;
+        let transfer_method = TransferMethod::from_byte(bytes[15]);
 
-        if bytes.len() < 17 + url_len {
+        let url_len = u16::from_be_bytes([bytes[16], bytes[17]]) as usize;
+
+        if bytes.len() < 18 + url_len {
             return Err(Error::MetadataTooShort {
                 size: bytes.len(),
-                minimum: 17 + url_len,
+                minimum: 18 + url_len,
             });
         }
 
-        let relay_url = String::from_utf8(bytes[17..17 + url_len].to_vec())
+        let relay_url = String::from_utf8(bytes[18..18 + url_len].to_vec())
             .map_err(|_| Error::InvalidMetadataUrl)?;
 
         Ok(Self {
@@ -323,6 +366,7 @@ impl CeremonyMetadata {
             ttl_seconds,
             disappearing_messages_seconds,
             notification_flags,
+            transfer_method,
             relay_url,
         })
     }
@@ -437,6 +481,7 @@ mod tests {
             metadata.notification_flags.bits(),
             NotificationFlags::DEFAULT
         );
+        assert_eq!(metadata.transfer_method, TransferMethod::Raptor);
         assert!(metadata.relay_url.is_empty());
     }
 
@@ -481,7 +526,27 @@ mod tests {
     fn metadata_encoded_size() {
         let metadata = CeremonyMetadata::new(300, 0, "https://relay.ash.app".to_string()).unwrap();
         let encoded = metadata.encode();
-        // 17 bytes header + URL length
-        assert_eq!(encoded.len(), 17 + "https://relay.ash.app".len());
+        // 18 bytes header + URL length (v2 includes transfer_method byte)
+        assert_eq!(encoded.len(), 18 + "https://relay.ash.app".len());
     }
+
+    #[test]
+    fn metadata_with_transfer_method() {
+        let metadata = CeremonyMetadata::with_all(
+            300,
+            60,
+            NotificationFlags::default_flags(),
+            TransferMethod::LT,
+            "https://relay.ash.app".to_string(),
+        )
+        .unwrap();
+
+        assert_eq!(metadata.transfer_method, TransferMethod::LT);
+
+        let encoded = metadata.encode();
+        let decoded = CeremonyMetadata::decode(&encoded).unwrap();
+
+        assert_eq!(decoded.transfer_method, TransferMethod::LT);
+    }
+
 }

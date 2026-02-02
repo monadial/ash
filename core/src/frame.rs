@@ -78,13 +78,13 @@
 //! ```
 
 use crate::error::{Error, Result};
-use crate::fountain::{EncodedBlock, FountainDecoder, LTEncoder};
+use crate::fountain::{EncodedBlock, LTEncoder};
 use crate::raptor::RaptorEncoder;
 
 /// Transfer method for QR ceremony.
 ///
 /// Determines which erasure coding strategy is used for pad transfer.
-/// All methods use the same wire format, so receivers auto-adapt.
+/// Encoded in ceremony metadata so receiver knows which decoder to use.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TransferMethod {
     /// Raptor codes - near-optimal, K + 2-5 blocks overhead (recommended).
@@ -104,6 +104,36 @@ pub enum TransferMethod {
     /// Requires receiving all K unique blocks to decode.
     /// No error recovery - if a frame is missed, must wait for cycle.
     Sequential,
+}
+
+impl TransferMethod {
+    /// Convert to byte for serialization.
+    pub const fn to_byte(self) -> u8 {
+        match self {
+            TransferMethod::Raptor => 0,
+            TransferMethod::LT => 1,
+            TransferMethod::Sequential => 2,
+        }
+    }
+
+    /// Convert from byte, defaulting to Raptor for unknown values.
+    pub const fn from_byte(byte: u8) -> Self {
+        match byte {
+            0 => TransferMethod::Raptor,
+            1 => TransferMethod::LT,
+            2 => TransferMethod::Sequential,
+            _ => TransferMethod::Raptor, // Default for unknown
+        }
+    }
+
+    /// Get display name for the transfer method.
+    pub const fn name(&self) -> &'static str {
+        match self {
+            TransferMethod::Raptor => "Raptor",
+            TransferMethod::LT => "LT Codes",
+            TransferMethod::Sequential => "Sequential",
+        }
+    }
 }
 
 /// Default block size for fountain encoding (1500 bytes).
@@ -282,8 +312,10 @@ impl FountainFrameGenerator {
     /// [metadata_len: 4B][metadata][pad_bytes]
     /// ```
     ///
-    /// This allows the receiver to extract both metadata and pad
-    /// from the decoded fountain data.
+    /// Transfer method is encoded in every frame's header (first byte),
+    /// allowing the receiver to detect it from ANY frame.
+    ///
+    /// Frame format: `[method:1][index:4][count:2][size:2][len:4][data:N][crc:4]`
     pub fn new(
         metadata: &crate::CeremonyMetadata,
         pad_bytes: &[u8],
@@ -295,7 +327,7 @@ impl FountainFrameGenerator {
             return Err(Error::EmptyPayload);
         }
 
-        // Prepend metadata to pad data
+        // Prepend metadata to pad data (transfer method is in frame header, not data)
         let metadata_bytes = metadata.encode();
         let mut data = Vec::with_capacity(4 + metadata_bytes.len() + pad_bytes.len());
 
@@ -356,14 +388,24 @@ impl FountainFrameGenerator {
     }
 
     /// Encode a block for QR transmission.
+    ///
+    /// Prepends transfer method byte to the encoded block so receivers
+    /// can detect the method from ANY frame, not just block 0.
+    ///
+    /// Frame format: `[method:1][index:4][count:2][size:2][len:4][data:N][crc:4]`
     fn encode_block(&self, block: &EncodedBlock) -> Vec<u8> {
         let encoded = block.encode();
 
-        // Optionally encrypt payload portion
+        // Prepend transfer method byte
+        let mut frame = Vec::with_capacity(1 + encoded.len());
+        frame.push(self.method.to_byte());
+        frame.extend_from_slice(&encoded);
+
+        // Optionally encrypt payload portion (skip method byte)
         if let Some(ref pass) = self.passphrase {
-            encrypt_fountain_block(&encoded, pass)
+            encrypt_fountain_frame(&frame, pass)
         } else {
-            encoded
+            frame
         }
     }
 
@@ -405,31 +447,33 @@ impl FountainFrameGenerator {
     }
 }
 
-/// Encrypt a fountain block's payload (XOR with passphrase-derived key).
+/// Encrypt a fountain frame's payload (XOR with passphrase-derived key).
 ///
-/// # Block Format
+/// # Frame Format
 ///
 /// ```text
-/// [index:4][count:2][size:2][len:4][payload:N][crc:4]
-///                                  ~~~~~~~~~~
-///                                  encrypted portion
+/// [method:1][index:4][count:2][size:2][len:4][payload:N][crc:4]
+///                                             ~~~~~~~~~~
+///                                             encrypted portion
 /// ```
 ///
-/// Only the payload is encrypted. Header remains readable for
-/// decoder initialization and progress tracking.
-fn encrypt_fountain_block(encoded: &[u8], passphrase: &str) -> Vec<u8> {
-    let mut result = encoded.to_vec();
+/// Only the payload is encrypted. Header (including method byte) remains
+/// readable for decoder initialization and progress tracking.
+fn encrypt_fountain_frame(frame: &[u8], passphrase: &str) -> Vec<u8> {
+    let mut result = frame.to_vec();
 
-    let header_len = 12; // index(4) + source_count(2) + block_size(2) + original_len(4)
-    let block_size = u16::from_be_bytes([encoded[6], encoded[7]]) as usize;
+    // Account for method byte prefix
+    let method_len = 1;
+    let header_len = method_len + 12; // method(1) + index(4) + source_count(2) + block_size(2) + original_len(4)
+    let block_size = u16::from_be_bytes([frame[method_len + 6], frame[method_len + 7]]) as usize;
     let payload_end = header_len + block_size;
 
     if result.len() < payload_end + 4 {
-        return result; // Invalid block, return as-is
+        return result; // Invalid frame, return as-is
     }
 
     // Use lower 16 bits of index for key derivation
-    let index_u16 = u16::from_be_bytes([encoded[2], encoded[3]]);
+    let index_u16 = u16::from_be_bytes([frame[method_len + 2], frame[method_len + 3]]);
 
     // XOR payload with passphrase-derived key
     let key = crate::passphrase::derive_key(passphrase, index_u16, block_size);
@@ -445,17 +489,93 @@ fn encrypt_fountain_block(encoded: &[u8], passphrase: &str) -> Vec<u8> {
     result
 }
 
-/// Decrypt a fountain block's payload.
+/// Decrypt a fountain frame's payload.
 ///
 /// XOR encryption is symmetric, so decryption is identical to encryption.
-fn decrypt_fountain_block(encoded: &[u8], passphrase: &str) -> Vec<u8> {
-    encrypt_fountain_block(encoded, passphrase)
+fn decrypt_fountain_frame(frame: &[u8], passphrase: &str) -> Vec<u8> {
+    encrypt_fountain_frame(frame, passphrase)
+}
+
+/// Internal enum to hold different decoder types for receiving.
+enum ReceiverDecoderType {
+    Raptor(crate::raptor::RaptorDecoder),
+    LT(crate::fountain::LTDecoder),
+    // Sequential uses the same decoder as LT (it's just source blocks)
+}
+
+impl ReceiverDecoderType {
+    fn from_block(block: &EncodedBlock, method: TransferMethod) -> Self {
+        match method {
+            TransferMethod::Raptor => {
+                ReceiverDecoderType::Raptor(crate::raptor::RaptorDecoder::from_block(block))
+            }
+            TransferMethod::LT | TransferMethod::Sequential => {
+                ReceiverDecoderType::LT(crate::fountain::LTDecoder::from_block(block))
+            }
+        }
+    }
+
+    fn add_block(&mut self, block: &EncodedBlock) {
+        match self {
+            ReceiverDecoderType::Raptor(d) => {
+                d.add_block(block);
+            }
+            ReceiverDecoderType::LT(d) => {
+                d.add_block(block);
+            }
+        }
+    }
+
+    fn is_complete(&self) -> bool {
+        match self {
+            ReceiverDecoderType::Raptor(d) => d.is_complete(),
+            ReceiverDecoderType::LT(d) => d.is_complete(),
+        }
+    }
+
+    fn progress(&self) -> f64 {
+        match self {
+            ReceiverDecoderType::Raptor(d) => d.progress(),
+            ReceiverDecoderType::LT(d) => d.progress(),
+        }
+    }
+
+    fn source_count(&self) -> usize {
+        match self {
+            ReceiverDecoderType::Raptor(d) => d.source_count(),
+            ReceiverDecoderType::LT(d) => d.source_count(),
+        }
+    }
+
+    fn unique_blocks_received(&self) -> usize {
+        match self {
+            ReceiverDecoderType::Raptor(d) => d.unique_blocks_received(),
+            ReceiverDecoderType::LT(d) => d.unique_blocks_received(),
+        }
+    }
+
+    fn get_data(&self) -> Option<Vec<u8>> {
+        match self {
+            ReceiverDecoderType::Raptor(d) => d.get_data(),
+            ReceiverDecoderType::LT(d) => d.get_data(),
+        }
+    }
 }
 
 /// Fountain frame receiver for QR scanning.
 ///
 /// Collects scanned blocks and tracks decoding progress.
-/// Can decode from any sufficient subset of blocks.
+/// Automatically detects transfer method from the first byte of ANY frame
+/// and uses the appropriate decoder (Raptor, LT, or Sequential).
+///
+/// # Frame Format
+///
+/// Each frame starts with a transfer method byte:
+/// ```text
+/// [method:1][index:4][count:2][size:2][len:4][data:N][crc:4]
+/// ```
+///
+/// This allows instant detection from any frame - no need to wait for block 0.
 ///
 /// # Usage
 ///
@@ -478,9 +598,10 @@ fn decrypt_fountain_block(encoded: &[u8], passphrase: &str) -> Vec<u8> {
 /// }
 /// ```
 pub struct FountainFrameReceiver {
-    decoder: Option<FountainDecoder>,
+    decoder: Option<ReceiverDecoderType>,
     passphrase: Option<String>,
     blocks_received: usize,
+    detected_method: Option<TransferMethod>,
 }
 
 impl FountainFrameReceiver {
@@ -494,6 +615,7 @@ impl FountainFrameReceiver {
             decoder: None,
             passphrase: passphrase.map(String::from),
             blocks_received: 0,
+            detected_method: None,
         }
     }
 
@@ -509,31 +631,55 @@ impl FountainFrameReceiver {
     ///
     /// Duplicate blocks are safely ignored. Out-of-order blocks
     /// are handled automatically by the fountain decoder.
+    /// Transfer method is auto-detected from the first byte of ANY frame.
     pub fn add_frame(&mut self, frame_bytes: &[u8]) -> Result<bool> {
-        // Decode block (with optional decryption)
-        let block = self.decode_block(frame_bytes)?;
-
-        // Initialize decoder on first block
-        if self.decoder.is_none() {
-            self.decoder = Some(FountainDecoder::from_block(&block));
+        if frame_bytes.is_empty() {
+            return Err(Error::FountainBlockTooShort {
+                size: 0,
+                minimum: 1,
+            });
         }
 
-        let decoder = self.decoder.as_mut().unwrap();
-        decoder.add_block(&block);
+        // Extract transfer method from first byte (present in ALL frames)
+        let method = TransferMethod::from_byte(frame_bytes[0]);
+
+        // Decode block (strip method byte first, with optional decryption)
+        let block = self.decode_frame(frame_bytes)?;
         self.blocks_received += 1;
 
-        Ok(decoder.is_complete())
+        // Initialize decoder on first frame if needed
+        if self.decoder.is_none() {
+            self.detected_method = Some(method);
+            self.decoder = Some(ReceiverDecoderType::from_block(&block, method));
+        }
+
+        // Add block to decoder
+        if let Some(decoder) = self.decoder.as_mut() {
+            decoder.add_block(&block);
+        }
+
+        Ok(self.is_complete())
     }
 
-    /// Decode a received block.
-    fn decode_block(&self, frame_bytes: &[u8]) -> Result<EncodedBlock> {
-        let bytes = if let Some(ref pass) = self.passphrase {
-            decrypt_fountain_block(frame_bytes, pass)
+    /// Decode a received frame (strip method byte, decrypt if needed).
+    fn decode_frame(&self, frame_bytes: &[u8]) -> Result<EncodedBlock> {
+        // Frame format: [method:1][encoded_block...]
+        // First decrypt if needed (keeping method byte), then strip it
+        let decrypted = if let Some(ref pass) = self.passphrase {
+            decrypt_fountain_frame(frame_bytes, pass)
         } else {
             frame_bytes.to_vec()
         };
 
-        EncodedBlock::decode(&bytes)
+        // Strip method byte before decoding EncodedBlock
+        if decrypted.len() < 2 {
+            return Err(Error::FountainBlockTooShort {
+                size: decrypted.len(),
+                minimum: 2,
+            });
+        }
+
+        EncodedBlock::decode(&decrypted[1..])
     }
 
     /// Check if decoding is complete.
@@ -573,13 +719,20 @@ impl FountainFrameReceiver {
             .map_or(0, |d| d.unique_blocks_received())
     }
 
+    /// Get the detected transfer method.
+    ///
+    /// Returns `None` if block 0 hasn't been received yet.
+    pub fn detected_method(&self) -> Option<TransferMethod> {
+        self.detected_method
+    }
+
     /// Get the decoded ceremony result.
     ///
     /// Returns `None` if decoding is not complete.
     ///
     /// # Result Contents
     ///
-    /// - `metadata`: Ceremony settings (TTL, relay URL, etc.)
+    /// - `metadata`: Ceremony settings (TTL, relay URL, transfer method, etc.)
     /// - `pad`: The reconstructed pad bytes
     /// - `blocks_used`: Number of blocks received to complete decoding
     pub fn get_result(&self) -> Option<FountainCeremonyResult> {
@@ -587,6 +740,7 @@ impl FountainFrameReceiver {
         let data = decoder.get_data()?;
 
         // Parse: [metadata_len: 4B][metadata][pad_bytes]
+        // (transfer method is in frame header, not data)
         if data.len() < 4 {
             return None;
         }
@@ -668,9 +822,9 @@ mod tests {
                 .unwrap();
         let encrypted_frame = generator.next_frame();
 
-        // Verify decryption works
-        let decrypted = decrypt_fountain_block(&encrypted_frame, passphrase);
-        let block = EncodedBlock::decode(&decrypted);
+        // Verify decryption works (strip method byte before decoding)
+        let decrypted = decrypt_fountain_frame(&encrypted_frame, passphrase);
+        let block = EncodedBlock::decode(&decrypted[1..]); // Skip method byte
         assert!(block.is_ok(), "Decrypted block should be valid");
 
         // Full roundtrip
@@ -928,5 +1082,71 @@ mod tests {
         assert_eq!(gen_raptor.method(), TransferMethod::Raptor);
         assert_eq!(gen_lt.method(), TransferMethod::LT);
         assert_eq!(gen_seq.method(), TransferMethod::Sequential);
+    }
+
+    #[test]
+    fn transfer_method_detected_from_any_frame() {
+        // Test that scanning can start from ANY frame (not just block 0)
+        // This is the key fix: transfer method is in every frame's header
+        let metadata = crate::CeremonyMetadata::default();
+        let pad: Vec<u8> = (0..=255).cycle().take(3000).collect();
+
+        let mut generator =
+            create_fountain_ceremony(&metadata, &pad, 256, None, TransferMethod::LT).unwrap();
+
+        // Generate many frames
+        let frames: Vec<Vec<u8>> = (0..50).map(|_| generator.next_frame()).collect();
+
+        // Simulate starting scan from frame 30 (skipping 0-29)
+        let mut receiver = FountainFrameReceiver::new(None);
+
+        // First frame received is frame 30 - should detect method immediately
+        receiver.add_frame(&frames[30]).unwrap();
+        assert_eq!(
+            receiver.detected_method(),
+            Some(TransferMethod::LT),
+            "Should detect LT method from frame 30"
+        );
+
+        // Continue adding frames (including block 0 later)
+        for (i, frame) in frames.iter().enumerate() {
+            if i != 30 {
+                // Skip the one we already added
+                if receiver.add_frame(frame).unwrap() {
+                    break;
+                }
+            }
+        }
+
+        assert!(receiver.is_complete());
+        let result = receiver.get_result().unwrap();
+        assert_eq!(result.pad, pad);
+    }
+
+    #[test]
+    fn transfer_method_in_frame_header() {
+        // Verify that the first byte of every frame is the transfer method
+        let metadata = crate::CeremonyMetadata::default();
+        let pad = vec![0x42; 1000];
+
+        for method in [
+            TransferMethod::Raptor,
+            TransferMethod::LT,
+            TransferMethod::Sequential,
+        ] {
+            let generator =
+                create_fountain_ceremony(&metadata, &pad, 256, None, method).unwrap();
+
+            // Check first 10 frames all have correct method byte
+            for i in 0..10 {
+                let frame = generator.generate_frame(i);
+                let detected = TransferMethod::from_byte(frame[0]);
+                assert_eq!(
+                    detected, method,
+                    "Frame {} should have {:?} in header",
+                    i, method
+                );
+            }
+        }
     }
 }

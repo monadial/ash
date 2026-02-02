@@ -518,6 +518,7 @@ final class MessagingViewModel {
         case .burned:
             Log.warning(.sse, "[\(logId)] Peer burned conversation")
             peerBurned = true
+            isShowingBurnedScreen = true
             dependencies.hapticService.warning()
             disconnectSSE()
 
@@ -596,6 +597,7 @@ final class MessagingViewModel {
             if burnStatus.burned {
                 Log.warning(.poll, "[\(logId)] Peer burned conversation")
                 peerBurned = true
+                isShowingBurnedScreen = true
                 dependencies.hapticService.warning()
                 return
             }
@@ -613,6 +615,7 @@ final class MessagingViewModel {
 
             if response.burned {
                 peerBurned = true
+                isShowingBurnedScreen = true
                 dependencies.hapticService.warning()
                 return
             }
@@ -643,6 +646,7 @@ final class MessagingViewModel {
             case .conversationBurned:
                 Log.warning(.poll, "[\(logId)] Conversation burned")
                 peerBurned = true
+                isShowingBurnedScreen = true
                 dependencies.hapticService.warning()
             case .conversationNotFound:
                 // Conversation not registered - try to re-register once

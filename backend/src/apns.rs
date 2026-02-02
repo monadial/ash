@@ -81,7 +81,7 @@ impl ApnsClient {
     }
 
     /// Send silent push notification to a device (best-effort)
-    pub async fn send_silent_push(&self, device_token: &str) -> bool {
+    pub async fn send_silent_push(&self, device_token: &str, conversation_id: Option<&str>) -> bool {
         let client = match &self.client {
             Some(c) => c,
             None => return false,
@@ -95,9 +95,16 @@ impl ApnsClient {
             ..Default::default()
         };
 
-        let payload = DefaultNotificationBuilder::new()
+        let mut payload = DefaultNotificationBuilder::new()
             .set_content_available()
             .build(device_token, options);
+
+        // Add conversation_id as custom data if provided
+        if let Some(conv_id) = conversation_id {
+            if let Err(e) = payload.add_custom_data("conversation_id", &conv_id) {
+                debug!(error = %e, "Failed to add conversation_id to payload");
+            }
+        }
 
         match client.send(payload).await {
             Ok(response) => {
@@ -116,7 +123,7 @@ impl ApnsClient {
     }
 
     /// Send silent push to multiple devices (best-effort, parallel)
-    pub async fn send_to_devices(&self, devices: &[DeviceRegistration]) {
+    pub async fn send_to_devices(&self, devices: &[DeviceRegistration], conversation_id: Option<&str>) {
         if self.client.is_none() || devices.is_empty() {
             return;
         }
@@ -124,7 +131,7 @@ impl ApnsClient {
         // Send to all devices in parallel (best-effort)
         let send_futures: Vec<_> = devices
             .iter()
-            .map(|d| self.send_silent_push(&d.device_token))
+            .map(|d| self.send_silent_push(&d.device_token, conversation_id))
             .collect();
 
         let results = futures::future::join_all(send_futures).await;

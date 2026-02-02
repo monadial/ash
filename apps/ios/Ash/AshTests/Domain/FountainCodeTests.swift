@@ -20,6 +20,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             ttlSeconds: 86400,
             disappearingMessagesSeconds: 0,
             notificationFlags: 0x000B, // new message + expiring + delivery failed
+            transferMethod: .raptor,
             relayUrl: "https://relay.test"
         )
 
@@ -65,6 +66,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             ttlSeconds: 3600,
             disappearingMessagesSeconds: 60,
             notificationFlags: 0x000B,
+            transferMethod: .raptor,
             relayUrl: "https://relay.test"
         )
 
@@ -97,6 +99,7 @@ final class FountainCodeRoundtripTests: XCTestCase {
             ttlSeconds: 3600,
             disappearingMessagesSeconds: 0,
             notificationFlags: 0x000B,
+            transferMethod: .raptor,
             relayUrl: "https://relay.test"
         )
 
@@ -462,6 +465,175 @@ final class CorruptedFrameTests: XCTestCase {
 
         XCTAssertThrowsError(try receiver.addFrame(frameBytes: truncatedFrame)) { error in
             XCTAssertTrue(error is AshError)
+        }
+    }
+}
+
+// MARK: - Transfer Method Detection Tests
+
+final class TransferMethodDetectionTests: XCTestCase {
+
+    /// Test that transfer method is detected from ANY frame (not just block 0)
+    /// This is the key fix: allows scanning to start mid-stream
+    func testTransferMethod_detectedFromAnyFrame() throws {
+        let padBytes = [UInt8]((0..<3000).map { UInt8($0 % 256) })
+        let metadata = CeremonyMetadata(
+            version: 1,
+            ttlSeconds: 86400,
+            disappearingMessagesSeconds: 0,
+            notificationFlags: 0x000B,
+            transferMethod: .lt,  // Use LT to test non-default method
+            relayUrl: "https://relay.test"
+        )
+
+        let testPassphrase = "test-passphrase"
+        let generator = try createFountainGenerator(
+            metadata: metadata,
+            padBytes: padBytes,
+            blockSize: 256,
+            passphrase: testPassphrase,
+            method: .lt
+        )
+
+        // Generate many frames
+        var frames: [[UInt8]] = []
+        for _ in 0..<50 {
+            frames.append(generator.nextFrame())
+        }
+
+        // Simulate starting scan from frame 30 (skipping 0-29)
+        let receiver = FountainFrameReceiver(passphrase: testPassphrase)
+
+        // First frame received is frame 30 - should detect method immediately
+        _ = try receiver.addFrame(frameBytes: frames[30])
+
+        // Method should be detected from first scanned frame
+        let detected = receiver.detectedMethod()
+        XCTAssertEqual(detected, .lt, "Should detect LT method from frame 30")
+
+        // Continue adding frames (including block 0 later)
+        for (i, frame) in frames.enumerated() {
+            if i != 30 {  // Skip the one we already added
+                if try receiver.addFrame(frameBytes: frame) {
+                    break
+                }
+            }
+        }
+
+        XCTAssertTrue(receiver.isComplete())
+        let result = receiver.getResult()
+        XCTAssertEqual(result?.pad, padBytes)
+    }
+
+    /// Test that all transfer methods are correctly detected
+    func testTransferMethod_allMethodsDetected() throws {
+        let padBytes = [UInt8](repeating: 0x42, count: 1000)
+        let testPassphrase = "test-passphrase"
+
+        for method: TransferMethod in [.raptor, .lt, .sequential] {
+            let metadata = CeremonyMetadata(
+                version: 1,
+                ttlSeconds: 86400,
+                disappearingMessagesSeconds: 0,
+                notificationFlags: 0x000B,
+                transferMethod: method,
+                relayUrl: "https://relay.test"
+            )
+
+            let generator = try createFountainGenerator(
+                metadata: metadata,
+                padBytes: padBytes,
+                blockSize: 256,
+                passphrase: testPassphrase,
+                method: method
+            )
+
+            // Generate a frame (any frame)
+            let frame = generator.generateFrame(index: 5)
+
+            let receiver = FountainFrameReceiver(passphrase: testPassphrase)
+            _ = try receiver.addFrame(frameBytes: frame)
+
+            // Verify method is detected correctly
+            XCTAssertEqual(receiver.detectedMethod(), method, "Should detect \(method) method")
+        }
+    }
+
+    /// Test that method in frame header matches metadata
+    func testTransferMethod_headerMatchesMetadata() throws {
+        let padBytes = [UInt8](repeating: 0xAB, count: 1000)
+        let metadata = CeremonyMetadata(
+            version: 1,
+            ttlSeconds: 86400,
+            disappearingMessagesSeconds: 0,
+            notificationFlags: 0x000B,
+            transferMethod: .sequential,
+            relayUrl: "https://relay.test"
+        )
+
+        let testPassphrase = "test-passphrase"
+        let generator = try createFountainGenerator(
+            metadata: metadata,
+            padBytes: padBytes,
+            blockSize: 256,
+            passphrase: testPassphrase,
+            method: .sequential
+        )
+
+        let receiver = FountainFrameReceiver(passphrase: testPassphrase)
+
+        // Complete the transfer
+        while !receiver.isComplete() {
+            let frame = generator.nextFrame()
+            _ = try receiver.addFrame(frameBytes: frame)
+        }
+
+        // Verify both detected method and result metadata match
+        XCTAssertEqual(receiver.detectedMethod(), .sequential)
+
+        let result = receiver.getResult()
+        XCTAssertEqual(result?.metadata.transferMethod, .sequential)
+    }
+
+    /// Test roundtrip with each transfer method
+    func testTransferMethod_roundtripAllMethods() throws {
+        let padBytes = [UInt8]((0..<2000).map { UInt8($0 % 256) })
+        let testPassphrase = "test-passphrase"
+
+        for method: TransferMethod in [.raptor, .lt, .sequential] {
+            let metadata = CeremonyMetadata(
+                version: 1,
+                ttlSeconds: 86400,
+                disappearingMessagesSeconds: 0,
+                notificationFlags: 0x000B,
+                transferMethod: method,
+                relayUrl: "https://relay.test"
+            )
+
+            let generator = try createFountainGenerator(
+                metadata: metadata,
+                padBytes: padBytes,
+                blockSize: 256,
+                passphrase: testPassphrase,
+                method: method
+            )
+
+            let receiver = FountainFrameReceiver(passphrase: testPassphrase)
+
+            let maxFrames = Int(generator.sourceCount()) * 3
+            var frameCount = 0
+
+            while !receiver.isComplete() && frameCount < maxFrames {
+                let frame = generator.nextFrame()
+                _ = try receiver.addFrame(frameBytes: frame)
+                frameCount += 1
+            }
+
+            XCTAssertTrue(receiver.isComplete(), "\(method) should complete")
+
+            let result = receiver.getResult()
+            XCTAssertEqual(result?.pad, padBytes, "\(method) should preserve pad")
+            XCTAssertEqual(result?.metadata.transferMethod, method, "\(method) should preserve method in metadata")
         }
     }
 }

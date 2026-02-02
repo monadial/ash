@@ -1535,37 +1535,30 @@ private struct ReceiverSetupView: View {
                     Text("Ready to Scan")
                         .font(.title2.bold())
 
-                    Text("Enter the passphrase that was spoken by the sender, then point your camera at their QR codes")
+                    Text("Enter the passphrase spoken by the sender")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top, 24)
                 .padding(.bottom, 24)
-                .padding(.horizontal, 20)
 
                 // Passphrase Section (Required)
                 VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Image(systemName: "lock.shield.fill")
-                                .font(.title3)
-                                .foregroundStyle(.tint)
-                                .frame(width: 32)
-                            Text("Verbal Passphrase")
-                                .font(.subheadline.weight(.semibold))
-                            Spacer()
-                            Text("Required")
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.orange, in: Capsule())
-                        }
-
-                        Text("Enter the passphrase that the sender told you verbally. Without the correct passphrase, the QR codes cannot be decoded.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    HStack {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("Verbal Passphrase")
+                            .font(.subheadline.bold())
+                        Spacer()
+                        Text("Required")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange, in: Capsule())
                     }
                     .padding(16)
 
@@ -1591,33 +1584,6 @@ private struct ReceiverSetupView: View {
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
-
-                // Instructions
-                VStack(spacing: 0) {
-                    HStack {
-                        Image(systemName: "info.circle")
-                            .font(.title3)
-                            .foregroundStyle(.tint)
-                            .frame(width: 32)
-                        Text("How it works")
-                            .font(.subheadline.bold())
-                        Spacer()
-                    }
-                    .padding(16)
-
-                    Divider().padding(.leading, 56)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        InstructionRow(number: 1, text: "Hold steady and point at the QR codes")
-                        InstructionRow(number: 2, text: "Frames are captured automatically")
-                        InstructionRow(number: 3, text: "Progress shows when complete")
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                }
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
 
                 // Conversation Color Section
                 VStack(spacing: 0) {
@@ -1665,6 +1631,33 @@ private struct ReceiverSetupView: View {
                         }
                     }
                     .padding(16)
+                }
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+
+                // Instructions
+                VStack(spacing: 0) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .font(.title3)
+                            .foregroundStyle(.tint)
+                            .frame(width: 32)
+                        Text("How it works")
+                            .font(.subheadline.bold())
+                        Spacer()
+                    }
+                    .padding(16)
+
+                    Divider().padding(.leading, 56)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        InstructionRow(number: 1, text: "Hold steady and point at the QR codes")
+                        InstructionRow(number: 2, text: "Frames are captured automatically")
+                        InstructionRow(number: 3, text: "Progress shows when complete")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
                 .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal, 20)
@@ -1719,6 +1712,14 @@ private struct QRDisplayView: View {
     let totalFrames: Int
     var accentColor: Color = Color.ashAccent
     @State private var previousBrightness: CGFloat = 0.5
+
+    /// Get screen from current window scene (iOS 26+ compatible)
+    private var currentScreen: UIScreen? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first?
+            .screen
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -1882,12 +1883,16 @@ private struct QRDisplayView: View {
         }
         .background(Color(.systemBackground))
         .onAppear {
-            previousBrightness = UIScreen.main.brightness
-            UIScreen.main.brightness = 1.0
+            if let screen = currentScreen {
+                previousBrightness = screen.brightness
+                screen.brightness = 1.0
+            }
             UIApplication.shared.isIdleTimerDisabled = true
         }
         .onDisappear {
-            UIScreen.main.brightness = previousBrightness
+            if let screen = currentScreen {
+                screen.brightness = previousBrightness
+            }
             UIApplication.shared.isIdleTimerDisabled = false
         }
     }

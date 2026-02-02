@@ -134,7 +134,7 @@ final class AppLockViewModel {
             )
 
             if success {
-                var settings = settingsService
+                let settings = settingsService
                 settings.isBiometricLockEnabled = true
                 return true
             }
@@ -149,7 +149,7 @@ final class AppLockViewModel {
 
     /// Disable biometric lock
     func disableBiometricLock() {
-        var settings = settingsService
+        let settings = settingsService
         settings.isBiometricLockEnabled = false
         isLocked = false
     }

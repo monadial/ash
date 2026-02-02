@@ -25,11 +25,73 @@ final class AppViewModel {
     // Child view models
     private(set) var ceremonyViewModel: CeremonyViewModel
 
+    // Push notification observer
+    private var pushNotificationObserver: NSObjectProtocol?
+
     // MARK: - Initialization
 
     init(dependencies: Dependencies) {
         self.dependencies = dependencies
         self.ceremonyViewModel = CeremonyViewModel(dependencies: dependencies)
+        setupPushNotificationHandling()
+    }
+
+    // MARK: - Push Notification Handling
+
+    private func setupPushNotificationHandling() {
+        pushNotificationObserver = NotificationCenter.default.addObserver(
+            forName: .pushNotificationReceived,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self else { return }
+
+            // Check if this notification is for a specific conversation
+            if let conversationId = notification.userInfo?["conversation_id"] as? String {
+                Task { @MainActor in
+                    await self.checkBurnStatusForConversation(id: conversationId)
+                }
+            }
+        }
+    }
+
+    /// Check burn status for a conversation and handle if burned
+    private func checkBurnStatusForConversation(id conversationId: String) async {
+        // Find the conversation
+        guard let conversation = conversations.first(where: { $0.id == conversationId }) else {
+            return
+        }
+
+        // Skip if this is the currently selected conversation (MessagingViewModel handles it)
+        if selectedConversation?.id == conversationId {
+            return
+        }
+
+        // Create relay service to check burn status
+        guard let relay = dependencies.createRelayService(for: conversation.relayURL) else {
+            return
+        }
+        do {
+            let status = try await relay.checkBurnStatus(
+                conversationId: conversationId,
+                authToken: conversation.authToken
+            )
+
+            if status.burned {
+                Log.warning(.push, "Conversation \(conversationId.prefix(8)) was burned by peer")
+
+                // Mark conversation as peer-burned (wipes local data)
+                _ = try await dependencies.burnConversationUseCase.markPeerBurned(conversation: conversation)
+
+                // Remove from local state
+                withAnimation {
+                    conversations.removeAll { $0.id == conversationId }
+                }
+            }
+        } catch {
+            // Silently ignore errors - burn check is best effort
+            Log.debug(.push, "Failed to check burn status for \(conversationId.prefix(8)): \(error)")
+        }
     }
 
     // MARK: - Actions
@@ -63,18 +125,27 @@ final class AppViewModel {
 
         do {
             try await dependencies.burnConversationUseCase.execute(conversation: conversation)
+            Log.info(.storage, "Burn completed for \(conversation.id.prefix(8))")
+
+            // Conversation was burned - deselect if currently selected
+            // This must happen BEFORE removing from list to ensure navigation pops
+            if selectedConversation?.id == conversation.id {
+                selectedConversation = nil
+            }
 
             // Update UI with animation to prevent List inconsistency crashes
             withAnimation {
                 conversations.removeAll { $0.id == conversation.id }
             }
-
-            // Conversation was burned - deselect if currently selected
+        } catch {
+            Log.error(.storage, "Burn failed for \(conversation.id.prefix(8)): \(error)")
+            // Even if burn fails, try to clean up UI state
             if selectedConversation?.id == conversation.id {
                 selectedConversation = nil
             }
-        } catch {
-            // Handle error
+            withAnimation {
+                conversations.removeAll { $0.id == conversation.id }
+            }
         }
     }
 

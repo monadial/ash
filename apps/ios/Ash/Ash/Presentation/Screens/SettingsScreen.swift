@@ -485,7 +485,7 @@ struct SettingsScreen: View {
     // MARK: - Helpers
 
     private func saveDefaultRelayURL() {
-        var settings = dependencies.settingsService
+        let settings = dependencies.settingsService
         settings.relayServerURL = defaultRelayURL
         connectionTestResult = nil
         onRelaySettingsChanged()

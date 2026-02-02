@@ -303,8 +303,9 @@ pub async fn submit_message(
         let devices = state.store.get_device_tokens(&conversation_id);
         if !devices.is_empty() {
             let apns = state.apns.clone();
+            let conv_id = conversation_id.clone();
             tokio::spawn(async move {
-                apns.send_to_devices(&devices).await;
+                apns.send_to_devices(&devices, Some(&conv_id)).await;
             });
         }
     }
@@ -415,8 +416,9 @@ pub async fn burn_conversation(
     // Send burn notification to registered devices (best-effort)
     if !devices.is_empty() {
         let apns = state.apns.clone();
+        let conv_id = conversation_id.clone();
         tokio::spawn(async move {
-            apns.send_to_devices(&devices).await;
+            apns.send_to_devices(&devices, Some(&conv_id)).await;
         });
     }
 

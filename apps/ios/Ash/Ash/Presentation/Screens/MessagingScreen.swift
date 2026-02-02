@@ -250,7 +250,7 @@ private struct ConversationSettingsSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle")
                             .foregroundStyle(.secondary)
-                        Text("Messages are stored in server RAM for \(MessageTTL.displayName) and deleted on delivery or expiry.")
+                        Text("Messages are stored in server RAM for \(conversation.messageRetention.displayName) and deleted on delivery or expiry.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

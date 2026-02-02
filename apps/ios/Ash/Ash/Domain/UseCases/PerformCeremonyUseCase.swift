@@ -256,6 +256,7 @@ final class PerformCeremonyUseCase: PerformCeremonyUseCaseProtocol, Sendable {
             ttlSeconds: metadata.ttlSeconds,
             disappearingMessagesSeconds: metadata.disappearingMessagesSeconds,
             notificationFlags: metadata.conversationFlags,
+            transferMethod: transferMethod.ffiMethod,
             relayUrl: metadata.relayURL
         )
 

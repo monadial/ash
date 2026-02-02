@@ -321,6 +321,7 @@ final class CeremonyFountainCodeTests: XCTestCase {
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
             notificationFlags: 0x000B,
+            transferMethod: .raptor,
             relayUrl: "https://relay.ash.test"
         )
 
@@ -348,6 +349,7 @@ final class CeremonyFountainCodeTests: XCTestCase {
             ttlSeconds: 172800,
             disappearingMessagesSeconds: 0,
             notificationFlags: 0x000B,
+            transferMethod: .raptor,
             relayUrl: "https://relay.ash.test"
         )
 

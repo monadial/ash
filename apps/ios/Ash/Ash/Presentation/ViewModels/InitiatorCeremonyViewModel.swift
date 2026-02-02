@@ -127,7 +127,14 @@ final class InitiatorCeremonyViewModel {
 
     /// Dynamic QR code size based on screen width
     private var qrCodeSize: CGFloat {
-        let screenWidth = UIScreen.main.bounds.width
+        let screenWidth: CGFloat
+        if let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first {
+            screenWidth = windowScene.screen.bounds.width
+        } else {
+            screenWidth = 390 // Default iPhone width fallback
+        }
         return QRSizeCalculator.optimalSize(for: screenWidth)
     }
 
@@ -342,7 +349,7 @@ final class InitiatorCeremonyViewModel {
                 method: transferMethod
             )
 
-            Log.info(.ceremony, "Fountain generator ready: \(sourceBlockCount) source blocks, \(totalFramesToGenerate) total frames, block size: \(generator.blockSize())")
+            Log.info(.ceremony, "Fountain generator ready: method=\(transferMethod.displayName), \(sourceBlockCount) source blocks, \(totalFramesToGenerate) total frames (redundancy=\(totalFramesToGenerate - sourceBlockCount)), block size: \(generator.blockSize())")
             await startStreamingQRCodes()
         } catch {
             Log.error(.ceremony, "Pad generation failed: \(error)")
@@ -365,7 +372,7 @@ final class InitiatorCeremonyViewModel {
         qrCache.removeAll()
 
         dependencies.hapticService.success()
-        phase = .transferring(currentFrame: 0, totalFrames: sourceBlockCount)
+        phase = .transferring(currentFrame: 0, totalFrames: totalFramesToGenerate)
         startDisplayCycling()
     }
 
@@ -430,7 +437,7 @@ final class InitiatorCeremonyViewModel {
 
     private func updatePhase() {
         if case .transferring = phase {
-            phase = .transferring(currentFrame: currentDisplayIndex % sourceBlockCount, totalFrames: sourceBlockCount)
+            phase = .transferring(currentFrame: currentDisplayIndex, totalFrames: totalFramesToGenerate)
         }
     }
 

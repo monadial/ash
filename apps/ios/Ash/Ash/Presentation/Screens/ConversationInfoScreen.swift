@@ -323,7 +323,7 @@ struct ConversationInfoScreen: View {
 
             Divider().padding(.leading, 56)
 
-            InfoRow(label: "Server Retention", value: MessageTTL.displayName)
+            InfoRow(label: "Server Retention", value: conversation.messageRetention.displayName)
             Divider().padding(.leading, 56)
             InfoRow(
                 label: "Disappearing Messages",

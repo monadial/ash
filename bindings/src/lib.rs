@@ -158,6 +158,16 @@ impl From<TransferMethod> for ash_core::frame::TransferMethod {
     }
 }
 
+impl From<ash_core::frame::TransferMethod> for TransferMethod {
+    fn from(method: ash_core::frame::TransferMethod) -> Self {
+        match method {
+            ash_core::frame::TransferMethod::Raptor => TransferMethod::Raptor,
+            ash_core::frame::TransferMethod::LT => TransferMethod::LT,
+            ash_core::frame::TransferMethod::Sequential => TransferMethod::Sequential,
+        }
+    }
+}
+
 // === Pad Wrapper ===
 
 /// Thread-safe wrapper around ash_core::Pad for FFI
@@ -270,6 +280,7 @@ pub struct CeremonyMetadata {
     pub ttl_seconds: u64,
     pub disappearing_messages_seconds: u32,
     pub notification_flags: u16,
+    pub transfer_method: TransferMethod,
     pub relay_url: String,
 }
 
@@ -280,6 +291,7 @@ impl From<ash_core::CeremonyMetadata> for CeremonyMetadata {
             ttl_seconds: m.ttl_seconds,
             disappearing_messages_seconds: m.disappearing_messages_seconds,
             notification_flags: m.notification_flags.bits(),
+            transfer_method: m.transfer_method.into(),
             relay_url: m.relay_url,
         }
     }
@@ -287,10 +299,11 @@ impl From<ash_core::CeremonyMetadata> for CeremonyMetadata {
 
 impl From<CeremonyMetadata> for ash_core::CeremonyMetadata {
     fn from(m: CeremonyMetadata) -> Self {
-        ash_core::CeremonyMetadata::with_flags(
+        ash_core::CeremonyMetadata::with_all(
             m.ttl_seconds,
             m.disappearing_messages_seconds,
             ash_core::NotificationFlags::from_bits(m.notification_flags),
+            m.transfer_method.into(),
             m.relay_url,
         )
         .unwrap_or_default()
@@ -415,6 +428,12 @@ impl FountainFrameReceiver {
     pub fn source_count(&self) -> u32 {
         let receiver = self.inner.lock().unwrap();
         receiver.source_count() as u32
+    }
+
+    /// Get the detected transfer method (None if block 0 hasn't been received yet)
+    pub fn detected_method(&self) -> Option<TransferMethod> {
+        let receiver = self.inner.lock().unwrap();
+        receiver.detected_method().map(|m| m.into())
     }
 
     /// Get the decoded result (None if not complete)
@@ -712,6 +731,7 @@ mod tests {
             ttl_seconds: 300,
             disappearing_messages_seconds: 0,
             notification_flags: 0x000B, // Default: new message + expiring + delivery failed
+            transfer_method: TransferMethod::Raptor,
             relay_url: "https://relay.test".to_string(),
         };
         let pad = vec![0x42; 2000];
@@ -743,13 +763,6 @@ mod tests {
 
     #[test]
     fn test_transfer_methods_all_work() {
-        let metadata = CeremonyMetadata {
-            version: 1,
-            ttl_seconds: 300,
-            disappearing_messages_seconds: 0,
-            notification_flags: 0x000B,
-            relay_url: "https://relay.test".to_string(),
-        };
         let pad = vec![0x42; 1500];
         let passphrase = "test-passphrase".to_string();
 
@@ -759,8 +772,16 @@ mod tests {
             TransferMethod::LT,
             TransferMethod::Sequential,
         ] {
+            let metadata = CeremonyMetadata {
+                version: 1,
+                ttl_seconds: 300,
+                disappearing_messages_seconds: 0,
+                notification_flags: 0x000B,
+                transfer_method: method,
+                relay_url: "https://relay.test".to_string(),
+            };
             let generator = create_fountain_generator(
-                metadata.clone(),
+                metadata,
                 pad.clone(),
                 256,
                 passphrase.clone(),

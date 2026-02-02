@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<true/>
 	<key>ASH_MESSAGE_PADDING_SIZE</key>
 	<integer>32</integer>
 	<key>CFBundleAllowMixedLocalizations</key>

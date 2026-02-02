@@ -81,7 +81,11 @@ impl ApnsClient {
     }
 
     /// Send silent push notification to a device (best-effort)
-    pub async fn send_silent_push(&self, device_token: &str, conversation_id: Option<&str>) -> bool {
+    pub async fn send_silent_push(
+        &self,
+        device_token: &str,
+        conversation_id: Option<&str>,
+    ) -> bool {
         let client = match &self.client {
             Some(c) => c,
             None => return false,
@@ -123,7 +127,11 @@ impl ApnsClient {
     }
 
     /// Send silent push to multiple devices (best-effort, parallel)
-    pub async fn send_to_devices(&self, devices: &[DeviceRegistration], conversation_id: Option<&str>) {
+    pub async fn send_to_devices(
+        &self,
+        devices: &[DeviceRegistration],
+        conversation_id: Option<&str>,
+    ) {
         if self.client.is_none() || devices.is_empty() {
             return;
         }
